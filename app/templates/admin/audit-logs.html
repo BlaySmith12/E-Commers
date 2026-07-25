@@ -125,7 +125,7 @@ async function fetchLogs(page) {
     if (dateTo) params.set('date_to', dateTo);
 
     try {
-        const res = await fetch(`${API}?${params.toString()}`);
+        const res = await fetch(`${API}?${params.toString()}`, { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') } });
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
         const logs = data.logs || data.items || data || [];

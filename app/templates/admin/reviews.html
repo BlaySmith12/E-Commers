@@ -220,6 +220,9 @@
 
     async function apiFetch(url, opts = {}) {
         try {
+            const token = localStorage.getItem('admin_token') || '';
+            if (!opts.headers) opts.headers = {};
+            opts.headers['Authorization'] = 'Bearer ' + token;
             const resp = await fetch(API + url, opts);
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({detail: resp.statusText}));

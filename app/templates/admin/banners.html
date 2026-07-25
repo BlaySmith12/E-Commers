@@ -263,7 +263,7 @@ async function saveBanner(e) {
     try {
         const res = await fetch(url, {
             method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify(payload),
         });
         if (!res.ok) { alert('Error saving banner'); return; }
@@ -277,7 +277,7 @@ async function saveBanner(e) {
 async function deleteBanner(id) {
     if (!confirm('Delete this banner?')) return;
     try {
-        const res = await fetch(`${API}/${id}`, { method: 'DELETE' });
+        const res = await fetch(`${API}/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') } });
         if (!res.ok) { alert('Error deleting banner'); return; }
         location.reload();
     } catch (err) {
@@ -289,7 +289,7 @@ async function toggleActive(id, current) {
     try {
         await fetch(`${API}/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify({ is_active: !current }),
         });
         location.reload();
@@ -304,7 +304,7 @@ async function moveBanner(id, currentPos, direction) {
     try {
         await fetch(`${API}/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify({ position: newPos }),
         });
         location.reload();

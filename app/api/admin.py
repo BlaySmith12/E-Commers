@@ -12,7 +12,7 @@ from app.db import get_db
 from app.models.catalog import (
     User, Product, Order, OrderItem, Category, Brand,
     ProductReview, Payment, SiteSetting, ProductImage,
-    ProductVariant, AuditLog,
+    ProductVariant, AuditLog, Role, Permission,
 )
 from app.schemas import (
     CategoryCreate, CategoryUpdate, CategoryOut,
@@ -25,13 +25,18 @@ from app.audit import log_audit
 
 router = APIRouter(prefix='/admin', tags=['Admin'])
 
+# Subquery to identify admin role IDs (roles with ADMIN permission bit set)
+_admin_role_ids_subq = select(Role.id).where((Role.permissions & Permission.ADMIN) != 0).scalar_subquery()
+_non_admin_filter = or_(User.role_id.is_(None), User.role_id.notin_(_admin_role_ids_subq))
+
 
 # ------------------------------- Dashboard -------------------------------
 @router.get('/dashboard')
 async def admin_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depends(RequireViewer)):
-    today = datetime.now(timezone.utc).date()
-    start_of_today = datetime(today.year, today.month, today.day, tzinfo=timezone.utc)
-    start_of_month = datetime(today.year, today.month, 1, tzinfo=timezone.utc)
+    from datetime import datetime as _dt
+    today = _dt.utcnow().date()
+    start_of_today = _dt(today.year, today.month, today.day)
+    start_of_month = _dt(today.year, today.month, 1)
 
     orders_today = (await db.execute(select(func.count()).select_from(Order).where(Order.created_at >= start_of_today))).scalar_one()
     orders_month = (await db.execute(select(func.count()).select_from(Order).where(Order.created_at >= start_of_month))).scalar_one()
@@ -40,9 +45,14 @@ async def admin_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depe
     revenue_month = (await db.execute(select(func.coalesce(func.sum(Order.total_amount), 0)).where(Order.created_at >= start_of_month))).scalar_one()
 
     product_count = (await db.execute(select(func.count()).select_from(Product))).scalar_one()
-    customer_count = (await db.execute(select(func.count()).select_from(User).where(User.is_admin == False))).scalar_one()
-    pending_orders = (await db.execute(select(func.count()).select_from(Order).where(Order.status == 'Pending'))).scalar_one()
+    customer_count = (await db.execute(select(func.count()).select_from(User).where(User.is_active == True, _non_admin_filter))).scalar_one()
+    pending_orders = (await db.execute(select(func.count()).select_from(Order).where(Order.status == 'Pending Payment'))).scalar_one()
+    processing_orders = (await db.execute(select(func.count()).select_from(Order).where(Order.status == 'Processing'))).scalar_one()
+    shipped_orders = (await db.execute(select(func.count()).select_from(Order).where(Order.status == 'Shipped'))).scalar_one()
+    delivered_orders = (await db.execute(select(func.count()).select_from(Order).where(Order.status == 'Delivered'))).scalar_one()
+    cancelled_orders = (await db.execute(select(func.count()).select_from(Order).where(Order.status == 'Cancelled'))).scalar_one()
     low_stock = (await db.execute(select(func.count()).select_from(Product).where(Product.stock < 5))).scalar_one()
+    total_orders = (await db.execute(select(func.count()).select_from(Order))).scalar_one()
 
     return {
         'revenue_today': round(revenue_today, 2),
@@ -52,7 +62,12 @@ async def admin_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depe
         'product_count': product_count,
         'customer_count': customer_count,
         'pending_orders': pending_orders,
+        'processing_orders': processing_orders,
+        'shipped_orders': shipped_orders,
+        'delivered_orders': delivered_orders,
+        'cancelled_orders': cancelled_orders,
         'low_stock_alerts': low_stock,
+        'total_orders': total_orders,
     }
 
 
@@ -454,8 +469,11 @@ async def admin_delete_product(product_id: int, db: AsyncSession = Depends(get_d
         raise HTTPException(status_code=404, detail='Product not found')
     product_name = product.name
     product_sku = product.sku
-    from app.models.catalog import Inventory
     await db.execute(text("DELETE FROM inventory WHERE product_id = :pid"), {"pid": product_id})
+    await db.execute(text("UPDATE order_items SET product_id = NULL WHERE product_id = :pid"), {"pid": product_id})
+    await db.execute(text("DELETE FROM cart_items WHERE product_id = :pid"), {"pid": product_id})
+    await db.execute(text("DELETE FROM wishlist_items WHERE product_id = :pid"), {"pid": product_id})
+    await db.execute(text("DELETE FROM collection_products WHERE product_id = :pid"), {"pid": product_id})
     await db.delete(product)
     await db.commit()
     await log_audit(
@@ -489,6 +507,11 @@ async def bulk_delete_products(
     
     # Delete inventory records first (FK constraint)
     await db.execute(text("DELETE FROM inventory WHERE product_id = ANY(:ids)"), {"ids": product_ids})
+    # Nullify FK references that don't cascade
+    await db.execute(text("UPDATE order_items SET product_id = NULL WHERE product_id = ANY(:ids)"), {"ids": product_ids})
+    await db.execute(text("DELETE FROM cart_items WHERE product_id = ANY(:ids)"), {"ids": product_ids})
+    await db.execute(text("DELETE FROM wishlist_items WHERE product_id = ANY(:ids)"), {"ids": product_ids})
+    await db.execute(text("DELETE FROM collection_products WHERE product_id = ANY(:ids)"), {"ids": product_ids})
     # Delete the products
     delete_stmt = Product.__table__.delete().where(Product.id.in_(product_ids))
     await db.execute(delete_stmt)
@@ -554,7 +577,7 @@ async def bulk_update_product_status(
 # ------------------------------- Customers -------------------------------
 @router.get('/customers', response_model=List[UserOut])
 async def admin_list_customers(db: AsyncSession = Depends(get_db), admin: User = Depends(RequireViewer), skip: int = 0, limit: int = 50):
-    result = await db.execute(select(User).where(User.is_admin == False).order_by(User.created_at.desc()).offset(skip).limit(limit))
+    result = await db.execute(select(User).where(_non_admin_filter).order_by(User.created_at.desc()).offset(skip).limit(limit))
     users = result.scalars().all()
     out = []
     for u in users:
@@ -574,14 +597,14 @@ async def bulk_delete_customers(
         raise HTTPException(status_code=400, detail='No user IDs provided')
     
     # Get the users to delete for logging (ensure they're not admins)
-    result = await db.execute(select(User).where(User.id.in_(user_ids), User.is_admin == False))
+    result = await db.execute(select(User).where(User.id.in_(user_ids), _non_admin_filter))
     users_to_delete = result.scalars().all()
     
     if not users_to_delete:
         raise HTTPException(status_code=404, detail='No non-admin users found with provided IDs')
     
     # Delete the users
-    delete_stmt = User.__table__.delete().where(User.id.in_(user_ids), User.is_admin == False)
+    delete_stmt = User.__table__.delete().where(User.id.in_(user_ids), _non_admin_filter)
     await db.execute(delete_stmt)
     await db.commit()
     
@@ -611,7 +634,7 @@ async def bulk_update_customer_status(
         raise HTTPException(status_code=400, detail='No user IDs provided')
     
     # Get the users to update for logging (ensure they're not admins)
-    result = await db.execute(select(User).where(User.id.in_(user_ids), User.is_admin == False))
+    result = await db.execute(select(User).where(User.id.in_(user_ids), _non_admin_filter))
     users_to_update = result.scalars().all()
     
     if not users_to_update:
@@ -620,7 +643,7 @@ async def bulk_update_customer_status(
     # Update the users
     update_stmt = (
         User.__table__.update()
-        .where(User.id.in_(user_ids), User.is_admin == False)
+        .where(User.id.in_(user_ids), _non_admin_filter)
         .values(is_active=is_active)
     )
     await db.execute(update_stmt)
@@ -886,14 +909,14 @@ async def bulk_delete_users(
         raise HTTPException(status_code=400, detail='Cannot delete your own account')
     
     # Get the users to delete for logging (ensure they're not admins, except we already checked above)
-    result = await db.execute(select(User).where(User.id.in_(user_ids), User.is_admin == False))
+    result = await db.execute(select(User).where(User.id.in_(user_ids), _non_admin_filter))
     users_to_delete = result.scalars().all()
     
     if not users_to_delete:
         raise HTTPException(status_code=404, detail='No non-admin users found with provided IDs')
     
     # Delete the users
-    delete_stmt = User.__table__.delete().where(User.id.in_(user_ids), User.is_admin == False)
+    delete_stmt = User.__table__.delete().where(User.id.in_(user_ids), _non_admin_filter)
     await db.execute(delete_stmt)
     await db.commit()
     

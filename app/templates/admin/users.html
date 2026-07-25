@@ -367,7 +367,9 @@ let deleteMode = null; // 'single' or 'bulk'
 /* ────────── Load Users ────────── */
 async function loadUsers() {
     try {
-        const res = await fetch(API_USERS);
+        const res = await fetch(API_USERS, {
+            headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') }
+        });
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
         allUsers = Array.isArray(data) ? data : (data.users || data.data || []);
@@ -622,7 +624,7 @@ async function bulkChangeRole() {
         try {
             const res = await fetch(`${API_USERS}/${id}/role`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
                 body: JSON.stringify({ role_id: roleMap[role] || 2, role })
             });
             if (res.ok) ok++; else fail++;
@@ -679,7 +681,7 @@ async function confirmDelete() {
         try {
             const res = await fetch(`${API_USERS}/bulk-delete`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
                 body: JSON.stringify({ ids: deleteTarget })
             });
             if (res.ok) showToast('success', `${deleteTarget.length} user(s) deleted.`);
@@ -687,7 +689,7 @@ async function confirmDelete() {
         } catch { showToast('danger', 'Bulk delete failed.'); }
     } else {
         for (const id of deleteTarget) {
-            try { await fetch(`${API_USERS}/${id}`, { method: 'DELETE' }); } catch {}
+            try { await fetch(`${API_USERS}/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') } }); } catch {}
         }
         showToast('success', 'User deleted.');
     }
@@ -720,7 +722,7 @@ async function submitInvite(e) {
     try {
         const res = await fetch('/api/auth/register', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify(payload)
         });
         if (res.ok) {
@@ -777,7 +779,7 @@ async function submitEdit(e) {
     try {
         const res = await fetch(`${API_USERS}/${id}/role`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify(payload)
         });
         if (res.ok) {

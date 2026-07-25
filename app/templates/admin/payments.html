@@ -470,7 +470,9 @@ function getStatusClass(status) {
 
 async function loadPayments() {
     try {
-        const res = await fetch(API);
+        const res = await fetch(API, {
+            headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') }
+        });
         if (!res.ok) throw new Error('Failed to load payments');
         allPayments = await res.json();
         updateStats();
@@ -799,7 +801,7 @@ async function confirmRefund() {
     try {
         const res = await fetch(`${API}/${refundingPayment.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify({
                 status: 'Refunded',
                 refund_reason: reason

@@ -813,7 +813,7 @@ async function saveBanner(e) {
     try {
         const res = await fetch(url, {
             method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify(payload)
         });
         if (!res.ok) {
@@ -832,7 +832,7 @@ async function toggleBannerActive(id, active) {
     try {
         const res = await fetch(`${BANNER_API}/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify({ is_active: active })
         });
         if (!res.ok) throw new Error('Failed to update');
@@ -850,7 +850,7 @@ async function moveBannerItem(id, currentPos, direction) {
     try {
         const res = await fetch(`${BANNER_API}/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify({ position: newPos })
         });
         if (!res.ok) throw new Error('Failed to reorder');
@@ -867,7 +867,7 @@ function confirmDeleteBanner(id) {
         btn.disabled = true;
         btn.textContent = 'Deleting...';
         try {
-            const res = await fetch(`${BANNER_API}/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${BANNER_API}/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') } });
             if (!res.ok) throw new Error('Failed to delete');
             bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
             showToast('Banner deleted');
@@ -989,7 +989,7 @@ async function saveTestimonial(e) {
     try {
         const res = await fetch(url, {
             method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify(payload)
         });
         if (!res.ok) {
@@ -1008,7 +1008,7 @@ async function toggleTestimonialFeatured(id, featured) {
     try {
         const res = await fetch(`${TESTIMONIAL_API}/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify({ is_featured: featured })
         });
         if (!res.ok) throw new Error('Failed');
@@ -1024,7 +1024,7 @@ async function toggleTestimonialActive(id, active) {
     try {
         const res = await fetch(`${TESTIMONIAL_API}/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify({ is_active: active })
         });
         if (!res.ok) throw new Error('Failed');
@@ -1043,7 +1043,7 @@ function confirmDeleteTestimonial(id) {
         btn.disabled = true;
         btn.textContent = 'Deleting...';
         try {
-            const res = await fetch(`${TESTIMONIAL_API}/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${TESTIMONIAL_API}/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') } });
             if (!res.ok) throw new Error('Failed');
             bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
             showToast('Testimonial deleted');
@@ -1287,7 +1287,7 @@ async function saveAllChanges() {
     try {
         const res = await fetch(SETTINGS_API, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify({ homepage: settings })
         });
         if (!res.ok) throw new Error('Failed to save settings');

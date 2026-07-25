@@ -338,6 +338,36 @@ class PaymentInitOut(BaseModel):
     order_id: Optional[int] = None
 
 
+class CustomerBrief(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: Optional[int] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    username: Optional[str] = None
+
+
+class OrderItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    quantity: int
+    price: float
+    product_id: Optional[int] = None
+    snapshot_name: Optional[str] = None
+    snapshot_image: Optional[str] = None
+
+
+class PaymentBriefOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: Optional[int] = None
+    status: Optional[str] = None
+    payment_method: Optional[str] = None
+    transaction_reference: Optional[str] = None
+    channel: Optional[str] = None
+    provider: Optional[str] = None
+
+
 class OrderOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -354,7 +384,11 @@ class OrderOut(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     items: List[OrderItemOut] = []
-    payment: Optional[PaymentOut] = None
+    payment: Optional[PaymentBriefOut] = None
+    customer: Optional[CustomerBrief] = None
+    shipping_address: Optional[AddressOut] = None
+    payment_method: Optional[str] = None
+    user_id: Optional[int] = None
 
 
 class OrderStatusUpdate(BaseModel):

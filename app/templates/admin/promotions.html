@@ -417,7 +417,7 @@ async function loadCategories() {
 async function loadPromotions() {
     updateClearBtn();
     try {
-        const resp = await fetch(API);
+        const resp = await fetch(API, { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') } });
         if (!resp.ok) throw new Error('Failed');
         allPromos = await resp.json();
         if (allPromos.promotions) allPromos = allPromos.promotions;
@@ -656,7 +656,7 @@ async function savePromotion(e) {
         const method = isEdit ? 'PUT' : 'POST';
         const resp = await fetch(url, {
             method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify(payload)
         });
         if (!resp.ok) {
@@ -686,7 +686,7 @@ async function confirmDelete() {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
     try {
-        const resp = await fetch(`${API}/${deleteTargetId}`, { method: 'DELETE' });
+        const resp = await fetch(`${API}/${deleteTargetId}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') } });
         if (!resp.ok) throw new Error('Delete failed');
         bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
         showToast('Promotion deleted.', 'error');

@@ -383,11 +383,11 @@ async function bulkAction(action) {
     for (const id of ids) {
         try {
             if (action === 'delete') {
-                await fetch(`${API}/${id}`, { method: 'DELETE' });
+                await fetch(`${API}/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') } });
             } else {
                 await fetch(`${API}/${id}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
                     body: JSON.stringify({ active: action === 'activate' })
                 });
             }
@@ -417,7 +417,7 @@ function goPage(p) { currentPage = p; loadCoupons(); }
 async function loadCoupons() {
     updateClearBtn();
     try {
-        const resp = await fetch(API);
+        const resp = await fetch(API, { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') } });
         if (!resp.ok) throw new Error('Failed to fetch');
         allCoupons = await resp.json();
         if (allCoupons.coupons) allCoupons = allCoupons.coupons;
@@ -621,7 +621,7 @@ async function saveCoupon(e) {
         const method = isEdit ? 'PUT' : 'POST';
         const resp = await fetch(url, {
             method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify(payload)
         });
         if (!resp.ok) {
@@ -651,7 +651,7 @@ async function duplicateCoupon(id) {
         payload.active = true;
         const resp = await fetch(API, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify(payload)
         });
         if (!resp.ok) throw new Error('Duplicate failed');
@@ -674,7 +674,7 @@ async function confirmDelete() {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
     try {
-        const resp = await fetch(`${API}/${deleteTargetId}`, { method: 'DELETE' });
+        const resp = await fetch(`${API}/${deleteTargetId}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') } });
         if (!resp.ok) throw new Error('Delete failed');
         bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
         showToast('Coupon deleted.', 'error');

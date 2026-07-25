@@ -5,8 +5,9 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.db import get_db
 from app.models.catalog import Order, OrderItem, Address, User, AuditLog, Payment, Product
@@ -104,34 +105,201 @@ async def list_orders(
     return result.scalars().all()
 
 
-@router.get('/admin', response_model=List[OrderOut])
+@router.get('/admin')
 async def admin_list_orders(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(RequireViewer),
     status: str = Query(None),
     user_id: int = Query(None),
+    search: str = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ):
-    stmt = select(Order)
+    stmt = (
+        select(Order)
+        .options(
+            selectinload(Order.customer),
+            selectinload(Order.items),
+            selectinload(Order.payment),
+            selectinload(Order.shipping_address),
+        )
+    )
     if status:
         stmt = stmt.where(Order.status == status)
     if user_id:
         stmt = stmt.where(Order.user_id == user_id)
+    if search:
+        like = f"%{search}%"
+        stmt = stmt.join(User, Order.user_id == User.id, isouter=True).where(
+            or_(
+                Order.order_number.ilike(like),
+                User.first_name.ilike(like),
+                User.last_name.ilike(like),
+                User.email.ilike(like),
+                User.phone.ilike(like),
+            )
+        )
     stmt = stmt.order_by(Order.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    orders = result.scalars().unique().all()
+
+    out = []
+    for o in orders:
+        cust = None
+        if o.customer:
+            cust = {
+                'id': o.customer.id,
+                'first_name': o.customer.first_name,
+                'last_name': o.customer.last_name,
+                'email': o.customer.email,
+                'phone': o.customer.phone,
+            }
+        items_out = []
+        for it in (o.items or []):
+            items_out.append({
+                'id': it.id,
+                'quantity': it.quantity,
+                'price': it.price,
+                'product_id': it.product_id,
+                'snapshot_name': it.snapshot_name,
+                'snapshot_image': it.snapshot_image,
+            })
+        pay_method = None
+        pay_brief = None
+        if o.payment:
+            pay_method = o.payment.payment_method or o.payment.channel or 'Paystack'
+            pay_brief = {
+                'id': o.payment.id,
+                'status': o.payment.status,
+                'payment_method': o.payment.payment_method,
+                'transaction_reference': o.payment.transaction_reference,
+                'channel': o.payment.channel,
+                'provider': o.payment.provider,
+            }
+        addr = None
+        if o.shipping_address:
+            addr = {
+                'id': o.shipping_address.id,
+                'street': getattr(o.shipping_address, 'street', None),
+                'city': getattr(o.shipping_address, 'city', None),
+                'state': getattr(o.shipping_address, 'state', None),
+                'country': getattr(o.shipping_address, 'country', None),
+                'zip_code': getattr(o.shipping_address, 'zip_code', None),
+            }
+        out.append({
+            'id': o.id,
+            'order_number': o.order_number,
+            'status': o.status,
+            'payment_status': o.payment_status,
+            'currency': o.currency,
+            'discount': o.discount,
+            'subtotal': o.subtotal,
+            'shipping_fee': o.shipping_fee,
+            'tax': o.tax,
+            'total_amount': o.total_amount,
+            'notes': o.notes,
+            'created_at': o.created_at.isoformat() if o.created_at else None,
+            'updated_at': o.updated_at.isoformat() if o.updated_at else None,
+            'user_id': o.user_id,
+            'customer': cust,
+            'items': items_out,
+            'payment': pay_brief,
+            'payment_method': pay_method,
+            'shipping_address': addr,
+        })
+
+    return out
 
 
-@router.get('/{order_id}', response_model=OrderOut)
+@router.get('/{order_id}')
 async def get_order(order_id: int, current_user: CurrentUser, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Order).where(Order.id == order_id))
-    order = result.scalar_one_or_none()
+    stmt = (
+        select(Order)
+        .options(
+            selectinload(Order.customer),
+            selectinload(Order.items),
+            selectinload(Order.payment),
+            selectinload(Order.shipping_address),
+        )
+        .where(Order.id == order_id)
+    )
+    result = await db.execute(stmt)
+    order = result.scalars().unique().first()
     if not order:
         raise HTTPException(status_code=404, detail='Order not found')
     if not current_user.is_admin and order.user_id != current_user.id:
         raise HTTPException(status_code=403, detail='Forbidden')
-    return order
+
+    cust = None
+    if order.customer:
+        cust = {
+            'id': order.customer.id,
+            'first_name': order.customer.first_name,
+            'last_name': order.customer.last_name,
+            'email': order.customer.email,
+            'phone': order.customer.phone,
+        }
+    items_out = []
+    for it in (order.items or []):
+        items_out.append({
+            'id': it.id,
+            'quantity': it.quantity,
+            'price': it.price,
+            'product_id': it.product_id,
+            'snapshot_name': it.snapshot_name,
+            'snapshot_image': it.snapshot_image,
+        })
+    pay_method = None
+    pay_brief = None
+    if order.payment:
+        pay_method = order.payment.payment_method or order.payment.channel or 'Paystack'
+        pay_brief = {
+            'id': order.payment.id,
+            'status': order.payment.status,
+            'payment_method': order.payment.payment_method,
+            'transaction_reference': order.payment.transaction_reference,
+            'channel': order.payment.channel,
+            'provider': order.payment.provider,
+            'amount': order.payment.amount,
+            'currency': order.payment.currency,
+            'paid_at': order.payment.paid_at.isoformat() if order.payment.paid_at else None,
+            'customer_email': order.payment.customer_email,
+            'gateway_response': order.payment.gateway_response,
+        }
+    addr = None
+    if order.shipping_address:
+        addr = {
+            'id': order.shipping_address.id,
+            'street': getattr(order.shipping_address, 'street', None),
+            'city': getattr(order.shipping_address, 'city', None),
+            'state': getattr(order.shipping_address, 'state', None),
+            'country': getattr(order.shipping_address, 'country', None),
+            'zip_code': getattr(order.shipping_address, 'zip_code', None),
+            'full_name': getattr(order.shipping_address, 'full_name', None),
+            'phone': getattr(order.shipping_address, 'phone', None),
+        }
+
+    return {
+        'id': order.id,
+        'order_number': order.order_number,
+        'status': order.status,
+        'payment_status': order.payment_status,
+        'currency': order.currency,
+        'discount': order.discount,
+        'subtotal': order.subtotal,
+        'shipping_fee': order.shipping_fee,
+        'tax': order.tax,
+        'total_amount': order.total_amount,
+        'notes': order.notes,
+        'created_at': order.created_at.isoformat() if order.created_at else None,
+        'updated_at': order.updated_at.isoformat() if order.updated_at else None,
+        'user_id': order.user_id,
+        'customer': cust,
+        'items': items_out,
+        'payment': pay_brief,
+        'payment_method': pay_method,
+        'shipping_address': addr,
+    }
 
 
 @router.post('/checkout', response_model=OrderOut, status_code=status.HTTP_201_CREATED)

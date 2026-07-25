@@ -181,7 +181,7 @@ async function savePost(e) {
     try {
         const res = await fetch(url, {
             method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify(payload),
         });
         if (!res.ok) { alert('Error saving post'); return; }
@@ -195,7 +195,7 @@ async function savePost(e) {
 async function deletePost(id) {
     if (!confirm('Delete this blog post?')) return;
     try {
-        const res = await fetch(`${API}/${id}`, { method: 'DELETE' });
+        const res = await fetch(`${API}/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') } });
         if (!res.ok) { alert('Error deleting post'); return; }
         location.reload();
     } catch (err) {
@@ -207,7 +207,7 @@ async function togglePublish(id, current) {
     try {
         await fetch(`${API}/${id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
             body: JSON.stringify({ is_published: !current }),
         });
         location.reload();

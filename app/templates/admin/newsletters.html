@@ -103,7 +103,7 @@ function toggleSelectAll() {
 async function deleteSubscriber(id) {
     if (!confirm('Delete this subscriber?')) return;
     try {
-        const res = await fetch(`${API}/${id}`, { method: 'DELETE' });
+        const res = await fetch(`${API}/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') } });
         if (!res.ok) { alert('Error deleting subscriber'); return; }
         location.reload();
     } catch (err) {
