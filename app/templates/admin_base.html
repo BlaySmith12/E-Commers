@@ -19,6 +19,7 @@
         :root,
         [data-theme="dark"] {
             --bg-body: #121010;
+            --bg-darker: #121010;
             --bg-sidebar: #0a0909;
             --bg-card: rgba(255, 255, 255, 0.025);
             --bg-card-hover: rgba(255, 255, 255, 0.045);
@@ -58,6 +59,7 @@
 
         [data-theme="light"] {
             --bg-body: #F5F1EC;
+            --bg-darker: #F5F1EC;
             --bg-sidebar: #FFFFFF;
             --bg-card: #FFFFFF;
             --bg-card-hover: #F9F7F5;
@@ -279,7 +281,6 @@
             background-color: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            backdrop-filter: blur(5px);
             box-shadow: 0 4px 20px rgba(0,0,0,0.06);
             transition: background-color .3s, border-color .3s;
         }
