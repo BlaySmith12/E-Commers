@@ -75,7 +75,7 @@ async def init_db() -> None:
             ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_reference VARCHAR(100);
             ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_amount FLOAT DEFAULT 0.0;
             ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_reason TEXT;
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS metadata_json JSONB;
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS metadata JSONB;
             ALTER TABLE payments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
         """))
     # Create payment_events table if not exists

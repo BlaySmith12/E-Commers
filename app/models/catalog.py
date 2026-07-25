@@ -413,7 +413,7 @@ class Payment(Base):
     refund_amount = Column(Float, default=0.0)
     refund_reason = Column(Text)
 
-    metadata = Column(JSON, default=dict)
+    extra_metadata = Column("metadata", JSON, default=dict)
 
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
