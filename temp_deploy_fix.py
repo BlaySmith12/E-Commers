@@ -37,8 +37,7 @@ if not ssh:
 
 try:
     run(ssh, 'cd /root/ecommerce && git pull origin main')
-    run(ssh, 'cd /root/ecommerce && docker compose down')
-    run(ssh, 'cd /root/ecommerce && docker compose up -d --build app', timeout=300)
+    run(ssh, 'cd /root/ecommerce && docker compose up -d --build', timeout=300)
 except Exception as e:
     print(f'Error: {e}')
 
