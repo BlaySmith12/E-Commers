@@ -23,6 +23,7 @@ from app.models.catalog import Order, OrderItem, Payment, PaymentEvent, Product,
 from app.services.paystack import paystack
 from app.security import CurrentUser, decode_access_token
 from app.audit import log_audit
+from config import config
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix='/payments', tags=['Payments'])
@@ -442,8 +443,8 @@ async def paystack_webhook(
     body = await request.body()
     signature = request.headers.get('x-paystack-signature', '')
 
-    # Verify signature
-    if not paystack.verify_webhook_signature(body, signature):
+    # Verify signature (skip if no webhook secret configured)
+    if config.PAYSTACK_WEBHOOK_SECRET and not paystack.verify_webhook_signature(body, signature):
         logger.warning("Invalid Paystack webhook signature")
         raise HTTPException(status_code=400, detail='Invalid signature')
 
