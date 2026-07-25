@@ -47,11 +47,13 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/https.conf:ro
+      - ./nginx/docker-entrypoint.sh:/docker-entrypoint-custom.sh:ro
       - static_files:/app/static:ro
-      - certbot_etc:/etc/letsencrypt:ro
-      - certbot_var:/var/lib/letsencrypt:ro
-      - certbot_www:/var/www/certbot:ro
+      - certbot_etc:/etc/letsencrypt
+      - certbot_var:/var/lib/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: ["/bin/sh", "/docker-entrypoint-custom.sh"]
     networks:
       - backend
 
