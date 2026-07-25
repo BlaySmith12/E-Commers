@@ -26,7 +26,7 @@ from app.audit import log_audit
 router = APIRouter(prefix='/admin', tags=['Admin'])
 
 # Subquery to identify admin role IDs (roles with ADMIN permission bit set)
-_admin_role_ids_subq = select(Role.id).where((Role.permissions & Permission.ADMIN) != 0).scalar_subquery()
+_admin_role_ids_subq = select(Role.id).where(Role.permissions.op('&')(Permission.ADMIN) > 0).scalar_subquery()
 _non_admin_filter = or_(User.role_id.is_(None), User.role_id.notin_(_admin_role_ids_subq))
 
 
