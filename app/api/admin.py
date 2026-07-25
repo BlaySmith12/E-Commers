@@ -454,6 +454,8 @@ async def admin_delete_product(product_id: int, db: AsyncSession = Depends(get_d
         raise HTTPException(status_code=404, detail='Product not found')
     product_name = product.name
     product_sku = product.sku
+    from app.models.catalog import Inventory
+    await db.execute(text("DELETE FROM inventory WHERE product_id = :pid"), {"pid": product_id})
     await db.delete(product)
     await db.commit()
     await log_audit(
@@ -485,6 +487,8 @@ async def bulk_delete_products(
     if not products_to_delete:
         raise HTTPException(status_code=404, detail='No products found with provided IDs')
     
+    # Delete inventory records first (FK constraint)
+    await db.execute(text("DELETE FROM inventory WHERE product_id = ANY(:ids)"), {"ids": product_ids})
     # Delete the products
     delete_stmt = Product.__table__.delete().where(Product.id.in_(product_ids))
     await db.execute(delete_stmt)

@@ -115,7 +115,7 @@ async def initialize_payment(
         payment.customer_email = payload.email
         payment.ip_address = request.client.host if request.client else None
         payment.gateway_response = json.dumps(init_result)
-        payment.updated_at = datetime.now(timezone.utc)
+        payment.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     else:
         payment = Payment(
             order_id=order.id,
@@ -194,7 +194,7 @@ async def verify_payment(
             payment.status = 'Failed'
             payment.failure_reason = verify_result.get('message', 'Verification failed')
             payment.gateway_response = json.dumps(verify_result)
-            payment.updated_at = datetime.now(timezone.utc)
+            payment.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             # Update order
             if payment.order:
                 payment.order.payment_status = 'Failed'
@@ -249,9 +249,9 @@ async def verify_payment(
             payment.paystack_reference = tx_data.get('reference', reference)
             payment.channel = tx_data.get('channel', '')
             payment.payment_method = tx_data.get('channel', 'paystack')
-            payment.paid_at = datetime.fromisoformat(tx_data.get('paid_at', datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00'))
+            payment.paid_at = datetime.fromisoformat(tx_data.get('paid_at', datetime.now(timezone.utc).replace(tzinfo=None).isoformat()).replace('Z', '+00:00'))
             payment.gateway_response = json.dumps(verify_result)
-            payment.updated_at = datetime.now(timezone.utc)
+            payment.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
             # Update order
             order.status = 'Paid'
@@ -280,7 +280,7 @@ async def verify_payment(
         payment.status = 'Failed'
         payment.failure_reason = tx_data.get('gateway_response', 'Payment not successful')
         payment.gateway_response = json.dumps(verify_result)
-        payment.updated_at = datetime.now(timezone.utc)
+        payment.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
         if order:
             order.payment_status = 'Failed'
@@ -550,11 +550,11 @@ async def _process_successful_payment(payment: Payment, event_data: dict, db: As
         try:
             payment.paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
         except (ValueError, TypeError):
-            payment.paid_at = datetime.now(timezone.utc)
+            payment.paid_at = datetime.now(timezone.utc).replace(tzinfo=None)
     else:
-        payment.paid_at = datetime.now(timezone.utc)
+        payment.paid_at = datetime.now(timezone.utc).replace(tzinfo=None)
     payment.gateway_response = json.dumps(event_data)
-    payment.updated_at = datetime.now(timezone.utc)
+    payment.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Update order
     order.status = 'Paid'
@@ -579,7 +579,7 @@ async def _process_failed_payment(payment: Payment, event_data: dict, db: AsyncS
     payment.status = 'Failed'
     payment.failure_reason = event_data.get('gateway_response', 'Payment failed')
     payment.gateway_response = json.dumps(event_data)
-    payment.updated_at = datetime.now(timezone.utc)
+    payment.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Update order
     order_result = await db.execute(select(Order).where(Order.id == payment.order_id))
@@ -598,6 +598,6 @@ async def _process_pending_payment(payment: Payment, event_data: dict, db: Async
 
     payment.status = 'Pending'
     payment.gateway_response = json.dumps(event_data)
-    payment.updated_at = datetime.now(timezone.utc)
+    payment.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     logger.info(f"Webhook: Payment {payment.id} status updated to Pending via webhook")
