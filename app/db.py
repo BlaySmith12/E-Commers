@@ -49,37 +49,37 @@ async def get_db() -> AsyncSession:
 
 async def init_db() -> None:
     """Create all tables (dev convenience). Use migrations in production."""
-    # Import all models so they register on Base.metadata
     from app import models  # noqa: F401
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        # Run migrations for existing tables
-        await conn.execute(text("""
-            ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) DEFAULT 'Pending';
-            ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'GHS';
-            ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount FLOAT DEFAULT 0.0;
-        """))
-        await conn.execute(text("""
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS provider VARCHAR(50) DEFAULT 'paystack';
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS transaction_reference VARCHAR(100);
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS paystack_reference VARCHAR(100);
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS paystack_access_code VARCHAR(200);
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS access_code VARCHAR(200);
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS channel VARCHAR(50);
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS customer_email VARCHAR(256);
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45);
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS gateway_response TEXT;
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP;
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS failure_reason TEXT;
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'GHS';
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_reference VARCHAR(100);
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_amount FLOAT DEFAULT 0.0;
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_reason TEXT;
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS metadata JSONB;
-            ALTER TABLE payments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
-        """))
-    # Create payment_events table if not exists
+
+    order_columns = [
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) DEFAULT 'Pending'",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'GHS'",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount FLOAT DEFAULT 0.0",
+    ]
+    payment_columns = [
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS provider VARCHAR(50) DEFAULT 'paystack'",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS transaction_reference VARCHAR(100)",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS paystack_reference VARCHAR(100)",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS paystack_access_code VARCHAR(200)",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS access_code VARCHAR(200)",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS channel VARCHAR(50)",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS customer_email VARCHAR(256)",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45)",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS gateway_response TEXT",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS failure_reason TEXT",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'GHS'",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_reference VARCHAR(100)",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_amount FLOAT DEFAULT 0.0",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_reason TEXT",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS metadata JSONB",
+        "ALTER TABLE payments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
+    ]
     async with engine.begin() as conn:
+        for stmt in order_columns + payment_columns:
+            await conn.execute(text(stmt))
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS payment_events (
                 id SERIAL PRIMARY KEY,
@@ -90,9 +90,8 @@ async def init_db() -> None:
                 payload JSONB,
                 processed BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT NOW()
-            );
+            )
         """))
-        # Add unique constraint to payments.transaction_reference if not exists
         await conn.execute(text("""
             DO $$ BEGIN
                 ALTER TABLE payments ADD CONSTRAINT uq_payments_transaction_reference UNIQUE (transaction_reference);
