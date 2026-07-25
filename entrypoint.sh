@@ -23,10 +23,14 @@ asyncio.run(check())
 done
 echo "PostgreSQL is ready."
 
-# ─── Run Alembic migrations ───────────────────────────────────────────────────
-echo "Running database migrations..."
-cd /app/migrations && alembic -c alembic.ini upgrade head
-cd /app
+# ─── Create all tables from models ────────────────────────────────────────────
+echo "Creating/verifying database tables..."
+python -c "
+import asyncio
+from app.db import init_db
+asyncio.run(init_db())
+print('  All tables created/verified.')
+"
 echo "Migrations complete."
 
 # ─── Seed initial data (roles, admin user) ────────────────────────────────────
