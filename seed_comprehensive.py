@@ -342,11 +342,11 @@ COUPONS_DATA = [
 ]
 
 HERO_BANNERS_DATA = [
-    ("Premium Plumbing Sale", "Up to 30% off on bathroom fixtures", "/static/images/banners/banner1.jpg", "/collections/best-sellers", "Shop Now", 1),
-    ("Featured Kitchen Appliances", "Upgrade your kitchen with top brands", "/static/images/banners/banner2.jpg", "/categories/kitchen-appliances", "Explore", 2),
-    ("Seasonal Deals", "Save big on water heaters and purifiers", "/static/images/banners/banner3.jpg", "/categories/water-heaters", "View Deals", 3),
-    ("Brand Spotlight: Grohe", "Discover Grohe's premium bathroom range", "/static/images/banners/banner4.jpg", "/brands/grohe", "Learn More", 4),
-    ("New Arrivals", "Check out the latest tools and accessories", "/static/images/banners/banner5.jpg", "/collections/new-arrivals", "See What's New", 5),
+    ("Premium Plumbing Sale", "Up to 30% off on bathroom fixtures", "/static/images/banners/banner1.png", "/collections/best-sellers", "Shop Now", 1),
+    ("Featured Kitchen Appliances", "Upgrade your kitchen with top brands", "/static/images/banners/banner2.png", "/categories/kitchen-appliances", "Explore", 2),
+    ("Seasonal Deals", "Save big on water heaters and purifiers", "/static/images/banners/banner3.png", "/categories/water-heaters", "View Deals", 3),
+    ("Brand Spotlight: Grohe", "Discover Grohe's premium bathroom range", "/static/images/banners/banner4.png", "/brands/grohe", "Learn More", 4),
+    ("New Arrivals", "Check out the latest tools and accessories", "/static/images/banners/banner5.png", "/collections/new-arrivals", "See What's New", 5),
 ]
 
 TESTIMONIALS_DATA = [
@@ -429,7 +429,8 @@ REVIEW_COMMENTS = [
 async def drop_and_create_tables() -> None:
     print("[1/15] Dropping all tables...")
     async with engine.begin() as conn:
-        await conn.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public"))
+        await conn.execute(text("DROP SCHEMA public CASCADE"))
+        await conn.execute(text("CREATE SCHEMA public"))
     print("       Tables dropped.")
     print("[1/15] Creating all tables...")
     await init_db()
@@ -603,7 +604,7 @@ async def seed_products(session: AsyncSession, categories: list, brands: list) -
                     name=f"Color: {color}",
                     sku=f"PN-{sku_prefix}-{color[:3].upper()}",
                     price_modifier=round(random.uniform(-50, 150), 2),
-                    stock=random.randint(5, stock),
+                    stock=random.randint(1, max(1, stock)),
                 ))
 
     print(f"       Created {len(products)} products with images, attributes, and variants.")
