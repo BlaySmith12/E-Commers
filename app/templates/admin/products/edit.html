@@ -1,0 +1,830 @@
+{% extends "admin_base.html" %}
+{% block head %}
+<style>
+.form-section{margin-bottom:0}
+.form-section-header{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:all .2s}
+.form-section-header:hover{background:rgba(255,255,255,.02)}
+.form-section-header h6{margin:0;font-weight:600;font-size:.9rem}
+.form-section-header i.bi-chevron-down{transition:transform .2s;font-size:.75rem;color:var(--text-muted)}
+.form-section-header.collapsed i.bi-chevron-down{transform:rotate(-90deg)}
+.form-section-body{padding:20px;transition:all .25s}
+.form-section-body.collapsed{display:none}
+.preview-img{width:120px;height:120px;object-fit:cover;border-radius:10px;border:2px dashed var(--border-color);transition:all .2s}
+.preview-img:hover{border-color:var(--primary-orange)}
+.existing-img{position:relative;display:inline-block;margin:6px}
+.existing-img img{width:100px;height:100px;object-fit:cover;border-radius:8px;border:2px solid var(--border-color)}
+.existing-img .remove-img{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:#dc3545;border:none;color:#fff;font-size:.65rem;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .2s}
+.existing-img:hover .remove-img{opacity:1}
+.image-slot{position:relative;display:inline-block;margin:6px}
+.image-slot .remove-img{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:#dc3545;border:none;color:#fff;font-size:.65rem;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .2s}
+.image-slot:hover .remove-img{opacity:1}
+.variant-row,.attribute-row{background:rgba(255,255,255,.02);border:1px solid var(--border-color);border-radius:10px;padding:14px;margin-bottom:10px;position:relative}
+.variant-row .remove-btn,.attribute-row .remove-btn{position:absolute;top:10px;right:10px}
+.sidebar-card{background:rgba(255,255,255,.02);border:1px solid var(--border-color);border-radius:12px;overflow:hidden}
+.sidebar-card-header{padding:14px 18px;border-bottom:1px solid var(--border-color);font-weight:600;font-size:.85rem;display:flex;align-items:center;gap:8px}
+.sidebar-card-body{padding:18px}
+.toggle-switch{width:42px;height:22px;background:var(--border-color);border-radius:11px;position:relative;cursor:pointer;transition:all .2s}
+.toggle-switch.active{background:var(--primary-orange)}
+.toggle-switch::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:all .2s}
+.toggle-switch.active::after{left:22px}
+.breadcrumb-custom{background:none;padding:0;margin:0 0 16px 0}
+.breadcrumb-custom .breadcrumb-item{color:var(--text-muted);font-size:.82rem}
+.breadcrumb-custom .breadcrumb-item a{color:var(--primary-orange);text-decoration:none}
+.breadcrumb-custom .breadcrumb-item.active{color:var(--text-muted)}
+.toast-container{position:fixed;top:84px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast-item{padding:12px 20px;border-radius:10px;font-size:.85rem;font-weight:500;color:#fff;min-width:280px;max-width:400px;display:flex;align-items:center;gap:10px;animation:slideInRight .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.toast-success{background:linear-gradient(135deg,#198754,#157347)}
+.toast-error{background:linear-gradient(135deg,#dc3545,#bb2d3b)}
+.toast-info{background:linear-gradient(135deg,#0d6efd,#0b5ed7)}
+@keyframes slideInRight{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.spinner-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(18,16,16,.8);display:flex;align-items:center;justify-content:center;z-index:100;border-radius:12px}
+.spinner-border-custom{width:2.5rem;height:2.5rem;border-width:3px;border-color:var(--primary-orange);border-top-color:transparent}
+.required-dot{color:#dc3545;font-size:.6rem;vertical-align:super}
+.form-label-custom{font-size:.83rem;color:var(--text-muted);margin-bottom:6px;font-weight:500}
+.slug-preview{background:rgba(255,255,255,.04);border:1px solid var(--border-color);border-radius:8px;padding:8px 12px;font-size:.8rem;color:var(--primary-orange);word-break:break-all}
+.preview-card{background:var(--bg-darker);border:1px solid var(--border-color);border-radius:12px;overflow:hidden}
+.preview-card img{width:100%;height:200px;object-fit:cover}
+.preview-card .card-body{padding:14px}
+.timestamp-line{font-size:.78rem;color:var(--text-muted);display:flex;align-items:center;gap:6px}
+@media(max-width:992px){.form-layout{flex-direction:column!important}}
+</style>
+{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="breadcrumb-custom">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/admin">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="/admin/products">Products</a></li>
+        <li class="breadcrumb-item active">Edit Product</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h3 class="fw-bold mb-1">Edit Product: <span id="editProductTitle" class="text-primary-orange">Loading...</span></h3>
+        <p class="text-muted mb-0 small" id="editTimestamps"></p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/admin/products" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back to Products</a>
+        <a href="#" class="btn btn-sm btn-outline-primary" id="viewOnStoreBtn" target="_blank" style="display:none"><i class="bi bi-box-arrow-up-right me-1"></i> View on Store</a>
+    </div>
+</div>
+
+<div class="d-flex gap-4 form-layout" style="position:relative">
+    <div class="spinner-overlay" id="mainSpinner" style="display:none">
+        <div class="spinner-border spinner-border-custom"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-grow-1" style="min-width:0">
+        <!-- General -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-info-circle text-primary-orange"></i>
+                <h6>General</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label-custom">Product Name <span class="required-dot">*</span></label>
+                        <input type="text" class="form-control bg-dark text-light border-secondary" id="fName" required oninput="autoSlug()">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-custom">SKU <span class="required-dot">*</span></label>
+                        <input type="text" class="form-control bg-dark text-light border-secondary" id="fSku" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label-custom">Description</label>
+                        <textarea class="form-control bg-dark text-light border-secondary" id="fDesc" rows="4"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label-custom">URL Slug</label>
+                        <div class="slug-preview" id="slugPreview">—</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label-custom">Status</label>
+                        <div class="d-flex gap-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="status" id="statusActive" value="active" checked>
+                                <label class="form-check-label text-light" for="statusActive" style="font-size:.85rem">Active</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="status" id="statusDraft" value="draft">
+                                <label class="form-check-label text-light" for="statusDraft" style="font-size:.85rem">Draft</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="status" id="statusArchived" value="archived">
+                                <label class="form-check-label text-light" for="statusArchived" style="font-size:.85rem">Archived</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pricing -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-tag text-primary-orange"></i>
+                <h6>Pricing</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label-custom">Price (GHS) <span class="required-dot">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-muted" style="font-size:.85rem">GHS</span>
+                            <input type="number" step="0.01" min="0.01" class="form-control bg-dark text-light border-secondary" id="fPrice" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-custom">Discount Price (GHS)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-muted" style="font-size:.85rem">GHS</span>
+                            <input type="number" step="0.01" min="0" class="form-control bg-dark text-light border-secondary" id="fDiscPrice">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-custom">Tax Class</label>
+                        <select class="form-select bg-dark text-light border-secondary" id="fTaxClass">
+                            <option value="">No Tax</option>
+                            <option value="standard">Standard (15%)</option>
+                            <option value="reduced">Reduced (3%)</option>
+                            <option value="zero">Zero-rated (0%)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-box-seam text-primary-orange"></i>
+                <h6>Inventory</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label-custom">Stock Quantity <span class="required-dot">*</span></label>
+                        <input type="number" min="0" class="form-control bg-dark text-light border-secondary" id="fStock" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label-custom">Low Stock Threshold</label>
+                        <input type="number" min="0" class="form-control bg-dark text-light border-secondary" id="fLowStockThreshold" value="5">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label-custom">Backorders</label>
+                        <select class="form-select bg-dark text-light border-secondary" id="fBackorders">
+                            <option value="no">Don't Allow</option>
+                            <option value="yes">Allow</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label-custom">Stock Status</label>
+                        <select class="form-select bg-dark text-light border-secondary" id="fStockStatus">
+                            <option value="in_stock">In Stock</option>
+                            <option value="out_of_stock">Out of Stock</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Images -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-image text-primary-orange"></i>
+                <h6>Images</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div id="existingImagesContainer" class="d-flex flex-wrap gap-2 mb-3"></div>
+                <div class="mb-3">
+                    <div id="productImageUpload" style="border:2px dashed var(--border-color);border-radius:10px;padding:24px 16px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg-card);">
+                        <i class="bi bi-cloud-arrow-up" style="font-size:2rem;color:var(--primary);display:block;margin-bottom:8px;"></i>
+                        <p style="color:var(--text-secondary);font-size:0.85rem;margin:0;"><strong>Click to upload</strong> or drag & drop multiple images</p>
+                        <p style="color:var(--text-muted);font-size:0.72rem;margin:4px 0 0;">JPG, PNG, WEBP &mdash; Max 16 MB each</p>
+                        <input type="file" id="productImageInput" multiple accept="image/*" style="display:none;">
+                    </div>
+                    <div id="productUploadProgress" style="display:none;margin-top:8px;">
+                        <div class="progress" style="height:4px;background:var(--bg-input);border-radius:2px;">
+                            <div class="progress-bar" style="background:var(--primary);width:0%;transition:width 0.3s;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label-custom">Or paste URL</label>
+                    <div class="input-group input-group-sm">
+                        <input type="url" class="form-control bg-dark text-light border-secondary" id="fImageUrl" placeholder="https://example.com/image.jpg" style="font-size:.82rem;">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" onclick="addImage()"><i class="bi bi-plus-lg"></i></button>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2" id="newImagePreviewContainer"></div>
+            </div>
+        </div>
+
+        <!-- Variants -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-layers text-primary-orange"></i>
+                <h6>Variants</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div id="variantsContainer"></div>
+                <button class="btn btn-sm btn-outline-secondary" type="button" onclick="addVariant()"><i class="bi bi-plus-lg me-1"></i> Add Variant</button>
+            </div>
+        </div>
+
+        <!-- Attributes -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-list-check text-primary-orange"></i>
+                <h6>Attributes</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div id="attributesContainer"></div>
+                <button class="btn btn-sm btn-outline-secondary" type="button" onclick="addAttribute()"><i class="bi bi-plus-lg me-1"></i> Add Attribute</button>
+            </div>
+        </div>
+
+        <!-- SEO -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-search text-primary-orange"></i>
+                <h6>SEO</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label-custom">Meta Title</label>
+                        <input type="text" class="form-control bg-dark text-light border-secondary" id="fMetaTitle" placeholder="SEO title">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom">Meta Description</label>
+                        <textarea class="form-control bg-dark text-light border-secondary" id="fMetaDesc" rows="2" placeholder="Brief description"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-eye text-primary-orange"></i>
+                <h6>Preview</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div class="preview-card" id="productPreview">
+                    <div id="previewImage" style="height:200px;background:var(--bg-darker);display:flex;align-items:center;justify-content:center;color:var(--text-muted)"><i class="bi bi-image fs-1"></i></div>
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-1" id="previewName">Product Name</h6>
+                        <div class="text-muted small mb-2" id="previewSku">SKU: —</div>
+                        <div class="fw-bold" id="previewPrice">GHS 0.00</div>
+                        <div class="text-muted small" id="previewCategory">Category: —</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div style="width:340px;flex-shrink:0" class="d-flex flex-column gap-3">
+        <!-- Publish -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header"><i class="bi bi-send text-primary-orange"></i> Publish</div>
+            <div class="sidebar-card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span style="font-size:.85rem">Status</span>
+                    <span class="badge bg-success bg-opacity-25 text-success rounded-pill px-3 py-1" id="sidebarStatus">Active</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span style="font-size:.85rem">Visibility</span>
+                    <span style="font-size:.85rem;color:var(--primary-orange)">Public</span>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label-custom">Schedule Publish</label>
+                    <input type="datetime-local" class="form-control bg-dark text-light border-secondary" id="fScheduleDate">
+                </div>
+            </div>
+        </div>
+
+        <!-- Category -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header"><i class="bi bi-tag text-primary-orange"></i> Category</div>
+            <div class="sidebar-card-body">
+                <select class="form-select bg-dark text-light border-secondary" id="fCategory">
+                    <option value="">Select Category</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Brand -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header"><i class="bi bi-award text-primary-orange"></i> Brand</div>
+            <div class="sidebar-card-body">
+                <select class="form-select bg-dark text-light border-secondary" id="fBrand">
+                    <option value="">Select Brand</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tags -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header"><i class="bi bi-hash text-primary-orange"></i> Tags</div>
+            <div class="sidebar-card-body">
+                <input type="text" class="form-control bg-dark text-light border-secondary" id="fTags" placeholder="e.g. kitchen, premium">
+                <small class="text-muted" style="font-size:.75rem">Comma-separated</small>
+            </div>
+        </div>
+
+        <!-- Featured -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header"><i class="bi bi-star text-primary-orange"></i> Featured</div>
+            <div class="sidebar-card-body d-flex justify-content-between align-items-center">
+                <span style="font-size:.85rem">Mark as featured</span>
+                <div class="toggle-switch" id="toggleFeatured" onclick="this.classList.toggle('active')"></div>
+            </div>
+        </div>
+
+        <!-- Trending -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header"><i class="bi bi-fire text-primary-orange"></i> Trending</div>
+            <div class="sidebar-card-body d-flex justify-content-between align-items-center">
+                <span style="font-size:.85rem">Mark as trending</span>
+                <div class="toggle-switch" id="toggleTrending" onclick="this.classList.toggle('active')"></div>
+            </div>
+        </div>
+
+        <!-- Timestamps -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header"><i class="bi bi-clock text-primary-orange"></i> Timestamps</div>
+            <div class="sidebar-card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="timestamp-line"><i class="bi bi-calendar-plus"></i> Created</span>
+                    <span class="timestamp-line" id="tsCreated">—</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="timestamp-line"><i class="bi bi-calendar-check"></i> Updated</span>
+                    <span class="timestamp-line" id="tsUpdated">—</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save Buttons -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-body d-flex flex-column gap-2">
+                <button class="btn btn-primary-custom w-100" id="saveBtn" onclick="saveProduct('update')">
+                    <i class="bi bi-check-lg me-1"></i> Update Product
+                </button>
+                <button class="btn btn-outline-secondary w-100" onclick="saveProduct('draft')">
+                    <i class="bi bi-pencil me-1"></i> Save as Draft
+                </button>
+                <a href="/admin/products" class="btn btn-outline-secondary w-100"><i class="bi bi-x-lg me-1"></i> Cancel</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+    const API_BASE = '/api';
+    const PRODUCT_ID = {{ product_id }};
+    let existingImages = [];
+    let newImageUrls = [];
+    let removedImageIds = new Set();
+    let categories = [];
+    let brands = [];
+    let productData = null;
+
+    document.addEventListener('DOMContentLoaded', init);
+
+    async function init() {
+        showSpinner(true);
+        await Promise.all([loadProductData(), loadCategories(), loadBrands()]);
+        showSpinner(false);
+    }
+
+    async function apiFetch(url, opts = {}) {
+        try {
+            const resp = await fetch(API_BASE + url, opts);
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({detail: resp.statusText}));
+                throw new Error(err.detail || 'Request failed');
+            }
+            return await resp.json();
+        } catch (e) {
+            showToast(e.message, 'error');
+            throw e;
+        }
+    }
+
+    async function loadProductData() {
+        try {
+            const data = await apiFetch(`/products/${PRODUCT_ID}`);
+            productData = data;
+            populateForm(data);
+            loadExistingImages(data.images || []);
+            loadExistingVariants(data.variants || []);
+            loadExistingAttributes(data.attributes || []);
+        } catch(e) {
+            showToast('Failed to load product', 'error');
+        }
+    }
+
+    async function loadCategories() {
+        try {
+            const data = await apiFetch('/admin/categories');
+            categories = data;
+            const sel = document.getElementById('fCategory');
+            data.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id; opt.textContent = c.name;
+                sel.appendChild(opt);
+            });
+        } catch(e) {}
+    }
+
+    async function loadBrands() {
+        try {
+            const data = await apiFetch('/admin/brands');
+            brands = data;
+            const sel = document.getElementById('fBrand');
+            data.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.id; opt.textContent = b.name;
+                sel.appendChild(opt);
+            });
+        } catch(e) {}
+    }
+
+    function populateForm(p) {
+        document.getElementById('fName').value = p.name || '';
+        document.getElementById('fSku').value = p.sku || '';
+        document.getElementById('fDesc').value = p.description || '';
+        document.getElementById('fPrice').value = p.price || '';
+        document.getElementById('fDiscPrice').value = p.discount_price || '';
+        document.getElementById('fStock').value = p.stock || 0;
+        if (p.category_id) document.getElementById('fCategory').value = p.category_id;
+        if (p.brand_id) document.getElementById('fBrand').value = p.brand_id;
+
+        // Status
+        const statusRadio = document.querySelector(`input[name="status"][value="${p.status}"]`);
+        if (statusRadio) statusRadio.checked = true;
+
+        // Toggles
+        if (p.is_featured) document.getElementById('toggleFeatured').classList.add('active');
+        if (p.is_trending) document.getElementById('toggleTrending').classList.add('active');
+
+        // Title & link
+        document.getElementById('editProductTitle').textContent = p.name;
+        if (p.slug) {
+            const storeBtn = document.getElementById('viewOnStoreBtn');
+            storeBtn.style.display = 'inline-flex';
+            storeBtn.href = '/product/' + p.slug;
+        }
+
+        // Timestamps
+        if (p.created_at) document.getElementById('tsCreated').textContent = new Date(p.created_at).toLocaleString();
+        document.getElementById('tsUpdated').textContent = 'N/A';
+
+        // Slug preview
+        autoSlug();
+
+        // Update sidebar status badge
+        updateSidebarStatus(p.status);
+
+        // Preview
+        updatePreview();
+    }
+
+    function loadExistingImages(images) {
+        existingImages = images.map(img => ({...img}));
+        renderExistingImages();
+    }
+
+    function renderExistingImages() {
+        const container = document.getElementById('existingImagesContainer');
+        if (existingImages.length === 0) { container.innerHTML = '<div class="text-muted small">No existing images.</div>'; return; }
+        container.innerHTML = existingImages.map((img, i) => `
+            <div class="existing-img">
+                <img src="${escHtml(img.image_url)}" onerror="this.src='https://via.placeholder.com/100x100/1a1a1a/666?text=Error'" alt="${escHtml(img.alt_text||'')}">
+                <button class="remove-img" onclick="removeExistingImage(${i}, ${img.id})"><i class="bi bi-x-lg"></i></button>
+                ${img.is_primary ? '<div style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:var(--primary-orange);color:#fff;font-size:.6rem;padding:2px 8px;border-radius:10px;white-space:nowrap">Primary</div>' : ''}
+            </div>
+        `).join('');
+    }
+
+    window.removeExistingImage = function(idx, id) {
+        if (id) removedImageIds.add(id);
+        existingImages.splice(idx, 1);
+        renderExistingImages();
+    };
+
+    // ---- New Images ----
+    window.addImage = function() {
+        const input = document.getElementById('fImageUrl');
+        const url = input.value.trim();
+        if (!url) return;
+        if (!url.match(/^https?:\/\/.+/)) { showToast('Please enter a valid URL', 'error'); return; }
+        newImageUrls.push({url: url, is_primary: existingImages.length === 0 && newImageUrls.length === 0});
+        renderNewImages();
+        input.value = '';
+    };
+
+    window.removeNewImage = function(idx) {
+        newImageUrls.splice(idx, 1);
+        renderNewImages();
+    };
+
+    function renderNewImages() {
+        const container = document.getElementById('newImagePreviewContainer');
+        if (newImageUrls.length === 0) { container.innerHTML = ''; return; }
+        container.innerHTML = newImageUrls.map((img, i) => `
+            <div class="image-slot">
+                <img src="${escHtml(img.url)}" class="preview-img" onerror="this.src='https://via.placeholder.com/120x120/1a1a1a/666?text=Error'">
+                <button class="remove-img" onclick="removeNewImage(${i})"><i class="bi bi-x-lg"></i></button>
+            </div>
+        `).join('');
+    }
+
+    // ---- File Upload for Product Edit ----
+    (function() {
+        const dropzone = document.getElementById('productImageUpload');
+        const input = document.getElementById('productImageInput');
+        if (!dropzone || !input) return;
+        dropzone.addEventListener('click', () => input.click());
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = 'var(--primary)'; dropzone.style.background = 'var(--primary-ghost)'; });
+        dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = 'var(--border-color)'; dropzone.style.background = 'var(--bg-card)'; });
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault(); dropzone.style.borderColor = 'var(--border-color)'; dropzone.style.background = 'var(--bg-card)';
+            handleProductEditUpload(e.dataTransfer.files);
+        });
+        input.addEventListener('change', () => { if (input.files.length > 0) handleProductEditUpload(input.files); });
+    })();
+
+    async function handleProductEditUpload(files) {
+        const progressEl = document.getElementById('productUploadProgress');
+        const bar = progressEl.querySelector('.progress-bar');
+        progressEl.style.display = '';
+        let done = 0;
+        for (const file of files) {
+            bar.style.width = Math.round((done / files.length) * 100) + '%';
+            const fd = new FormData(); fd.append('file', file); fd.append('folder', 'products'); fd.append('media_type', 'entity_product');
+            try {
+                const resp = await fetch('/api/media/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') }, body: fd });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    newImageUrls.push({ url: data.url, is_primary: existingImages.length === 0 && newImageUrls.length === 0 });
+                }
+            } catch(e) {}
+            done++;
+        }
+        bar.style.width = '100%'; renderNewImages();
+        setTimeout(() => { progressEl.style.display = 'none'; bar.style.width = '0%'; }, 1000);
+    }
+
+    // ---- Variants ----
+    let variantCount = 0;
+    function loadExistingVariants(variants) {
+        variants.forEach(v => {
+            const id = variantCount++;
+            const container = document.getElementById('variantsContainer');
+            const row = document.createElement('div');
+            row.className = 'variant-row';
+            row.id = 'variant-' + id;
+            row.dataset.variantId = v.id || '';
+            row.innerHTML = `
+                <button class="btn btn-sm btn-outline-danger remove-btn" onclick="removeVariant(${id})" style="font-size:.7rem"><i class="bi bi-x-lg"></i></button>
+                <div class="row g-2">
+                    <div class="col-md-5"><label class="form-label-custom">Variant Name</label><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary variant-name" value="${escHtml(v.name)}"></div>
+                    <div class="col-md-3"><label class="form-label-custom">SKU</label><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary variant-sku" value="${escHtml(v.sku||'')}"></div>
+                    <div class="col-md-2"><label class="form-label-custom">Price Mod</label><input type="number" step="0.01" class="form-control form-control-sm bg-dark text-light border-secondary variant-price" value="${v.price_modifier||0}"></div>
+                    <div class="col-md-2"><label class="form-label-custom">Stock</label><input type="number" min="0" class="form-control form-control-sm bg-dark text-light border-secondary variant-stock" value="${v.stock||0}"></div>
+                </div>`;
+            container.appendChild(row);
+        });
+    }
+
+    window.addVariant = function() {
+        const id = variantCount++;
+        const container = document.getElementById('variantsContainer');
+        const row = document.createElement('div');
+        row.className = 'variant-row';
+        row.id = 'variant-' + id;
+        row.innerHTML = `
+            <button class="btn btn-sm btn-outline-danger remove-btn" onclick="removeVariant(${id})" style="font-size:.7rem"><i class="bi bi-x-lg"></i></button>
+            <div class="row g-2">
+                <div class="col-md-5"><label class="form-label-custom">Variant Name</label><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary variant-name" placeholder="e.g. Color: Red"></div>
+                <div class="col-md-3"><label class="form-label-custom">SKU</label><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary variant-sku" placeholder="SKU"></div>
+                <div class="col-md-2"><label class="form-label-custom">Price Mod</label><input type="number" step="0.01" class="form-control form-control-sm bg-dark text-light border-secondary variant-price" value="0"></div>
+                <div class="col-md-2"><label class="form-label-custom">Stock</label><input type="number" min="0" class="form-control form-control-sm bg-dark text-light border-secondary variant-stock" value="0"></div>
+            </div>`;
+        container.appendChild(row);
+    };
+
+    window.removeVariant = function(id) {
+        const el = document.getElementById('variant-' + id);
+        if (el) el.remove();
+    };
+
+    // ---- Attributes ----
+    let attrCount = 0;
+    function loadExistingAttributes(attrs) {
+        attrs.forEach(a => {
+            const id = attrCount++;
+            const container = document.getElementById('attributesContainer');
+            const row = document.createElement('div');
+            row.className = 'attribute-row';
+            row.id = 'attr-' + id;
+            row.dataset.attrId = a.id || '';
+            row.innerHTML = `
+                <button class="btn btn-sm btn-outline-danger remove-btn" onclick="removeAttribute(${id})" style="font-size:.7rem"><i class="bi bi-x-lg"></i></button>
+                <div class="row g-2">
+                    <div class="col-md-5"><label class="form-label-custom">Name</label><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary attr-name" value="${escHtml(a.name)}"></div>
+                    <div class="col-md-7"><label class="form-label-custom">Value</label><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary attr-value" value="${escHtml(a.value)}"></div>
+                </div>`;
+            container.appendChild(row);
+        });
+    }
+
+    window.addAttribute = function() {
+        const id = attrCount++;
+        const container = document.getElementById('attributesContainer');
+        const row = document.createElement('div');
+        row.className = 'attribute-row';
+        row.id = 'attr-' + id;
+        row.innerHTML = `
+            <button class="btn btn-sm btn-outline-danger remove-btn" onclick="removeAttribute(${id})" style="font-size:.7rem"><i class="bi bi-x-lg"></i></button>
+            <div class="row g-2">
+                <div class="col-md-5"><label class="form-label-custom">Name</label><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary attr-name" placeholder="e.g. Material"></div>
+                <div class="col-md-7"><label class="form-label-custom">Value</label><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary attr-value" placeholder="e.g. Stainless Steel"></div>
+            </div>`;
+        container.appendChild(row);
+    };
+
+    window.removeAttribute = function(id) {
+        const el = document.getElementById('attr-' + id);
+        if (el) el.remove();
+    };
+
+    // ---- Helpers ----
+    window.autoSlug = function() {
+        const name = document.getElementById('fName').value;
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        document.getElementById('slugPreview').textContent = slug || '—';
+        updatePreview();
+    };
+
+    window.toggleSection = function(header) {
+        const body = header.nextElementSibling;
+        header.classList.toggle('collapsed');
+        body.classList.toggle('collapsed');
+    };
+
+    function updateSidebarStatus(status) {
+        const labels = {active: 'Active', draft: 'Draft', archived: 'Archived'};
+        const colors = {active: 'text-success', draft: 'text-secondary', archived: 'text-danger'};
+        const bgColors = {active: 'bg-success', draft: 'bg-secondary', archived: 'bg-danger'};
+        const badge = document.getElementById('sidebarStatus');
+        badge.textContent = labels[status] || 'Active';
+        badge.className = `badge rounded-pill px-3 py-1 bg-opacity-25 ${bgColors[status]||'bg-success'} ${colors[status]||'text-success'}`;
+    }
+
+    document.querySelectorAll('input[name="status"]').forEach(r => {
+        r.addEventListener('change', function() { updateSidebarStatus(this.value); });
+    });
+
+    // ---- Preview ----
+    function updatePreview() {
+        if (!productData) return;
+        const name = document.getElementById('fName').value || productData.name;
+        const sku = document.getElementById('fSku').value || productData.sku;
+        const price = document.getElementById('fPrice').value || productData.price;
+        const catId = document.getElementById('fCategory').value;
+        const catName = catId ? (categories.find(c => c.id == catId)?.name || '—') : '—';
+        const img = existingImages.length > 0 ? existingImages[0].image_url : (newImageUrls.length > 0 ? newImageUrls[0].url : '');
+
+        document.getElementById('previewName').textContent = name;
+        document.getElementById('previewSku').textContent = 'SKU: ' + sku;
+        document.getElementById('previewPrice').textContent = 'GHS ' + parseFloat(price||0).toFixed(2);
+        document.getElementById('previewCategory').textContent = 'Category: ' + catName;
+
+        const imgContainer = document.getElementById('previewImage');
+        if (img) {
+            imgContainer.innerHTML = `<img src="${escHtml(img)}" style="width:100%;height:200px;object-fit:cover" onerror="this.style.display='none'">`;
+        }
+    }
+
+    // Listen for changes on key fields to update preview
+    ['fName','fPrice','fCategory'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', updatePreview);
+        document.getElementById(id)?.addEventListener('change', updatePreview);
+    });
+
+    // ---- Save ----
+    window.saveProduct = async function(mode) {
+        const name = document.getElementById('fName').value.trim();
+        const sku = document.getElementById('fSku').value.trim();
+        const price = parseFloat(document.getElementById('fPrice').value);
+
+        if (!name) { showToast('Product name is required', 'error'); document.getElementById('fName').focus(); return; }
+        if (!sku) { showToast('SKU is required', 'error'); document.getElementById('fSku').focus(); return; }
+        if (!price || price <= 0) { showToast('Valid price is required', 'error'); document.getElementById('fPrice').focus(); return; }
+
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const status = mode === 'draft' ? 'draft' : document.querySelector('input[name="status"]:checked').value;
+        const discountPrice = parseFloat(document.getElementById('fDiscPrice').value) || null;
+        const categoryId = document.getElementById('fCategory').value ? parseInt(document.getElementById('fCategory').value) : null;
+        const brandId = document.getElementById('fBrand').value ? parseInt(document.getElementById('fBrand').value) : null;
+
+        // Build images array (existing kept + new)
+        const allImages = [
+            ...existingImages.map(img => ({image_url: img.image_url, is_primary: img.is_primary, alt_text: img.alt_text})),
+            ...newImageUrls.map(img => ({image_url: img.url, is_primary: img.is_primary, alt_text: name}))
+        ];
+
+        // Build variants
+        const variants = [];
+        document.querySelectorAll('.variant-row').forEach(row => {
+            const vName = row.querySelector('.variant-name').value.trim();
+            if (vName) {
+                variants.push({
+                    name: vName,
+                    sku: row.querySelector('.variant-sku').value.trim() || null,
+                    price_modifier: parseFloat(row.querySelector('.variant-price').value) || 0,
+                    stock: parseInt(row.querySelector('.variant-stock').value) || 0
+                });
+            }
+        });
+
+        // Build attributes
+        const attributes = [];
+        document.querySelectorAll('.attribute-row').forEach(row => {
+            const aName = row.querySelector('.attr-name').value.trim();
+            const aValue = row.querySelector('.attr-value').value.trim();
+            if (aName && aValue) attributes.push({name: aName, value: aValue});
+        });
+
+        const payload = {
+            name: name,
+            sku: sku,
+            slug: slug,
+            price: price,
+            discount_price: discountPrice,
+            stock: parseInt(document.getElementById('fStock').value) || 0,
+            description: document.getElementById('fDesc').value.trim() || null,
+            is_featured: document.getElementById('toggleFeatured').classList.contains('active'),
+            is_trending: document.getElementById('toggleTrending').classList.contains('active'),
+            status: status,
+            category_id: categoryId,
+            brand_id: brandId,
+        };
+
+        const btn = document.getElementById('saveBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Updating...';
+        document.getElementById('mainSpinner').style.display = 'flex';
+
+        try {
+            // Update product fields
+            await apiFetch(`/admin/products/${PRODUCT_ID}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            showToast('Product updated successfully!', 'success');
+            setTimeout(() => { window.location.href = '/admin/products'; }, 1200);
+        } catch(e) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Update Product';
+            document.getElementById('mainSpinner').style.display = 'none';
+        }
+    };
+
+    function escHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+    function showSpinner(show) { document.getElementById('mainSpinner').style.display = show ? 'flex' : 'none'; }
+
+    function showToast(msg, type) {
+        const c = document.getElementById('toastContainer');
+        const t = document.createElement('div');
+        t.className = 'toast-item toast-' + type;
+        t.innerHTML = `<i class="bi bi-${type==='success'?'check-circle-fill':type==='error'?'exclamation-circle-fill':'info-circle-fill'}"></i><span>${msg}</span>`;
+        c.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(50px)'; t.style.transition = 'all .3s'; setTimeout(() => t.remove(), 300); }, 3500);
+    }
+})();
+</script>
+{% endblock %}

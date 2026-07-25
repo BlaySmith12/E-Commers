@@ -1,0 +1,21 @@
+#!/bin/bash
+set -e
+
+cd "$(dirname "$0")"
+
+echo "Starting PostgreSQL..."
+if command -v pg_ctl &> /dev/null; then
+    pg_ctl start -D "$(brew --prefix 2>/dev/null || echo /usr/local)/var/postgresql@16" 2>/dev/null || \
+    net start postgresql-x64-16 2>/dev/null || \
+    echo "  (PostgreSQL may already be running)"
+elif command -v net &> /dev/null; then
+    net start postgresql-x64-16 2>/dev/null || echo "  (PostgreSQL may already be running)"
+fi
+
+if [ -d "venv" ]; then
+    echo "Activating virtual environment..."
+    source venv/Scripts/activate
+fi
+
+echo "Starting uvicorn..."
+python manage.py

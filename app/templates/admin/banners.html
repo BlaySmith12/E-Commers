@@ -1,0 +1,390 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">Hero Banners</h3>
+        <p class="text-muted mb-0">Manage homepage hero banners and slides.</p>
+    </div>
+    <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#bannerModal" onclick="resetForm()">
+        <i class="bi bi-plus-lg me-1"></i> Add Banner
+    </button>
+</div>
+
+<div class="card card-custom p-0 overflow-hidden">
+    <div class="p-3 border-bottom border-secondary bg-dark bg-opacity-50 d-flex justify-content-between align-items-center">
+        <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Search banners..." id="searchInput" style="width: 250px;" oninput="filterBanners()">
+        <select class="form-select form-select-sm bg-dark text-light border-secondary" id="activeFilter" onchange="filterBanners()" style="width: 130px;">
+            <option value="">All Active</option>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+        </select>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0 align-middle" style="--bs-table-bg: transparent;">
+            <thead>
+                <tr>
+                    <th class="text-muted fw-normal border-secondary px-3 py-3" style="width:50px;"></th>
+                    <th class="text-muted fw-normal border-secondary">Title</th>
+                    <th class="text-muted fw-normal border-secondary">Subtitle</th>
+                    <th class="text-muted fw-normal border-secondary">Image</th>
+                    <th class="text-muted fw-normal border-secondary">Button Text</th>
+                    <th class="text-muted fw-normal border-secondary">Position</th>
+                    <th class="text-muted fw-normal border-secondary">Active</th>
+                    <th class="text-muted fw-normal border-secondary text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="bannersTable">
+                {% if banners %}
+                    {% for b in banners %}
+                    <tr data-active="{{ b.is_active|lower }}" data-search="{{ (b.title ~ ' ' ~ b.subtitle ~ ' ' ~ b.button_text)|lower }}" data-position="{{ b.position }}">
+                        <td class="border-secondary px-3 text-muted">
+                            <i class="bi bi-grip-vertical cursor-pointer"></i>
+                        </td>
+                        <td class="border-secondary text-light fw-bold">{{ b.title }}</td>
+                        <td class="border-secondary text-muted small">{{ b.subtitle or '-' }}</td>
+                        <td class="border-secondary">
+                            {% if b.image_url %}
+                            <img src="{{ b.image_url }}" alt="" style="width: 80px; height: 40px; object-fit: cover; border-radius: 4px;" class="border border-secondary">
+                            {% else %}
+                            <span class="text-muted">No image</span>
+                            {% endif %}
+                        </td>
+                        <td class="border-secondary text-light">{{ b.button_text or '-' }}</td>
+                        <td class="border-secondary">
+                            <span class="badge bg-secondary rounded-pill px-3 py-2">{{ b.position }}</span>
+                        </td>
+                        <td class="border-secondary">
+                            <button class="btn btn-sm {{ 'btn-outline-success' if b.is_active else 'btn-outline-secondary' }} rounded-pill px-3" onclick="toggleActive({{ b.id }}, {{ b.is_active|lower }})">
+                                {{ 'Active' if b.is_active else 'Inactive' }}
+                            </button>
+                        </td>
+                        <td class="border-secondary text-end pe-4">
+                            <button class="btn btn-sm btn-outline-info rounded-circle me-1" style="width:32px;height:32px;padding:0;" onclick="moveBanner({{ b.id }}, {{ b.position }}, -1)" title="Move Up"><i class="bi bi-arrow-up"></i></button>
+                            <button class="btn btn-sm btn-outline-info rounded-circle me-1" style="width:32px;height:32px;padding:0;" onclick="moveBanner({{ b.id }}, {{ b.position }}, 1)" title="Move Down"><i class="bi bi-arrow-down"></i></button>
+                            <button class="btn btn-sm btn-outline-primary rounded-circle me-1" style="width:32px;height:32px;padding:0;" onclick="editBanner({{ b.id }}, '{{ b.title|replace("'", "\\'") }}', '{{ (b.subtitle or '')|replace("'", "\\'") }}', '{{ (b.image_url or '')|replace("'", "\\'") }}', '{{ (b.button_text or '')|replace("'", "\\'") }}', '{{ (b.link_url or '')|replace("'", "\\'") }}', {{ b.position }}, {{ b.is_active|lower }})"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-outline-danger rounded-circle" style="width:32px;height:32px;padding:0;" onclick="deleteBanner({{ b.id }})"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted border-secondary">
+                        <i class="bi bi-image fs-1 d-block mb-3 opacity-50"></i>
+                        No banners found. <a href="#" class="text-primary-orange" onclick="openAddModal()">Add your first banner.</a>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="bannerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white" id="modalTitle">Add Banner</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="bannerForm" onsubmit="saveBanner(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="banId">
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label text-light">Title</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="banTitle" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label text-light">Position</label>
+                            <input type="number" class="form-control bg-dark text-light border-secondary" id="banPosition" min="0" value="0" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light">Subtitle</label>
+                        <input type="text" class="form-control bg-dark text-light border-secondary" id="banSubtitle">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light">Description</label>
+                        <textarea class="form-control bg-dark text-light border-secondary" id="banDescription" rows="2" placeholder="Optional description..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light fw-semibold">Banner Images</label>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small">Desktop Image (1920x700)</label>
+                                <div id="banDesktopUpload"></div>
+                                <input type="hidden" id="banDesktopImage" value="">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small">Tablet Image (1200x800)</label>
+                                <div id="banTabletUpload"></div>
+                                <input type="hidden" id="banTabletImage" value="">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small">Mobile Image (768x1000)</label>
+                                <div id="banMobileUpload"></div>
+                                <input type="hidden" id="banMobileImage" value="">
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <label class="form-label text-light small">Or use single image URL (fallback)</label>
+                            <input type="url" class="form-control bg-dark text-light border-secondary form-control-sm" id="banImage" placeholder="https://...">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label text-light">Primary Button Text</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="banBtnText" placeholder="Shop Now">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label text-light">Primary Button URL</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="banBtnLink" placeholder="/shop">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label text-light">Open In</label>
+                            <select class="form-select bg-dark text-light border-secondary" id="banOpenNewTab">
+                                <option value="false">Same Tab</option>
+                                <option value="true">New Tab</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-light">Secondary Button Text</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="banSecBtnText" placeholder="Learn More">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-light">Secondary Button URL</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="banSecBtnLink" placeholder="/about">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-light">Start Date (Optional)</label>
+                            <input type="datetime-local" class="form-control bg-dark text-light border-secondary" id="banStartDate">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-light">End Date (Optional)</label>
+                            <input type="datetime-local" class="form-control bg-dark text-light border-secondary" id="banEndDate">
+                        </div>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="banActive" checked>
+                        <label class="form-check-label text-light">Active</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom" id="saveBtn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API = '/api/hero-banners';
+let editingId = null;
+
+function resetForm() {
+    editingId = null;
+    document.getElementById('bannerForm').reset();
+    document.getElementById('banId').value = '';
+    document.getElementById('banDesktopImage').value = '';
+    document.getElementById('banTabletImage').value = '';
+    document.getElementById('banMobileImage').value = '';
+    document.getElementById('modalTitle').textContent = 'Add Banner';
+    document.getElementById('saveBtn').textContent = 'Save';
+    document.getElementById('banActive').checked = true;
+    document.querySelectorAll('#bannerModal .asaah-upload-zone').forEach(zone => {
+        const uid = zone.id.replace('_zone', '');
+        const preview = document.getElementById(uid + '_preview');
+        const ph = document.getElementById(uid + '_ph');
+        if (preview) preview.style.display = 'none';
+        if (ph) ph.style.display = '';
+    });
+}
+
+function openAddModal() {
+    resetForm();
+    new bootstrap.Modal(document.getElementById('bannerModal')).show();
+}
+
+function editBanner(id, title, subtitle, imageUrl, btnText, btnLink, position, active) {
+    editingId = id;
+    document.getElementById('banId').value = id;
+    document.getElementById('banTitle').value = title;
+    document.getElementById('banSubtitle').value = subtitle;
+    document.getElementById('banImage').value = imageUrl;
+    document.getElementById('banBtnText').value = btnText;
+    document.getElementById('banBtnLink').value = btnLink;
+    document.getElementById('banPosition').value = position;
+    document.getElementById('banActive').checked = active;
+
+    if (imageUrl) {
+        document.querySelectorAll('#bannerModal .asaah-upload-zone').forEach(zone => {
+            const uid = zone.id.replace('_zone', '');
+            document.getElementById(uid + '_previewImg').src = imageUrl;
+            document.getElementById(uid + '_preview').style.display = '';
+            document.getElementById(uid + '_ph').style.display = 'none';
+        });
+    }
+
+    document.getElementById('modalTitle').textContent = 'Edit Banner';
+    document.getElementById('saveBtn').textContent = 'Update';
+    new bootstrap.Modal(document.getElementById('bannerModal')).show();
+}
+
+async function saveBanner(e) {
+    e.preventDefault();
+    const payload = {
+        title: document.getElementById('banTitle').value,
+        subtitle: document.getElementById('banSubtitle').value,
+        description: document.getElementById('banDescription').value || null,
+        image_url: document.getElementById('banImage').value || null,
+        desktop_image_url: document.getElementById('banDesktopImage').value || null,
+        tablet_image_url: document.getElementById('banTabletImage').value || null,
+        mobile_image_url: document.getElementById('banMobileImage').value || null,
+        button_text: document.getElementById('banBtnText').value || null,
+        link_url: document.getElementById('banBtnLink').value || null,
+        secondary_button_text: document.getElementById('banSecBtnText').value || null,
+        secondary_button_url: document.getElementById('banSecBtnLink').value || null,
+        open_new_tab: document.getElementById('banOpenNewTab').value === 'true',
+        start_date: document.getElementById('banStartDate').value || null,
+        end_date: document.getElementById('banEndDate').value || null,
+        position: parseInt(document.getElementById('banPosition').value),
+        is_active: document.getElementById('banActive').checked,
+    };
+    const method = editingId ? 'PUT' : 'POST';
+    const url = editingId ? `${API}/${editingId}` : API;
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) { alert('Error saving banner'); return; }
+        bootstrap.Modal.getInstance(document.getElementById('bannerModal')).hide();
+        location.reload();
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+
+async function deleteBanner(id) {
+    if (!confirm('Delete this banner?')) return;
+    try {
+        const res = await fetch(`${API}/${id}`, { method: 'DELETE' });
+        if (!res.ok) { alert('Error deleting banner'); return; }
+        location.reload();
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+
+async function toggleActive(id, current) {
+    try {
+        await fetch(`${API}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: !current }),
+        });
+        location.reload();
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+
+async function moveBanner(id, currentPos, direction) {
+    const newPos = currentPos + direction;
+    if (newPos < 0) return;
+    try {
+        await fetch(`${API}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ position: newPos }),
+        });
+        location.reload();
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+
+function filterBanners() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const active = document.getElementById('activeFilter').value;
+    document.querySelectorAll('#bannersTable tr[data-search]').forEach(tr => {
+        const matchSearch = !search || tr.dataset.search.includes(search);
+        const matchActive = !active || tr.dataset.active === active;
+        tr.style.display = (matchSearch && matchActive) ? '' : 'none';
+    });
+}
+
+function createBanUploader(containerId, inputId, folder, callback) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const uid = 'upl_' + Math.random().toString(36).substr(2, 8);
+    container.innerHTML = `
+        <div class="asaah-upload-zone" id="${uid}_zone" style="border:2px dashed var(--border-color);border-radius:8px;padding:16px 8px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg-card);min-height:100px;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+            <div id="${uid}_preview" style="display:none;position:relative;width:100%;">
+                <img id="${uid}_previewImg" style="width:100%;height:80px;object-fit:cover;border-radius:4px;" src="" alt="">
+                <button type="button" class="btn btn-sm" style="position:absolute;top:2px;right:2px;background:rgba(220,53,69,0.9);color:#fff;border:none;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;" onclick="event.stopPropagation();document.getElementById('${uid}_preview').style.display='none';document.getElementById('${uid}_ph').style.display='';document.getElementById('${inputId}').value='';">&times;</button>
+            </div>
+            <div id="${uid}_ph">
+                <i class="bi bi-cloud-arrow-up" style="font-size:1.2rem;color:var(--primary);display:block;margin-bottom:4px;"></i>
+                <p style="color:var(--text-secondary);font-size:0.72rem;margin:0;">Upload</p>
+            </div>
+            <input type="file" id="${uid}_input" accept="image/*" style="display:none;">
+        </div>
+        <div id="${uid}_progress" style="display:none;margin-top:4px;">
+            <div class="progress" style="height:3px;background:var(--bg-input);border-radius:2px;">
+                <div class="progress-bar" style="background:var(--primary);width:0%;transition:width 0.3s;border-radius:2px;"></div>
+            </div>
+        </div>`;
+    const zone = document.getElementById(uid + '_zone');
+    const input = document.getElementById(uid + '_input');
+    zone.addEventListener('click', () => input.click());
+    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.style.borderColor = 'var(--primary)'; });
+    zone.addEventListener('dragleave', () => { zone.style.borderColor = 'var(--border-color)'; });
+    zone.addEventListener('drop', (e) => {
+        e.preventDefault(); zone.style.borderColor = 'var(--border-color)';
+        if (e.dataTransfer.files.length > 0) uploadBanFile(uid, inputId, folder, e.dataTransfer.files[0], callback);
+    });
+    input.addEventListener('change', () => { if (input.files.length > 0) uploadBanFile(uid, inputId, folder, input.files[0], callback); });
+}
+
+async function uploadBanFile(uid, inputId, folder, file, callback) {
+    const progressEl = document.getElementById(uid + '_progress');
+    const bar = progressEl.querySelector('.progress-bar');
+    progressEl.style.display = ''; bar.style.width = '30%';
+    const fd = new FormData(); fd.append('file', file); fd.append('folder', folder); fd.append('media_type', 'entity_hero_banner');
+    try {
+        const resp = await fetch('/api/media/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') }, body: fd });
+        bar.style.width = '80%';
+        if (resp.ok) {
+            const data = await resp.json(); bar.style.width = '100%';
+            document.getElementById(uid + '_previewImg').src = data.url;
+            document.getElementById(uid + '_preview').style.display = '';
+            document.getElementById(uid + '_ph').style.display = 'none';
+            setTimeout(() => { progressEl.style.display = 'none'; bar.style.width = '0%'; }, 800);
+            if (callback) callback(data.url);
+        } else { const err = await resp.json(); alert(err.detail || 'Upload failed'); progressEl.style.display = 'none'; }
+    } catch(e) { alert('Upload failed'); progressEl.style.display = 'none'; }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    createBanUploader('banDesktopUpload', 'banDesktopImage', 'banners', function(url) {
+        document.getElementById('banDesktopImage').value = url;
+    });
+    createBanUploader('banTabletUpload', 'banTabletImage', 'banners', function(url) {
+        document.getElementById('banTabletImage').value = url;
+    });
+    createBanUploader('banMobileUpload', 'banMobileImage', 'banners', function(url) {
+        document.getElementById('banMobileImage').value = url;
+    });
+});
+</script>
+{% endblock %}

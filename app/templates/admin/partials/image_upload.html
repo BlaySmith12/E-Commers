@@ -1,0 +1,190 @@
+/**
+ * ASAH'S PRIMENEST — Shared Image Upload Component
+ * Provides reusable upload functions for any admin page.
+ *
+ * Usage in template:
+ *   {% include "admin/partials/image_upload.html" %}
+ *   or include the JS/CSS inline.
+ */
+(function() {
+    window.ASAHUpload = {
+
+        API: '/api/media',
+
+        getToken() {
+            return localStorage.getItem('admin_token') || '';
+        },
+
+        headers() {
+            return { 'Authorization': 'Bearer ' + this.getToken() };
+        },
+
+        /**
+         * Create an image upload zone element.
+         * @param {Object} opts - { container, entityType, entityId, field, folder, onUpload, multiple, accept }
+         */
+        createUploader(opts) {
+            const container = typeof opts.container === 'string'
+                ? document.querySelector(opts.container) : opts.container;
+            if (!container) return;
+
+            const id = 'upload_' + Math.random().toString(36).substr(2, 6);
+            const multiple = opts.multiple || false;
+            const accept = opts.accept || 'image/*';
+
+            container.innerHTML = `
+                <div class="asaah-upload-zone" id="${id}_zone" style="
+                    border: 2px dashed var(--border-color);
+                    border-radius: 10px;
+                    padding: 24px 16px;
+                    text-align: center;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    background: var(--bg-card);
+                    position: relative;
+                    overflow: hidden;
+                ">
+                    <div class="asaah-upload-preview" id="${id}_preview" style="display:none;position:relative;">
+                        <img id="${id}_previewImg" style="max-width:100%;max-height:200px;border-radius:8px;object-fit:contain;" src="" alt="">
+                        <button class="btn btn-sm asaah-remove-btn" style="
+                            position:absolute;top:6px;right:6px;
+                            background:rgba(220,53,69,0.9);color:#fff;border:none;
+                            width:28px;height:28px;border-radius:50%;display:flex;
+                            align-items:center;justify-content:center;font-size:0.8rem;
+                        " onclick="event.stopPropagation();ASAHUpload.removePreview('${id}')">&times;</button>
+                    </div>
+                    <div class="asaah-upload-placeholder" id="${id}_placeholder">
+                        <i class="bi bi-cloud-arrow-up" style="font-size:2rem;color:var(--primary);display:block;margin-bottom:8px;"></i>
+                        <p style="color:var(--text-secondary);font-size:0.85rem;margin:0;">
+                            <strong>Click to upload</strong> or drag & drop
+                        </p>
+                        <p style="color:var(--text-muted);font-size:0.72rem;margin:4px 0 0;">JPG, PNG, WEBP &mdash; Max 16 MB</p>
+                    </div>
+                    <input type="file" id="${id}_input" accept="${accept}" ${multiple ? 'multiple' : ''} style="display:none;">
+                </div>
+                <div id="${id}_progress" style="display:none;margin-top:8px;">
+                    <div class="progress" style="height:4px;background:var(--bg-input);border-radius:2px;">
+                        <div class="progress-bar" style="background:var(--primary);width:0%;transition:width 0.3s;border-radius:2px;"></div>
+                    </div>
+                </div>
+                <div id="${id}_status" style="margin-top:4px;font-size:0.78rem;"></div>
+            `;
+
+            const zone = document.getElementById(id + '_zone');
+            const input = document.getElementById(id + '_input');
+
+            zone.addEventListener('click', () => input.click());
+            zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.style.borderColor = 'var(--primary)'; zone.style.background = 'var(--primary-ghost)'; });
+            zone.addEventListener('dragleave', () => { zone.style.borderColor = 'var(--border-color)'; zone.style.background = 'var(--bg-card)'; });
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.style.borderColor = 'var(--border-color)';
+                zone.style.background = 'var(--bg-card)';
+                if (e.dataTransfer.files.length > 0) {
+                    this.uploadFiles(id, e.dataTransfer.files, opts);
+                }
+            });
+
+            input.addEventListener('change', () => {
+                if (input.files.length > 0) {
+                    this.uploadFiles(id, input.files, opts);
+                }
+            });
+
+            return { id, zone, input };
+        },
+
+        async uploadFiles(id, files, opts) {
+            const progressEl = document.getElementById(id + '_progress');
+            const statusEl = document.getElementById(id + '_status');
+            const bar = progressEl.querySelector('.progress-bar');
+            progressEl.style.display = '';
+
+            let done = 0;
+            const total = files.length;
+            const results = [];
+
+            for (const file of files) {
+                bar.style.width = Math.round((done / total) * 100) + '%';
+                statusEl.textContent = `Uploading ${done + 1}/${total}: ${file.name}`;
+                statusEl.style.color = 'var(--text-muted)';
+
+                const fd = new FormData();
+                fd.append('file', file);
+                fd.append('folder', opts.folder || 'uploads');
+                fd.append('media_type', opts.mediaType || 'image');
+                if (opts.entityType) fd.append('entity_type', opts.entityType);
+                if (opts.entityId) fd.append('entity_id', opts.entityId);
+                if (opts.field) fd.append('field', opts.field);
+
+                try {
+                    let url;
+                    if (opts.entityType && opts.entityId) {
+                        url = this.API + '/entity-upload';
+                    } else {
+                        url = this.API + '/upload';
+                    }
+
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: this.headers(),
+                        body: fd,
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        results.push(data);
+                        if (!opts.multiple) {
+                            this.showPreview(id, data.url);
+                        }
+                    } else {
+                        const err = await res.json();
+                        statusEl.textContent = err.detail || 'Upload failed';
+                        statusEl.style.color = '#dc3545';
+                    }
+                } catch(e) {
+                    statusEl.textContent = 'Upload error';
+                    statusEl.style.color = '#dc3545';
+                }
+                done++;
+            }
+
+            bar.style.width = '100%';
+            statusEl.textContent = `${total} file(s) uploaded`;
+            statusEl.style.color = '#198754';
+            setTimeout(() => { progressEl.style.display = 'none'; bar.style.width = '0%'; }, 2000);
+
+            if (opts.onUpload) {
+                opts.onUpload(results);
+            }
+        },
+
+        showPreview(id, url) {
+            const preview = document.getElementById(id + '_preview');
+            const img = document.getElementById(id + '_previewImg');
+            const placeholder = document.getElementById(id + '_placeholder');
+            img.src = url;
+            preview.style.display = '';
+            placeholder.style.display = 'none';
+        },
+
+        removePreview(id) {
+            const preview = document.getElementById(id + '_preview');
+            const placeholder = document.getElementById(id + '_placeholder');
+            const input = document.getElementById(id + '_input');
+            preview.style.display = 'none';
+            placeholder.style.display = '';
+            input.value = '';
+        },
+
+        async loadMediaPicker(opts) {
+            const params = new URLSearchParams({ limit: '50', sort: 'newest' });
+            if (opts.folder) params.set('folder', opts.folder);
+            try {
+                const res = await fetch(this.API + '?' + params.toString(), { headers: this.headers() });
+                if (res.ok) return await res.json();
+            } catch(e) {}
+            return [];
+        }
+    };
+})();

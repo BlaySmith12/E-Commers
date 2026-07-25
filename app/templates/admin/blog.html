@@ -1,0 +1,236 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">Blog Posts</h3>
+        <p class="text-muted mb-0">Create and manage blog content.</p>
+    </div>
+    <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#blogModal" onclick="resetForm()">
+        <i class="bi bi-plus-lg me-1"></i> New Post
+    </button>
+</div>
+
+<div class="card card-custom p-0 overflow-hidden">
+    <div class="p-3 border-bottom border-secondary bg-dark bg-opacity-50 d-flex justify-content-between align-items-center">
+        <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Search posts..." id="searchInput" style="width: 250px;" oninput="filterPosts()">
+        <select class="form-select form-select-sm bg-dark text-light border-secondary" id="statusFilter" onchange="filterPosts()" style="width: 140px;">
+            <option value="">All Status</option>
+            <option value="true">Published</option>
+            <option value="false">Draft</option>
+        </select>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0 align-middle" style="--bs-table-bg: transparent;">
+            <thead>
+                <tr>
+                    <th class="text-muted fw-normal border-secondary px-3 py-3">ID</th>
+                    <th class="text-muted fw-normal border-secondary">Title</th>
+                    <th class="text-muted fw-normal border-secondary">Slug</th>
+                    <th class="text-muted fw-normal border-secondary">Author</th>
+                    <th class="text-muted fw-normal border-secondary">Status</th>
+                    <th class="text-muted fw-normal border-secondary">Created</th>
+                    <th class="text-muted fw-normal border-secondary text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="blogTable">
+                {% if posts %}
+                    {% for p in posts %}
+                    <tr data-published="{{ p.is_published|lower }}" data-search="{{ (p.title ~ ' ' ~ (p.author or ''))|lower }}">
+                        <td class="border-secondary px-3 text-muted">{{ p.id }}</td>
+                        <td class="border-secondary text-light fw-bold">{{ p.title }}</td>
+                        <td class="border-secondary text-muted small">{{ p.slug }}</td>
+                        <td class="border-secondary text-muted">{{ p.author or '-' }}</td>
+                        <td class="border-secondary">
+                            {% if p.is_published %}
+                            <span class="badge bg-success rounded-pill px-3 py-2">Published</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark rounded-pill px-3 py-2">Draft</span>
+                            {% endif %}
+                        </td>
+                        <td class="border-secondary text-muted small">{{ p.created_at.strftime('%Y-%m-%d') if p.created_at else '-' }}</td>
+                        <td class="border-secondary text-end pe-4">
+                            <button class="btn btn-sm btn-outline-info rounded-circle me-1" style="width:32px;height:32px;padding:0;" onclick="togglePublish({{ p.id }}, {{ p.is_published|lower }})" title="{{ 'Unpublish' if p.is_published else 'Publish' }}"><i class="bi {{ 'bi-eye-slash' if p.is_published else 'bi-eye' }}"></i></button>
+                            <button class="btn btn-sm btn-outline-primary rounded-circle me-1" style="width:32px;height:32px;padding:0;" onclick="editPost({{ p.id }}, '{{ p.title|replace("'", "\\'") }}', '{{ p.slug|replace("'", "\\'") }}', '{{ (p.author or '')|replace("'", "\\'") }}', `{{ p.content|replace('`', '\\`') }}`, {{ p.is_published|lower }})"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-outline-danger rounded-circle" style="width:32px;height:32px;padding:0;" onclick="deletePost({{ p.id }})"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted border-secondary">
+                        <i class="bi bi-journal-text fs-1 d-block mb-3 opacity-50"></i>
+                        No blog posts found. <a href="#" class="text-primary-orange" onclick="openAddModal()">Write your first post.</a>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="blogModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white" id="modalTitle">New Post</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="blogForm" onsubmit="savePost(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="postId">
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label text-light">Title</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="postTitle" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label text-light">Slug</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="postSlug" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-light">Author</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="postAuthor">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-light">Featured Image URL</label>
+                            <input type="url" class="form-control bg-dark text-light border-secondary" id="postImage" placeholder="https://...">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light">Excerpt</label>
+                        <textarea class="form-control bg-dark text-light border-secondary" id="postExcerpt" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light">Content (Markdown / HTML)</label>
+                        <textarea class="form-control bg-dark text-light border-secondary" id="postContent" rows="12" style="font-family: monospace; font-size: 0.9rem;"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-light">Meta Title (SEO)</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="postMetaTitle">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-light">Meta Description (SEO)</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="postMetaDesc">
+                        </div>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="postPublished">
+                        <label class="form-check-label text-light">Published</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom" id="saveBtn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API = '/api/blog';
+let editingId = null;
+
+function resetForm() {
+    editingId = null;
+    document.getElementById('blogForm').reset();
+    document.getElementById('modalTitle').textContent = 'New Post';
+    document.getElementById('saveBtn').textContent = 'Save';
+    document.getElementById('postPublished').checked = false;
+}
+
+function openAddModal() {
+    resetForm();
+    new bootstrap.Modal(document.getElementById('blogModal')).show();
+}
+
+function editPost(id, title, slug, author, content, published) {
+    editingId = id;
+    document.getElementById('postId').value = id;
+    document.getElementById('postTitle').value = title;
+    document.getElementById('postSlug').value = slug;
+    document.getElementById('postAuthor').value = author;
+    document.getElementById('postContent').value = content;
+    document.getElementById('postPublished').checked = published;
+    document.getElementById('modalTitle').textContent = 'Edit Post';
+    document.getElementById('saveBtn').textContent = 'Update';
+    new bootstrap.Modal(document.getElementById('blogModal')).show();
+}
+
+async function savePost(e) {
+    e.preventDefault();
+    const payload = {
+        title: document.getElementById('postTitle').value,
+        slug: document.getElementById('postSlug').value,
+        author: document.getElementById('postAuthor').value,
+        content: document.getElementById('postContent').value,
+        excerpt: document.getElementById('postExcerpt').value,
+        featured_image: document.getElementById('postImage').value,
+        meta_title: document.getElementById('postMetaTitle').value,
+        meta_description: document.getElementById('postMetaDesc').value,
+        is_published: document.getElementById('postPublished').checked,
+    };
+    const method = editingId ? 'PUT' : 'POST';
+    const url = editingId ? `${API}/${editingId}` : API;
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) { alert('Error saving post'); return; }
+        bootstrap.Modal.getInstance(document.getElementById('blogModal')).hide();
+        location.reload();
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+
+async function deletePost(id) {
+    if (!confirm('Delete this blog post?')) return;
+    try {
+        const res = await fetch(`${API}/${id}`, { method: 'DELETE' });
+        if (!res.ok) { alert('Error deleting post'); return; }
+        location.reload();
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+
+async function togglePublish(id, current) {
+    try {
+        await fetch(`${API}/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_published: !current }),
+        });
+        location.reload();
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+
+function filterPosts() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const status = document.getElementById('statusFilter').value;
+    document.querySelectorAll('#blogTable tr[data-search]').forEach(tr => {
+        const matchSearch = !search || tr.dataset.search.includes(search);
+        const matchStatus = !status || tr.dataset.published === status;
+        tr.style.display = (matchSearch && matchStatus) ? '' : 'none';
+    });
+}
+
+document.getElementById('postTitle').addEventListener('input', function() {
+    if (!editingId) {
+        document.getElementById('postSlug').value = this.value
+            .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    }
+});
+</script>
+{% endblock %}

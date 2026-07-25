@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Contact Us{% endblock %}
+
+{% block content %}
+<!-- Hero Banner -->
+<section class="position-relative" style="background: linear-gradient(rgba(18,16,16,0.85), rgba(18,16,16,0.95)), url('{{ url_for("static", filename="images/hero_bg.png") }}') center/cover no-repeat; padding: 120px 0 60px;">
+    <div class="container position-relative" style="z-index: 2;">
+        <div class="text-center" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Get In Touch</span>
+            <h1 class="display-4 fw-bold text-white mt-3">Contact Us</h1>
+            <p class="text-warm-gray mx-auto mt-3" style="max-width:550px;">Have a question or need assistance? We'd love to hear from you. Our team is ready to help.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Contact Section -->
+<section class="py-5" style="background-color: var(--dark-bg);">
+    <div class="container py-5">
+        <div class="row g-5">
+            <!-- Contact Info -->
+            <div class="col-lg-4" data-aos="fade-right">
+                <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Reach Us</span>
+                <h3 class="text-white mt-2 mb-4">Contact Information</h3>
+
+                <div class="d-flex align-items-start mb-4">
+                    <div class="me-3 d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style="width:50px; height:50px; background:rgba(242,102,15,0.1);">
+                        <i class="bi bi-geo-alt text-primary-orange fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-white fw-bold mb-1">Address</h6>
+                        <p class="text-warm-gray mb-0 small">{{ site_settings.get('store_address', '123 Liberation Road, Accra, Greater Accra Region, Ghana') }}</p>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-start mb-4">
+                    <div class="me-3 d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style="width:50px; height:50px; background:rgba(242,102,15,0.1);">
+                        <i class="bi bi-telephone text-primary-orange fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-white fw-bold mb-1">Phone</h6>
+                        <a href="tel:{{ site_settings.get('contact_phone', '+233 30 277 1234') }}" class="text-warm-gray mb-0 small text-decoration-none d-block">{{ site_settings.get('contact_phone', '+233 30 277 1234') }}</a>
+                        {% if site_settings.get('contact_phone_secondary') %}
+                        <a href="tel:{{ site_settings.get('contact_phone_secondary') }}" class="text-warm-gray mb-0 small text-decoration-none d-block">{{ site_settings.get('contact_phone_secondary') }}</a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-start mb-4">
+                    <div class="me-3 d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style="width:50px; height:50px; background:rgba(242,102,15,0.1);">
+                        <i class="bi bi-envelope text-primary-orange fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-white fw-bold mb-1">Email</h6>
+                        <a href="mailto:{{ site_settings.get('contact_email', 'info@asahsprimenest.com') }}" class="text-warm-gray mb-0 small text-decoration-none d-block">{{ site_settings.get('contact_email', 'info@asahsprimenest.com') }}</a>
+                        <a href="mailto:support@asahsprimenest.com" class="text-warm-gray mb-0 small text-decoration-none d-block">support@asahsprimenest.com</a>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-start mb-4">
+                    <div class="me-3 d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style="width:50px; height:50px; background:rgba(242,102,15,0.1);">
+                        <i class="bi bi-clock text-primary-orange fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-white fw-bold mb-1">Business Hours</h6>
+                        <p class="text-warm-gray mb-0 small">Mon - Fri: 8:00 AM - 6:00 PM<br>Sat: 9:00 AM - 4:00 PM<br>Sun: Closed</p>
+                    </div>
+                </div>
+
+                <!-- Social Media -->
+                <div class="mt-4">
+                    <h6 class="text-white fw-bold mb-3">Follow Us</h6>
+                    <div class="d-flex gap-3">
+                        <a href="{{ site_settings.get('social_facebook', 'https://facebook.com') or 'https://facebook.com' }}" class="btn btn-outline-primary btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width:42px; height:42px; border-radius:50% !important;" target="_blank" rel="noopener noreferrer">
+                            <i class="bi bi-facebook"></i>
+                        </a>
+                        <a href="{{ site_settings.get('social_instagram', 'https://instagram.com') or 'https://instagram.com' }}" class="btn btn-outline-primary btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width:42px; height:42px; border-radius:50% !important;" target="_blank" rel="noopener noreferrer">
+                            <i class="bi bi-instagram"></i>
+                        </a>
+                        <a href="{{ site_settings.get('social_twitter', 'https://x.com') or 'https://x.com' }}" class="btn btn-outline-primary btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width:42px; height:42px; border-radius:50% !important;" target="_blank" rel="noopener noreferrer">
+                            <i class="bi bi-twitter-x"></i>
+                        </a>
+                        {% if site_settings.get('social_whatsapp') %}
+                        <a href="https://wa.me/{{ site_settings.get('social_whatsapp', '') | replace('+', '') }}" class="btn btn-outline-primary btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width:42px; height:42px; border-radius:50% !important;" target="_blank" rel="noopener noreferrer">
+                            <i class="bi bi-whatsapp"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Form -->
+            <div class="col-lg-8" data-aos="fade-left">
+                <div class="card card-custom p-5">
+                    <h3 class="text-white fw-bold mb-4">Send Us a Message</h3>
+                    <form id="contact-form">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label for="name" class="form-label text-warm-gray">Full Name</label>
+                                <input type="text" class="form-control form-control-custom" id="name" name="name" placeholder="Your name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="email" class="form-label text-warm-gray">Email Address</label>
+                                <input type="email" class="form-control form-control-custom" id="email" name="email" placeholder="your@email.com" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="subject" class="form-label text-warm-gray">Subject</label>
+                                <input type="text" class="form-control form-control-custom" id="subject" name="subject" placeholder="How can we help?" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="message" class="form-label text-warm-gray">Message</label>
+                                <textarea class="form-control form-control-custom" id="message" name="message" rows="5" placeholder="Write your message here..." required></textarea>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-lg px-5">SEND MESSAGE</button>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="form-success" class="alert alert-success mt-4 d-none" role="alert">
+                        <i class="bi bi-check-circle me-2"></i>Your message has been sent successfully. We'll get back to you soon!
+                    </div>
+                    <div id="form-error" class="alert alert-danger mt-4 d-none" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Something went wrong. Please try again later.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Map Placeholder -->
+<section style="background-color: #0a0909;">
+    <div class="container-fluid p-0">
+        <div class="card card-custom m-0 border-0 rounded-0 overflow-hidden" style="height: 400px;">
+            <div class="d-flex align-items-center justify-content-center h-100" style="background: rgba(255,255,255,0.03);">
+                <div class="text-center">
+                    <i class="bi bi-geo-alt-fill text-primary-orange" style="font-size: 4rem;"></i>
+                    <h5 class="text-white mt-3">Find Us on the Map</h5>
+                    <p class="text-warm-gray">{{ site_settings.get('store_address', '123 Liberation Road, Accra, Ghana') }}</p>
+                    <a href="https://maps.google.com/?q={{ site_settings.get('store_address', '123 Liberation Road, Accra, Ghana') | urlencode }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary">Open in Google Maps</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .form-control-custom::placeholder { color: rgba(219, 210, 203, 0.5); }
+    #contact-form .form-control-custom:focus { box-shadow: 0 0 0 0.25rem rgba(242, 102, 15, 0.25); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('contact-form');
+    const successMsg = document.getElementById('form-success');
+    const errorMsg = document.getElementById('form-error');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        successMsg.classList.add('d-none');
+        errorMsg.classList.add('d-none');
+
+        const formData = {
+            sender_name: form.name.value,
+            sender_email: form.email.value,
+            subject: form.subject.value,
+            body: form.message.value,
+            category: 'general'
+        };
+
+        try {
+            const res = await fetch('/api/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            if (res.ok) {
+                form.reset();
+                successMsg.classList.remove('d-none');
+                successMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                throw new Error('Failed');
+            }
+        } catch (err) {
+            errorMsg.classList.remove('d-none');
+            errorMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    });
+});
+</script>
+{% endblock %}

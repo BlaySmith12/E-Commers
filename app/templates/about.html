@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}About Us{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="position-relative" style="background: linear-gradient(rgba(18,16,16,0.85), rgba(18,16,16,0.95)), url('{{ url_for("static", filename="images/hero_bg.png") }}') center/cover no-repeat; padding: 120px 0 80px;">
+    <div class="container position-relative" style="z-index: 2;">
+        <div class="row align-items-center">
+            <div class="col-lg-6" data-aos="fade-right">
+                <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Our Story</span>
+                <h1 class="display-4 fw-bold text-white mb-4 mt-3">Building Homes.<br>Empowering <span class="text-primary-orange">Lives.</span></h1>
+                <p class="lead text-warm-gray mb-4" style="max-width: 520px;">
+                    Asah's Primenest was founded with a simple mission: to provide quality home improvement products that make everyday living better. From humble beginnings, we've grown into a trusted name across Ghana.
+                </p>
+                <div class="d-flex gap-4 mt-4">
+                    <div class="text-center">
+                        <h3 class="text-primary-orange fw-bold mb-0">1000+</h3>
+                        <small class="text-warm-gray">Products</small>
+                    </div>
+                    <div class="text-center">
+                        <h3 class="text-primary-orange fw-bold mb-0">5000+</h3>
+                        <small class="text-warm-gray">Customers</small>
+                    </div>
+                    <div class="text-center">
+                        <h3 class="text-primary-orange fw-bold mb-0">10+</h3>
+                        <small class="text-warm-gray">Years</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Mission & Vision -->
+<section class="py-5" style="background-color: #0a0909;">
+    <div class="container py-5">
+        <div class="row g-5 align-items-center">
+            <div class="col-lg-6" data-aos="fade-right">
+                <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">What Drives Us</span>
+                <h2 class="text-white mt-3 mb-4">Our Mission & Vision</h2>
+                <div class="card card-custom p-4 mb-4">
+                    <div class="d-flex align-items-start">
+                        <div class="me-3 mt-1"><i class="bi bi-bullseye text-primary-orange fs-3"></i></div>
+                        <div>
+                            <h5 class="text-white fw-bold">Our Mission</h5>
+                            <p class="text-warm-gray mb-0">To provide premium-quality home improvement products at accessible prices, backed by exceptional customer service and reliable delivery across Ghana.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-custom p-4">
+                    <div class="d-flex align-items-start">
+                        <div class="me-3 mt-1"><i class="bi bi-eye text-primary-orange fs-3"></i></div>
+                        <div>
+                            <h5 class="text-white fw-bold">Our Vision</h5>
+                            <p class="text-warm-gray mb-0">To become West Africa's leading destination for home improvement, empowering every household with quality products and smart solutions.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6" data-aos="fade-left">
+                <div class="card card-custom overflow-hidden border-0" style="height: 450px;">
+                    <img src="https://via.placeholder.com/600x450/121010/DBD2CB?text=Our+Story" alt="Our Story" class="w-100 h-100 object-fit-cover" style="opacity: 0.8;">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Why Choose Us -->
+<section class="py-5" style="background-color: var(--dark-bg);">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">The Primenest Difference</span>
+            <h2 class="text-white mt-3">Why Choose Us</h2>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-patch-check text-primary-orange fs-1"></i>
+                        </div>
+                    </div>
+                    <h5 class="text-white fw-bold">Quality Products</h5>
+                    <p class="text-warm-gray small mb-0">Every product is sourced from trusted manufacturers and tested for durability and performance.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-truck text-primary-orange fs-1"></i>
+                        </div>
+                    </div>
+                    <h5 class="text-white fw-bold">Fast Delivery</h5>
+                    <p class="text-warm-gray small mb-0">Same-day dispatch and nationwide delivery to get your products to you quickly and safely.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-headset text-primary-orange fs-1"></i>
+                        </div>
+                    </div>
+                    <h5 class="text-white fw-bold">24/7 Support</h5>
+                    <p class="text-warm-gray small mb-0">Our dedicated support team is always available to help with orders, returns, and product inquiries.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="400">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-tags text-primary-orange fs-1"></i>
+                        </div>
+                    </div>
+                    <h5 class="text-white fw-bold">Best Prices</h5>
+                    <p class="text-warm-gray small mb-0">Competitive pricing on all products with regular deals and discounts to save you more.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Team Section -->
+<section class="py-5" style="background-color: #0a0909;">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Meet the People</span>
+            <h2 class="text-white mt-3">Our Team</h2>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+                <div class="card card-custom border-0 text-center overflow-hidden">
+                    <img src="https://via.placeholder.com/300x300/121010/DBD2CB?text=CEO" alt="CEO" class="w-100" style="height:280px; object-fit:cover;">
+                    <div class="p-4">
+                        <h6 class="text-white fw-bold mb-1">Asah Mensah</h6>
+                        <small class="text-primary-orange">Founder & CEO</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+                <div class="card card-custom border-0 text-center overflow-hidden">
+                    <img src="https://via.placeholder.com/300x300/121010/DBD2CB?text=CTO" alt="CTO" class="w-100" style="height:280px; object-fit:cover;">
+                    <div class="p-4">
+                        <h6 class="text-white fw-bold mb-1">Kofi Amoako</h6>
+                        <small class="text-primary-orange">Head of Operations</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+                <div class="card card-custom border-0 text-center overflow-hidden">
+                    <img src="https://via.placeholder.com/300x300/121010/DBD2CB?text=CMO" alt="CMO" class="w-100" style="height:280px; object-fit:cover;">
+                    <div class="p-4">
+                        <h6 class="text-white fw-bold mb-1">Ama Serwah</h6>
+                        <small class="text-primary-orange">Marketing Director</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="400">
+                <div class="card card-custom border-0 text-center overflow-hidden">
+                    <img src="https://via.placeholder.com/300x300/121010/DBD2CB?text=CS" alt="CS" class="w-100" style="height:280px; object-fit:cover;">
+                    <div class="p-4">
+                        <h6 class="text-white fw-bold mb-1">Yaw Boateng</h6>
+                        <small class="text-primary-orange">Customer Success Lead</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Statistics -->
+<section class="py-5" style="background-color: var(--dark-bg); border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
+    <div class="container py-5">
+        <div class="row g-4 text-center">
+            <div class="col-md-3 col-6" data-aos="zoom-in" data-aos-delay="100">
+                <h2 class="text-primary-orange fw-bold mb-2">1000+</h2>
+                <p class="text-warm-gray mb-0">Products Available</p>
+            </div>
+            <div class="col-md-3 col-6" data-aos="zoom-in" data-aos-delay="200">
+                <h2 class="text-primary-orange fw-bold mb-2">5000+</h2>
+                <p class="text-warm-gray mb-0">Happy Customers</p>
+            </div>
+            <div class="col-md-3 col-6" data-aos="zoom-in" data-aos-delay="300">
+                <h2 class="text-primary-orange fw-bold mb-2">10+</h2>
+                <p class="text-warm-gray mb-0">Years Experience</p>
+            </div>
+            <div class="col-md-3 col-6" data-aos="zoom-in" data-aos-delay="400">
+                <h2 class="text-primary-orange fw-bold mb-2">99%</h2>
+                <p class="text-warm-gray mb-0">Satisfaction Rate</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="py-5" style="background: linear-gradient(135deg, var(--primary-orange), #d1560c);">
+    <div class="container py-5 text-center" data-aos="fade-up">
+        <h2 class="text-white fw-bold mb-3">Ready to Transform Your Home?</h2>
+        <p class="text-white mb-4" style="opacity:0.9; max-width:500px; margin:0 auto;">Explore our wide range of premium products and find exactly what you need for your next project.</p>
+        <a href="/shop" class="btn btn-light btn-lg px-5 fw-bold">SHOP NOW</a>
+    </div>
+</section>
+
+<style>
+    .object-fit-cover { object-fit: cover; }
+    .feature-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+</style>
+{% endblock %}

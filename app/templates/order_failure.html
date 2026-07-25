@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Payment Failed — ASAH'S PRIMENEST{% endblock %}
+
+{% block content %}
+<style>
+.of-page{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:2rem 1rem}
+.of-card{max-width:480px;width:100%;text-align:center}
+
+/* Error animation */
+.of-icon{width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;background:linear-gradient(135deg,rgba(220,53,69,.15),rgba(220,53,69,.05));border:3px solid #dc3545;animation:ofPulse 2s infinite}
+.of-icon i{font-size:2.5rem;color:#dc3545;animation:ofShake .6s .3s both}
+@keyframes ofPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,53,69,.2)}50%{box-shadow:0 0 0 15px rgba(220,53,69,0)}}
+@keyframes ofShake{0%{transform:rotate(0)}20%{transform:rotate(-10deg)}40%{transform:rotate(10deg)}60%{transform:rotate(-5deg)}80%{transform:rotate(5deg)}100%{transform:rotate(0)}}
+@media(min-width:768px){.of-icon{width:110px;height:110px}.of-icon i{font-size:3.5rem}}
+
+.of-title{font-size:1.3rem;font-weight:700;color:#fff;margin-bottom:.35rem}
+.of-subtitle{font-size:.9rem;color:var(--text-secondary,#C8BEB7);margin-bottom:1.5rem}
+@media(min-width:768px){.of-title{font-size:1.6rem}}
+
+.of-ref{background:#1a1717;border:1px solid var(--border-color,#2a2727);border-radius:12px;padding:.875rem 1rem;margin-bottom:1.5rem}
+.of-ref .label{font-size:.75rem;color:var(--text-muted,#9a9590);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.of-ref .value{color:#fff;font-size:.9rem;font-weight:500}
+
+.of-reasons{background:#1a1717;border:1px solid var(--border-color,#2a2727);border-radius:12px;padding:1rem;margin-bottom:1.5rem;text-align:left}
+.of-reasons h6{color:#fff;font-size:.85rem;font-weight:600;margin-bottom:.5rem}
+.of-reasons ul{margin:0;padding-left:1.2rem}
+.of-reasons li{color:var(--text-secondary,#C8BEB7);font-size:.82rem;line-height:1.6}
+
+.of-actions{display:flex;flex-direction:column;gap:10px}
+.of-actions a,.of-actions button{display:flex;align-items:center;justify-content:center;gap:8px;padding:.85rem;border-radius:12px;font-weight:600;font-size:.95rem;text-decoration:none;transition:all .2s;-webkit-tap-highlight-color:transparent;cursor:pointer;border:none;width:100%}
+.of-actions a:active,.of-actions button:active{transform:scale(.98)}
+.of-btn-retry{background:var(--primary-orange);color:#fff}
+.of-btn-retry:hover{background:#d45a0d;color:#fff}
+.of-btn-cart{background:transparent;color:#fff;border:1px solid var(--border-color,#333)!important}
+.of-btn-cart:hover{border-color:var(--primary-orange)!important;color:var(--primary-orange)}
+.of-btn-support{background:transparent;color:var(--primary-orange);border:1px solid var(--primary-orange)!important}
+.of-btn-support:hover{background:rgba(242,102,15,.08);color:var(--primary-orange)}
+@media(min-width:576px){.of-actions{flex-direction:row}.of-actions a,.of-actions button{flex:1}}
+</style>
+
+<div class="of-page">
+    <div class="of-card">
+        <div class="of-icon"><i class="bi bi-x-lg"></i></div>
+        <h2 class="of-title">Payment Could Not Be Completed</h2>
+        <p class="of-subtitle" id="ofMessage">We were unable to process your payment. Your cart has been preserved.</p>
+
+        <div class="of-ref" id="ofRef" style="display:none">
+            <div class="label">Reference</div>
+            <div class="value" id="ofRefVal"></div>
+        </div>
+
+        <div class="of-reasons">
+            <h6>This may have happened because:</h6>
+            <ul>
+                <li>Insufficient funds in your account</li>
+                <li>Payment was declined by your bank</li>
+                <li>Network connectivity issue</li>
+                <li>Session timed out during payment</li>
+            </ul>
+        </div>
+
+        <div class="of-actions">
+            <a href="/checkout" class="of-btn-retry"><i class="bi bi-arrow-repeat"></i> Try Again</a>
+            <a href="/cart" class="of-btn-cart"><i class="bi bi-cart3"></i> Return to Cart</a>
+            <a href="/contact" class="of-btn-support"><i class="bi bi-headset"></i> Contact Support</a>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    var p=new URLSearchParams(window.location.search);
+    var msg=p.get('message');
+    var ref=p.get('reference')||p.get('order_id');
+    if(msg)document.getElementById('ofMessage').textContent=decodeURIComponent(msg);
+    if(ref){document.getElementById('ofRef').style.display='block';document.getElementById('ofRefVal').textContent=ref}
+})();
+</script>
+{% endblock %}

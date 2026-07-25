@@ -1,0 +1,111 @@
+{% extends "admin_base.html" %}
+{% block head %}
+<style>
+    .sr-group { margin-bottom: 24px; }
+    .sr-group-title { font-size: .8rem; text-transform: uppercase; letter-spacing: .5px; color: #6e6a66; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .sr-count { background: rgba(255,255,255,.08); padding: 2px 8px; border-radius: 10px; font-size: .7rem; }
+    .sr-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(255,255,255,.02); border: 1px solid var(--border-color); border-radius: 10px; text-decoration: none; color: #F6F9F9; transition: all .2s; margin-bottom: 8px; }
+    .sr-item:hover { background: rgba(242,102,15,.04); border-color: var(--primary-orange); transform: translateX(4px); }
+    .sr-thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+    .sr-thumb-placeholder { width: 44px; height: 44px; border-radius: 8px; background: rgba(255,255,255,.06); display: flex; align-items: center; justify-content: center; color: #6e6a66; font-size: 1.1rem; flex-shrink: 0; }
+    .sr-title { font-size: .9rem; font-weight: 600; }
+    .sr-subtitle { font-size: .78rem; color: #9a9590; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #9a9590; }
+    .empty-state i { font-size: 3rem; opacity: .2; display: block; margin-bottom: 12px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <h3 class="fw-bold mb-1">Search Results</h3>
+        <p style="color:#9a9590;margin:0;" id="search-subtitle">Searching...</p>
+    </div>
+
+    <div class="mb-4" style="max-width:500px;">
+        <div class="position-relative">
+            <i class="bi bi-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9a9590;"></i>
+            <input type="text" id="search-input" class="form-control" placeholder="Search products, orders, customers..." style="background:#242020;border-color:var(--border-color);color:#F6F9F9;padding-left:40px;border-radius:10px;">
+        </div>
+    </div>
+
+    <div id="search-results"></div>
+    <div id="loading" class="text-center py-4"><div class="spinner-border spinner-border-sm text-orange"></div></div>
+    <div id="empty-state" class="empty-state" style="display:none;">
+        <i class="bi bi-search"></i>
+        <p>No results found</p>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const token = localStorage.getItem('admin_token');
+if (!token) { window.location.href = '/admin/login'; }
+const H = { 'Authorization': `Bearer ${token}` };
+
+function getQuery() { return new URLSearchParams(window.location.search).get('q') || ''; }
+function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+
+const typeConfig = {
+    product: { icon: 'bi-box-seam', label: 'Products', color: '#F2660F' },
+    order: { icon: 'bi-receipt', label: 'Orders', color: '#0d6efd' },
+    customer: { icon: 'bi-person', label: 'Customers', color: '#198754' },
+    category: { icon: 'bi-folder', label: 'Categories', color: '#ffc107' },
+    brand: { icon: 'bi-tag', label: 'Brands', color: '#6f42c1' },
+    coupon: { icon: 'bi-ticket', label: 'Coupons', color: '#20c997' }
+};
+
+async function doSearch(q) {
+    if (!q) return;
+    document.getElementById('search-subtitle').innerHTML = `Results for "<strong>${esc(q)}</strong>"`;
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('search-results').innerHTML = '';
+    document.getElementById('empty-state').style.display = 'none';
+
+    const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { headers: H });
+    if (r.status === 401) { window.location.href = '/admin/login'; return; }
+    const data = await r.json();
+    document.getElementById('loading').style.display = 'none';
+
+    if (!data || data.length === 0) {
+        document.getElementById('empty-state').style.display = 'block';
+        return;
+    }
+
+    const grouped = {};
+    data.forEach(r => { if (!grouped[r.type]) grouped[r.type] = []; grouped[r.type].push(r); });
+
+    let html = '';
+    for (const [type, items] of Object.entries(grouped)) {
+        const cfg = typeConfig[type] || { icon: 'bi-search', label: type, color: '#9a9590' };
+        html += `<div class="sr-group"><div class="sr-group-title"><i class="bi ${cfg.icon}" style="color:${cfg.color}"></i> ${cfg.label} <span class="sr-count">${items.length}</span></div>`;
+        items.forEach(r => {
+            const thumb = r.image ? `<img src="${esc(r.image)}" class="sr-thumb" alt="">` : `<div class="sr-thumb-placeholder"><i class="bi ${cfg.icon}"></i></div>`;
+            html += `<a href="${esc(r.url)}" class="sr-item">${thumb}<div><div class="sr-title">${esc(r.title)}</div><div class="sr-subtitle">${esc(r.subtitle||'')}</div></div></a>`;
+        });
+        html += '</div>';
+    }
+    document.getElementById('search-results').innerHTML = html;
+}
+
+const input = document.getElementById('search-input');
+const q = getQuery();
+if (q) { input.value = q; doSearch(q); }
+let timeout;
+input.addEventListener('input', () => {
+    clearTimeout(timeout);
+    const v = input.value.trim();
+    if (v.length >= 2) {
+        timeout = setTimeout(() => {
+            window.history.replaceState({}, '', `/admin/search?q=${encodeURIComponent(v)}`);
+            doSearch(v);
+        }, 400);
+    }
+});
+input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const v = input.value.trim();
+        if (v) { window.history.replaceState({}, '', `/admin/search?q=${encodeURIComponent(v)}`); doSearch(v); }
+    }
+});
+</script>
+{% endblock %}

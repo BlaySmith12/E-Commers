@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASAH'S PRIMENEST | {% block title %}{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+    {% set phone = site_settings.get('contact_phone', '+233 30 277 1234') or '+233 30 277 1234' %}
+    {% set email = site_settings.get('contact_email', 'info@asahsprimenest.com') or 'info@asahsprimenest.com' %}
+    {% set facebook = site_settings.get('social_facebook', '') or '' %}
+    {% set instagram = site_settings.get('social_instagram', '') or '' %}
+    {% set twitter = site_settings.get('social_twitter', '') or '' %}
+    {% set tiktok = site_settings.get('social_tiktok', '') or '' %}
+    {% set whatsapp = site_settings.get('social_whatsapp', '') or '' %}
+
+    <!-- Top Bar -->
+    <div class="top-bar d-none d-md-block">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <a href="tel:{{ phone }}" class="text-warm-gray small text-decoration-none"><i class="bi bi-telephone me-1"></i> {{ phone }}</a>
+                <a href="mailto:{{ email }}" class="text-warm-gray small text-decoration-none"><i class="bi bi-envelope me-1"></i> {{ email }}</a>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <a href="/order-tracking" class="text-warm-gray small text-decoration-none"><i class="bi bi-truck me-1"></i> Track Order</a>
+                <a href="/shop" class="text-warm-gray small text-decoration-none"><i class="bi bi-shop me-1"></i> Shop Now</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top" id="mainNav">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Asah's Primenest" style="height: 72px; width: auto;">
+            </a>
+
+            <!-- Mobile: Search + Cart + Menu -->
+            <div class="d-flex align-items-center d-lg-none gap-3">
+                <button class="nav-icon-btn" onclick="toggleMobileSearch()" aria-label="Search">
+                    <i class="bi bi-search"></i>
+                </button>
+                <a href="/cart" class="nav-icon-btn position-relative" aria-label="Cart">
+                    <i class="bi bi-cart3"></i>
+                    <span class="cart-badge" id="mobileCartCount">0</span>
+                </a>
+                <button class="navbar-toggler p-0 border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
+
+            <!-- Desktop Nav -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <!-- Mobile Search Bar (shown inside collapse on mobile) -->
+                <div class="mobile-search-wrap d-lg-none mb-3 mt-2" id="mobileSearchWrap" style="display:none">
+                    <form action="/shop" method="GET" class="position-relative">
+                        <input type="text" name="q" class="form-control search-input-mobile" placeholder="Search products..." id="mobileSearchInput">
+                        <button class="search-submit-btn" type="submit"><i class="bi bi-search"></i></button>
+                    </form>
+                </div>
+
+                <ul class="navbar-nav mx-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/shop">Shop</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/#categories">Categories</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">About Us</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/contact">Contact</a>
+                    </li>
+                </ul>
+
+                <!-- Desktop Icons -->
+                <div class="navbar-icons d-none d-lg-flex align-items-center">
+                    <div class="position-relative me-3">
+                        <form action="/shop" method="GET" class="d-flex align-items-center desktop-search-form">
+                            <div class="position-relative">
+                                <i class="bi bi-search search-icon-nav"></i>
+                                <input type="text" name="q" class="form-control search-input-nav" placeholder="Search products..." id="desktopSearchInput">
+                            </div>
+                        </form>
+                    </div>
+                    <a href="/wishlist" class="nav-icon-link" aria-label="Wishlist">
+                        <i class="bi bi-heart"></i>
+                    </a>
+                    <a href="/cart" class="nav-icon-link position-relative" aria-label="Cart">
+                        <i class="bi bi-cart3"></i>
+                        <span class="cart-badge" id="desktopCartCount">0</span>
+                    </a>
+                    <a href="/login" class="nav-icon-link" aria-label="Account" id="navAccountLink">
+                        <i class="bi bi-person"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <h5 class="footer-title">
+                        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Asah's Primenest" style="height: 70px; width: auto;">
+                    </h5>
+                    <p class="text-warm-gray mb-3" style="font-size:.9rem;line-height:1.7">Quality. Style. Comfort. Your one-stop shop for premium plumbing materials, household appliances, tools, and home improvement products in Ghana.</p>
+                    <div class="d-flex gap-3">
+                        {% if facebook %}
+                        <a href="{{ facebook }}" class="social-link" target="_blank" rel="noopener noreferrer"><i class="bi bi-facebook"></i></a>
+                        {% else %}
+                        <a href="https://facebook.com" class="social-link" target="_blank" rel="noopener noreferrer"><i class="bi bi-facebook"></i></a>
+                        {% endif %}
+                        {% if instagram %}
+                        <a href="{{ instagram }}" class="social-link" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>
+                        {% else %}
+                        <a href="https://instagram.com" class="social-link" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>
+                        {% endif %}
+                        {% if twitter %}
+                        <a href="{{ twitter }}" class="social-link" target="_blank" rel="noopener noreferrer"><i class="bi bi-twitter-x"></i></a>
+                        {% else %}
+                        <a href="https://x.com" class="social-link" target="_blank" rel="noopener noreferrer"><i class="bi bi-twitter-x"></i></a>
+                        {% endif %}
+                        {% if tiktok %}
+                        <a href="{{ tiktok }}" class="social-link" target="_blank" rel="noopener noreferrer"><i class="bi bi-tiktok"></i></a>
+                        {% else %}
+                        <a href="https://tiktok.com" class="social-link" target="_blank" rel="noopener noreferrer"><i class="bi bi-tiktok"></i></a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-6 col-6">
+                    <h6 class="footer-title">Quick Links</h6>
+                    <a href="/" class="footer-link">Home</a>
+                    <a href="/shop" class="footer-link">Shop</a>
+                    <a href="/#categories" class="footer-link">Categories</a>
+                    <a href="/about" class="footer-link">About Us</a>
+                    <a href="/contact" class="footer-link">Contact</a>
+                </div>
+                <div class="col-lg-2 col-md-6 col-6">
+                    <h6 class="footer-title">Customer Service</h6>
+                    <a href="/login" class="footer-link" id="footerAccountLink">My Account</a>
+                    <a href="/order-tracking" class="footer-link">Order Tracking</a>
+                    <a href="/shipping-policy" class="footer-link">Shipping Policy</a>
+                    <a href="/returns-refunds" class="footer-link">Returns & Refunds</a>
+                    <a href="/faq" class="footer-link">FAQ</a>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <h6 class="footer-title">Newsletter</h6>
+                    <p class="text-warm-gray mb-3" style="font-size:.85rem">Subscribe for special offers and product updates.</p>
+                    <form onsubmit="subscribeNewsletter(event)" class="d-flex gap-2">
+                        <input type="email" class="form-control form-control-sm newsletter-input" placeholder="Your email address" id="footerEmail" required>
+                        <button class="btn btn-primary btn-sm px-3" type="submit" id="footerSubBtn">Subscribe</button>
+                    </form>
+                    <div id="newsletter-msg" class="mt-2 small" style="display:none;"></div>
+                    <div class="mt-3">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <a href="tel:{{ phone }}" class="d-flex align-items-center gap-2 text-decoration-none">
+                                <i class="bi bi-telephone text-primary-orange"></i>
+                                <span class="text-warm-gray small">{{ phone }}</span>
+                            </a>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <a href="mailto:{{ email }}" class="d-flex align-items-center gap-2 text-decoration-none">
+                                <i class="bi bi-envelope text-primary-orange"></i>
+                                <span class="text-warm-gray small">{{ email }}</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <hr class="mt-4 mb-3" style="border-color:rgba(255,255,255,.08)">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+                <p class="text-warm-gray mb-0 small">&copy; 2026 Asah's Primenest. All Rights Reserved.</p>
+                <div class="d-flex gap-3">
+                    <a href="/payment-security" class="text-warm-gray small text-decoration-none"><i class="bi bi-shield-check text-primary-orange me-1"></i> Secure Payments</a>
+                    <a href="/shipping-policy" class="text-warm-gray small text-decoration-none"><i class="bi bi-truck text-primary-orange me-1"></i> Fast Delivery</a>
+                    <a href="/returns-refunds" class="text-warm-gray small text-decoration-none"><i class="bi bi-arrow-return-left text-primary-orange me-1"></i> Easy Returns</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Back to Top -->
+    <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+        <i class="bi bi-chevron-up"></i>
+    </button>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Back to top
+        window.addEventListener('scroll', function() {
+            const btn = document.getElementById('backToTop');
+            if (window.scrollY > 400) btn.classList.add('show');
+            else btn.classList.remove('show');
+        });
+
+        // Mobile search toggle
+        function toggleMobileSearch() {
+            const nav = document.getElementById('navbarNav');
+            const wrap = document.getElementById('mobileSearchWrap');
+            const input = document.getElementById('mobileSearchInput');
+            if (nav && !nav.classList.contains('show')) {
+                var bsCollapse = bootstrap.Collapse.getOrCreateInstance(nav, {toggle:false});
+                bsCollapse.show();
+            }
+            if (wrap) {
+                const isHidden = wrap.style.display === 'none' || !wrap.style.display;
+                wrap.style.display = isHidden ? 'block' : 'none';
+                if (isHidden && input) input.focus();
+            }
+        }
+
+        // Cart count
+        async function updateCartCount() {
+            try {
+                const token = localStorage.getItem('token');
+                const headers = token ? {'Authorization': 'Bearer ' + token} : {};
+                const resp = await fetch('/api/cart', {headers});
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const count = (data.items || []).reduce((sum, i) => sum + i.quantity, 0);
+                    document.querySelectorAll('.cart-badge').forEach(b => b.textContent = count);
+                }
+            } catch(e) {}
+        }
+        updateCartCount();
+
+        // Update account link based on auth state
+        (function() {
+            const token = localStorage.getItem('token');
+            const link = document.getElementById('navAccountLink');
+            const footerLink = document.getElementById('footerAccountLink');
+            if (token && link) {
+                link.href = '/customer/dashboard';
+            }
+            if (token && footerLink) {
+                footerLink.href = '/customer/dashboard';
+            }
+        })();
+
+        // Newsletter with inline feedback
+        async function subscribeNewsletter(e) {
+            e.preventDefault();
+            const btn = document.getElementById('footerSubBtn');
+            const msgEl = document.getElementById('newsletter-msg');
+            const emailInput = document.getElementById('footerEmail');
+            const email = emailInput.value.trim();
+
+            if (!email) return;
+
+            btn.disabled = true;
+            btn.textContent = '...';
+            msgEl.style.display = 'none';
+
+            try {
+                const resp = await fetch('/api/newsletters/subscribe', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email})
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    emailInput.value = '';
+                    msgEl.textContent = 'Thank you for subscribing! You\'ll receive our latest product updates and special offers.';
+                    msgEl.className = 'mt-2 small';
+                    msgEl.style.color = '#22c55e';
+                    msgEl.style.display = 'block';
+                } else if (resp.status === 400 && data.detail) {
+                    msgEl.textContent = data.detail;
+                    msgEl.className = 'mt-2 small';
+                    msgEl.style.color = '#eab308';
+                    msgEl.style.display = 'block';
+                } else {
+                    throw new Error('Failed');
+                }
+            } catch(e) {
+                msgEl.textContent = 'Something went wrong. Please try again later.';
+                msgEl.className = 'mt-2 small';
+                msgEl.style.color = '#ef4444';
+                msgEl.style.display = 'block';
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Subscribe';
+            setTimeout(() => { msgEl.style.display = 'none'; }, 5000);
+        }
+
+        // Navbar shrink on scroll
+        window.addEventListener('scroll', function() {
+            const nav = document.getElementById('mainNav');
+            if (window.scrollY > 50) nav.classList.add('nav-scrolled');
+            else nav.classList.remove('nav-scrolled');
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

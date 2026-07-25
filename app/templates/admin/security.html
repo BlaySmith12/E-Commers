@@ -1,0 +1,111 @@
+{% extends "admin_base.html" %}
+{% block head %}
+<style>
+    .sec-card { background: rgba(255,255,255,.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; }
+    .session-item { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border-color); }
+    .session-item:last-child { border-bottom: none; }
+    .session-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.05); font-size: 1.1rem; color: #9a9590; flex-shrink: 0; }
+    .session-info { flex: 1; }
+    .session-title { font-size: .88rem; font-weight: 600; color: #F6F9F9; }
+    .session-meta { font-size: .78rem; color: #9a9590; margin-top: 2px; }
+    .session-current { background: rgba(242,102,15,.06); border-radius: 8px; padding: 10px 14px; margin: -4px 0; }
+    .switch-wrap { position: relative; width: 48px; height: 26px; }
+    .switch-wrap input { opacity: 0; width: 0; height: 0; }
+    .switch-slider { position: absolute; inset: 0; background: #3a3533; border-radius: 13px; cursor: pointer; transition: .3s; }
+    .switch-slider::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; background: #fff; border-radius: 50%; transition: .3s; }
+    .switch-wrap input:checked + .switch-slider { background: var(--primary-orange); }
+    .switch-wrap input:checked + .switch-slider::after { left: 25px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <h3 class="fw-bold mb-1">Security</h3>
+        <p style="color:#9a9590;margin:0;">Manage your account security settings</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-6">
+            <div class="sec-card mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Two-Factor Authentication</h5>
+                    <label class="switch-wrap">
+                        <input type="checkbox" id="twofa-toggle">
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+                <p style="color:#9a9590;font-size:.85rem;margin:0;">Add an extra layer of security to your account by requiring a verification code in addition to your password.</p>
+                <div id="twofa-status" class="mt-3" style="font-size:.85rem;"></div>
+            </div>
+
+            <div class="sec-card">
+                <h5 class="fw-bold mb-3">Quick Security Actions</h5>
+                <button class="btn btn-outline-danger btn-sm" onclick="revokeAllSessions()">
+                    <i class="bi bi-box-arrow-right me-1"></i> Log Out All Other Sessions
+                </button>
+                <div id="revoke-status" class="mt-2" style="font-size:.85rem;"></div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <div class="sec-card">
+                <h5 class="fw-bold mb-3">Active Sessions</h5>
+                <div id="sessions-list">
+                    <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-orange"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const token = localStorage.getItem('admin_token');
+if (!token) { window.location.href = '/admin/login'; }
+const H = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+async function api(url, opts={}) { const r = await fetch(url, { headers: H, ...opts }); if (r.status===401){localStorage.removeItem('admin_token');window.location.href='/admin/login';return null;} return r.json(); }
+
+async function loadSessions() {
+    const sessions = await api('/api/admin/sessions');
+    const el = document.getElementById('sessions-list');
+    if (!sessions || sessions.length === 0) { el.innerHTML = '<p style="color:#9a9590;font-size:.85rem;">No active sessions</p>'; return; }
+    el.innerHTML = sessions.map((s, i) => `
+        <div class="session-item ${i===0 ? 'session-current' : ''}">
+            <div class="session-icon"><i class="bi bi-${s.browser ? 'globe' : 'pc-display'}"></i></div>
+            <div class="session-info">
+                <div class="session-title">${s.browser || 'Unknown'} on ${s.os || 'Unknown'}</div>
+                <div class="session-meta">IP: ${s.ip_address || 'Unknown'} | ${s.is_active ? 'Active' : 'Ended'} | ${s.created_at ? new Date(s.created_at).toLocaleString() : '-'}</div>
+            </div>
+            ${i===0 ? '<span style="color:#198754;font-size:.75rem;font-weight:600;">Current</span>' : ''}
+        </div>
+    `).join('');
+}
+
+async function load2FA() {
+    const profile = await api('/api/admin/profile');
+    if (profile) {
+        document.getElementById('twofa-toggle').checked = profile.two_factor_enabled;
+        document.getElementById('twofa-status').innerHTML = profile.two_factor_enabled ?
+            '<span style="color:#198754;"><i class="bi bi-shield-check me-1"></i> 2FA is enabled</span>' :
+            '<span style="color:#9a9590;"><i class="bi bi-shield me-1"></i> 2FA is disabled</span>';
+    }
+}
+
+document.getElementById('twofa-toggle').addEventListener('change', async function() {
+    const data = await api('/api/admin/toggle-2fa', { method: 'POST' });
+    if (data) load2FA();
+});
+
+async function revokeAllSessions() {
+    if (!confirm('This will log out all other sessions. Continue?')) return;
+    const data = await api('/api/admin/sessions/revoke-all', { method: 'POST' });
+    const el = document.getElementById('revoke-status');
+    if (data) { el.innerHTML = '<span style="color:#198754;">All other sessions terminated</span>'; loadSessions(); }
+    else { el.innerHTML = '<span style="color:#dc3545;">Failed to revoke sessions</span>'; }
+    setTimeout(() => el.innerHTML = '', 4000);
+}
+
+loadSessions();
+load2FA();
+</script>
+{% endblock %}

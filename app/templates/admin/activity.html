@@ -1,0 +1,101 @@
+{% extends "admin_base.html" %}
+{% block head %}
+<style>
+    .act-timeline { position: relative; padding-left: 30px; }
+    .act-timeline::before { content: ''; position: absolute; left: 12px; top: 0; bottom: 0; width: 2px; background: var(--border-color); }
+    .act-item { position: relative; padding: 0 0 24px 0; }
+    .act-dot { position: absolute; left: -24px; top: 4px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border-color); background: #1a1717; z-index: 1; }
+    .act-dot.create { border-color: #198754; background: #198754; }
+    .act-dot.update { border-color: #0d6efd; background: #0d6efd; }
+    .act-dot.delete { border-color: #dc3545; background: #dc3545; }
+    .act-dot.login { border-color: var(--primary-orange); background: var(--primary-orange); }
+    .act-action { font-size: .9rem; color: #F6F9F9; font-weight: 500; }
+    .act-details { font-size: .8rem; color: #9a9590; margin-top: 3px; }
+    .act-time { font-size: .72rem; color: #6e6a66; margin-top: 4px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1">Activity Log</h3>
+            <p style="color:#9a9590;margin:0;">Track administrative actions and changes</p>
+        </div>
+    </div>
+
+    <div class="card card-custom p-4">
+        <div id="activity-list" class="act-timeline">
+            <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-orange"></div></div>
+        </div>
+        <div class="text-center mt-3">
+            <button class="btn btn-sm btn-outline-secondary" id="load-more-btn" style="display:none;" onclick="loadMore()">Load More</button>
+        </div>
+        <div id="empty-state" class="text-center py-5" style="display:none;">
+            <i class="bi bi-clock-history" style="font-size:3rem;color:#6e6a66;opacity:.3;"></i>
+            <p style="color:#9a9590;margin-top:12px;">No activity recorded yet</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const token = localStorage.getItem('admin_token');
+if (!token) { window.location.href = '/admin/login'; }
+const H = { 'Authorization': `Bearer ${token}` };
+let skip = 0; const limit = 20;
+
+function getDotClass(action) {
+    const a = (action || '').toLowerCase();
+    if (a.includes('create') || a.includes('add')) return 'create';
+    if (a.includes('update') || a.includes('edit') || a.includes('change')) return 'update';
+    if (a.includes('delete') || a.includes('remove')) return 'delete';
+    if (a.includes('login') || a.includes('logout') || a.includes('session')) return 'login';
+    return '';
+}
+
+function timeAgo(d) {
+    if (!d) return '';
+    const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+    if (s < 60) return 'Just now';
+    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    if (s < 86400) return Math.floor(s/3600) + 'h ago';
+    if (s < 604800) return Math.floor(s/86400) + 'd ago';
+    return new Date(d).toLocaleDateString();
+}
+
+async function loadActivities(reset) {
+    if (reset) { skip = 0; document.getElementById('activity-list').innerHTML = ''; }
+    const r = await fetch(`/api/admin/activity?skip=${skip}&limit=${limit}`, { headers: H });
+    if (r.status === 401) { window.location.href = '/admin/login'; return; }
+    const data = await r.json();
+    const list = document.getElementById('activity-list');
+    const empty = document.getElementById('empty-state');
+    const moreBtn = document.getElementById('load-more-btn');
+
+    if (skip === 0 && (!data || data.length === 0)) {
+        empty.style.display = 'block';
+        return;
+    }
+
+    const items = (data || []).map(a => `
+        <div class="act-item">
+            <div class="act-dot ${getDotClass(a.action)}"></div>
+            <div class="act-action">${escapeHtml(a.action)}</div>
+            ${a.entity_type ? `<div class="act-details">${escapeHtml(a.entity_type)}${a.entity_id ? ' #' + a.entity_id : ''}</div>` : ''}
+            ${a.details ? `<div class="act-details">${escapeHtml(a.details)}</div>` : ''}
+            ${a.ip_address ? `<div class="act-details">IP: ${escapeHtml(a.ip_address)}</div>` : ''}
+            <div class="act-time">${timeAgo(a.created_at)}</div>
+        </div>
+    `).join('');
+    list.insertAdjacentHTML('beforeend', items);
+
+    moreBtn.style.display = (data && data.length >= limit) ? 'inline-block' : 'none';
+    skip += data ? data.length : 0;
+}
+
+function loadMore() { loadActivities(false); }
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+loadActivities(true);
+</script>
+{% endblock %}

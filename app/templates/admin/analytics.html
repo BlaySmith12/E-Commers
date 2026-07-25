@@ -1,0 +1,123 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h3 class="fw-bold mb-1">Analytics</h3>
+    <p class="text-muted mb-0">Real-time store performance and traffic insights.</p>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card card-custom stat-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="text-muted mb-1">Page Views</h6>
+                    <h3 class="fw-bold mb-0">128,430</h3>
+                </div>
+                <div class="stat-icon bg-light-orange"><i class="bi bi-eye"></i></div>
+            </div>
+            <span class="badge bg-success bg-opacity-25 text-success"><i class="bi bi-arrow-up-right"></i> 8.2%</span>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card card-custom stat-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="text-muted mb-1">Bounce Rate</h6>
+                    <h3 class="fw-bold mb-0">34.2%</h3>
+                </div>
+                <div class="stat-icon bg-light-orange"><i class="bi bi-activity"></i></div>
+            </div>
+            <span class="badge bg-danger bg-opacity-25 text-danger"><i class="bi bi-arrow-down-right"></i> 2.1%</span>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card card-custom stat-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="text-muted mb-1">Avg. Session</h6>
+                    <h3 class="fw-bold mb-0">4m 32s</h3>
+                </div>
+                <div class="stat-icon bg-light-orange"><i class="bi bi-clock"></i></div>
+            </div>
+            <span class="badge bg-success bg-opacity-25 text-success"><i class="bi bi-arrow-up-right"></i> 5.4%</span>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card card-custom stat-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="text-muted mb-1">Conversions</h6>
+                    <h3 class="fw-bold mb-0">2,847</h3>
+                </div>
+                <div class="stat-icon bg-light-orange"><i class="bi bi-cart-check"></i></div>
+            </div>
+            <span class="badge bg-success bg-opacity-25 text-success"><i class="bi bi-arrow-up-right"></i> 12.3%</span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-xl-8">
+        <div class="card card-custom p-4 h-100">
+            <h5 class="fw-bold mb-4">Traffic Overview</h5>
+            <div class="chart-container">
+                <canvas id="trafficChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4">
+        <div class="card card-custom p-4 h-100">
+            <h5 class="fw-bold mb-4">Traffic Sources</h5>
+            <div class="chart-container d-flex justify-content-center">
+                <canvas id="sourcesChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctx1 = document.getElementById('trafficChart').getContext('2d');
+new Chart(ctx1, {
+    type: 'line',
+    data: {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [{
+            label: 'Visitors',
+            data: [1200, 1500, 1100, 1800, 2200, 2800, 2600],
+            borderColor: '#F2660F',
+            backgroundColor: 'rgba(242, 102, 15, 0.1)',
+            tension: 0.4, fill: true, borderWidth: 2,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { display: false }, ticks: { color: '#DBD2CB' } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#DBD2CB' }, beginAtZero: true }
+        }
+    }
+});
+
+const ctx2 = document.getElementById('sourcesChart').getContext('2d');
+new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+        labels: ['Direct', 'Organic', 'Social', 'Referral'],
+        datasets: [{
+            data: [40, 30, 20, 10],
+            backgroundColor: ['#F2660F', '#DBD2CB', '#4a4542', '#8a827d'],
+            borderWidth: 0,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false, cutout: '70%',
+        plugins: { legend: { position: 'bottom', labels: { color: '#DBD2CB' } } }
+    }
+});
+</script>
+{% endblock %}

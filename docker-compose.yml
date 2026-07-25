@@ -1,0 +1,82 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ecom_user
+      POSTGRES_PASSWORD: ecom_secure_2026
+      POSTGRES_DB: ecom_db
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecom_user -d ecom_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://ecom_user:ecom_secure_2026@postgres:5432/ecom_db
+      - DEBUG=False
+    volumes:
+      - static_files:/app/app/static
+    networks:
+      - backend
+
+  nginx:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - static_files:/app/static:ro
+      - certbot_etc:/etc/letsencrypt:ro
+      - certbot_var:/var/lib/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    networks:
+      - backend
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certbot_etc:/etc/letsencrypt
+      - certbot_var:/var/lib/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done;'"
+    networks:
+      - backend
+
+volumes:
+  postgres_data:
+    driver: local
+  static_files:
+    driver: local
+  certbot_etc:
+    driver: local
+  certbot_var:
+    driver: local
+  certbot_www:
+    driver: local
+
+networks:
+  backend:
+    driver: bridge

@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} - Asah's Primenest{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb" style="background:none;padding:0;margin:0">
+            <li class="breadcrumb-item"><a href="/" class="text-warm-gray text-decoration-none">Home</a></li>
+            <li class="breadcrumb-item"><a href="/categories" class="text-warm-gray text-decoration-none">Categories</a></li>
+            <li class="breadcrumb-item active" style="color:var(--primary-orange)">{{ product.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- Product Gallery -->
+        <div class="col-lg-6 mb-4 mb-lg-0">
+            <div class="product-gallery-main mb-3" style="border-radius:16px;overflow:hidden;background:var(--card-bg);border:1px solid var(--border-color)">
+                {% if product.images %}
+                    <img id="mainImage" src="{{ product.images[0] }}" class="w-100" style="height:450px;object-fit:cover;display:block" alt="{{ product.name }}">
+                {% elif product.image %}
+                    <img id="mainImage" src="{{ product.image }}" class="w-100" style="height:450px;object-fit:cover;display:block" alt="{{ product.name }}">
+                {% else %}
+                    <div class="d-flex align-items-center justify-content-center" style="height:450px;background:rgba(242,102,15,.04)">
+                        <i class="bi bi-box-seam" style="font-size:5rem;color:rgba(242,102,15,.2)"></i>
+                    </div>
+                {% endif %}
+            </div>
+            {% if product.images and product.images|length > 1 %}
+            <div class="d-flex gap-2 overflow-auto pb-2">
+                {% for img in product.images %}
+                <img src="{{ img }}" class="product-thumb" style="width:80px;height:80px;object-fit:cover;border-radius:10px;cursor:pointer;border:2px solid {% if loop.first %}var(--primary-orange){% else %}var(--border-color){% endif %};flex-shrink:0" alt="Thumbnail" onclick="changeImage('{{ img }}', this)">
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Product Info -->
+        <div class="col-lg-6">
+            {% if product.brand %}
+            <div style="font-size:.8rem;color:var(--primary-orange);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem">{{ product.brand }}</div>
+            {% endif %}
+            <h1 style="font-size:1.6rem;font-weight:800;color:var(--white);margin-bottom:.5rem">{{ product.name }}</h1>
+            
+            <div class="d-flex align-items-center gap-3 mb-3" style="flex-wrap:wrap">
+                {% if product.reviews %}
+                <div class="d-flex align-items-center gap-1">
+                    {% for i in range(5) %}
+                        <i class="bi bi-star{% if loop.index <= (product.reviews|map(attribute='rating')|sum // (product.reviews|length)) %}-fill{% endif %}" style="color:#ffc107;font-size:.85rem"></i>
+                    {% endfor %}
+                    <span style="font-size:.8rem;color:var(--warm-gray);margin-left:4px">{{ product.reviews|length }} review{{ 's' if product.reviews|length != 1 }}</span>
+                </div>
+                {% endif %}
+                {% if product.stock > 0 %}
+                    <span class="badge" style="background:rgba(25,135,84,.15);color:#198754;border:1px solid rgba(25,135,84,.3);padding:5px 12px;font-size:.75rem">In Stock</span>
+                {% else %}
+                    <span class="badge" style="background:rgba(220,53,69,.15);color:#dc3545;border:1px solid rgba(220,53,69,.3);padding:5px 12px;font-size:.75rem">Out of Stock</span>
+                {% endif %}
+                <span style="font-size:.78rem;color:var(--warm-gray)">SKU: {{ product.sku }}</span>
+            </div>
+
+            <div class="mb-3">
+                {% if product.discount_price and product.discount_price < product.price %}
+                    <span style="font-size:1.8rem;font-weight:800;color:var(--primary-orange)">GHS {{ "%.2f"|format(product.discount_price) }}</span>
+                    <span style="font-size:1.1rem;color:var(--warm-gray);text-decoration:line-through;margin-left:10px">GHS {{ "%.2f"|format(product.price) }}</span>
+                    <span class="badge ms-2" style="background:rgba(242,102,15,.15);color:var(--primary-orange);font-size:.75rem">-{{ ((1 - product.discount_price / product.price) * 100)|int }}%</span>
+                {% else %}
+                    <span style="font-size:1.8rem;font-weight:800;color:var(--white)">GHS {{ "%.2f"|format(product.price) }}</span>
+                {% endif %}
+            </div>
+
+            {% if product.description %}
+            <p style="color:var(--warm-gray);line-height:1.7;font-size:.9rem;margin-bottom:1.5rem">{{ product.description }}</p>
+            {% endif %}
+
+            <hr style="border-color:var(--border-color)">
+
+            {% if product.attributes %}
+            <div class="mb-3">
+                {% for attr in product.attributes %}
+                <div class="d-flex align-items-center mb-2" style="font-size:.85rem">
+                    <span style="color:var(--warm-gray);min-width:120px">{{ attr.name }}:</span>
+                    <span style="color:var(--white);font-weight:600">{{ attr.value }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="d-flex align-items-center gap-3 my-4" style="flex-wrap:wrap">
+                <div>
+                    <label style="font-size:.8rem;color:var(--warm-gray);display:block;margin-bottom:6px">Quantity</label>
+                    <div class="d-flex align-items-center" style="border:1px solid var(--border-color);border-radius:10px;overflow:hidden">
+                        <button class="btn" style="background:transparent;color:var(--white);border:none;padding:8px 14px" onclick="changeQty(-1)">-</button>
+                        <input type="number" id="qty" value="1" min="1" max="{{ product.stock }}" class="form-control text-center" style="width:50px;background:transparent;border:none;color:var(--white);border-radius:0">
+                        <button class="btn" style="background:transparent;color:var(--white);border:none;padding:8px 14px" onclick="changeQty(1)">+</button>
+                    </div>
+                </div>
+                <div class="flex-grow-1">
+                    <label style="display:block;margin-bottom:6px">&nbsp;</label>
+                    <button class="btn btn-primary btn-lg w-100" style="border-radius:12px;padding:12px" onclick="addToCart({{ product.id }})">
+                        <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                    </button>
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:6px">&nbsp;</label>
+                    <button class="btn btn-lg" style="border-radius:12px;padding:12px 18px;border:1px solid var(--border-color);background:transparent;color:var(--white)" onclick="addToWishlist({{ product.id }})">
+                        <i class="bi bi-heart"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;padding:1.2rem">
+                <ul style="list-style:none;padding:0;margin:0">
+                    <li class="mb-2" style="font-size:.85rem;color:var(--warm-gray)"><i class="bi bi-truck me-2" style="color:var(--primary-orange)"></i><strong style="color:var(--white)">Free Delivery</strong> on orders over GHS 500</li>
+                    <li class="mb-2" style="font-size:.85rem;color:var(--warm-gray)"><i class="bi bi-arrow-return-left me-2" style="color:var(--primary-orange)"></i><strong style="color:var(--white)">30-Day Returns</strong> Guarantee</li>
+                    <li style="font-size:.85rem;color:var(--warm-gray)"><i class="bi bi-shield-check me-2" style="color:var(--primary-orange)"></i><strong style="color:var(--white)">Genuine Products</strong> Guaranteed</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="mt-5 pt-4" style="border-top:1px solid var(--border-color)">
+        <ul class="nav gap-2 mb-4" style="border:none">
+            <li><button class="btn btn-sm rounded-pill active" style="background:var(--primary-orange);color:var(--white);border:none" onclick="showTab('desc', this)">Description</button></li>
+            <li><button class="btn btn-sm rounded-pill" style="background:transparent;border:1px solid var(--border-color);color:var(--warm-gray)" onclick="showTab('specs', this)">Specifications</button></li>
+            <li><button class="btn btn-sm rounded-pill" style="background:transparent;border:1px solid var(--border-color);color:var(--warm-gray)" onclick="showTab('reviews', this)">Reviews ({{ product.reviews|length }})</button></li>
+        </ul>
+
+        <div id="tab-desc" class="tab-content-active">
+            <div style="color:var(--warm-gray);line-height:1.8;font-size:.9rem;max-width:800px">
+                {{ product.description or 'No description available.' }}
+            </div>
+        </div>
+
+        <div id="tab-specs" class="tab-content-active" style="display:none">
+            {% if product.attributes %}
+            <table style="width:100%;max-width:600px;border-collapse:collapse">
+                {% for attr in product.attributes %}
+                <tr style="border-bottom:1px solid var(--border-color)">
+                    <td style="padding:12px 16px;color:var(--white);font-weight:600;font-size:.85rem;width:40%">{{ attr.name }}</td>
+                    <td style="padding:12px 16px;color:var(--warm-gray);font-size:.85rem">{{ attr.value }}</td>
+                </tr>
+                {% endfor %}
+                <tr style="border-bottom:1px solid var(--border-color)">
+                    <td style="padding:12px 16px;color:var(--white);font-weight:600;font-size:.85rem">SKU</td>
+                    <td style="padding:12px 16px;color:var(--warm-gray);font-size:.85rem">{{ product.sku }}</td>
+                </tr>
+                {% if product.brand %}
+                <tr style="border-bottom:1px solid var(--border-color)">
+                    <td style="padding:12px 16px;color:var(--white);font-weight:600;font-size:.85rem">Brand</td>
+                    <td style="padding:12px 16px;color:var(--warm-gray);font-size:.85rem">{{ product.brand }}</td>
+                </tr>
+                {% endif %}
+            </table>
+            {% else %}
+            <p style="color:var(--warm-gray)">No specifications available.</p>
+            {% endif %}
+        </div>
+
+        <div id="tab-reviews" class="tab-content-active" style="display:none">
+            {% if product.reviews %}
+                {% for r in product.reviews %}
+                <div style="border-bottom:1px solid var(--border-color);padding:16px 0">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        {% for i in range(5) %}
+                            <i class="bi bi-star{% if i < r.rating %}-fill{% endif %}" style="color:#ffc107;font-size:.8rem"></i>
+                        {% endfor %}
+                        <span style="font-size:.75rem;color:var(--warm-gray)">{{ r.created_at.strftime('%d %b %Y') if r.created_at else '' }}</span>
+                    </div>
+                    <p style="color:var(--warm-gray);font-size:.85rem;margin:0">{{ r.comment or '' }}</p>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color:var(--warm-gray)">No reviews yet. Be the first to review this product!</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Related Products -->
+    {% if related %}
+    <div class="mt-5 pt-4" style="border-top:1px solid var(--border-color)">
+        <h4 class="mb-4">Related Products</h4>
+        <div class="row g-3">
+            {% for rp in related %}
+            <div class="col-6 col-md-3">
+                <a href="/product/{{ rp.slug }}" class="text-decoration-none">
+                    <div class="product-card h-100">
+                        <div class="product-card-img-wrap">
+                            {% if rp.image %}
+                                <img src="{{ rp.image }}" class="product-card-img" alt="{{ rp.name }}">
+                            {% else %}
+                                <div class="product-card-img d-flex align-items-center justify-content-center" style="background:rgba(255,255,255,.02);color:rgba(255,255,255,.15);font-size:2rem">
+                                    <i class="bi bi-box-seam"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="product-card-body">
+                            <div class="product-card-category">{{ rp.category }}</div>
+                            <h6 class="product-card-name">{{ rp.name }}</h6>
+                            <div class="product-card-price">
+                                {% if rp.discount_price and rp.discount_price < rp.price %}
+                                    <span class="price-current">GHS {{ "%.2f"|format(rp.discount_price) }}</span>
+                                    <span class="price-original">GHS {{ "%.2f"|format(rp.price) }}</span>
+                                {% else %}
+                                    <span class="price-current">GHS {{ "%.2f"|format(rp.price) }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function changeImage(src, el) {
+    document.getElementById('mainImage').src = src;
+    document.querySelectorAll('.product-thumb').forEach(t => t.style.borderColor = 'var(--border-color)');
+    el.style.borderColor = 'var(--primary-orange)';
+}
+
+function changeQty(delta) {
+    const inp = document.getElementById('qty');
+    let val = parseInt(inp.value) + delta;
+    if (val < 1) val = 1;
+    if (val > parseInt(inp.max)) val = parseInt(inp.max);
+    inp.value = val;
+}
+
+function showTab(name, btn) {
+    document.querySelectorAll('.tab-content-active').forEach(el => el.style.display = 'none');
+    document.getElementById('tab-' + name).style.display = 'block';
+    document.querySelectorAll('.nav .btn').forEach(b => { b.style.background = 'transparent'; b.style.border = '1px solid var(--border-color)'; b.style.color = 'var(--warm-gray)'; b.classList.remove('active'); });
+    btn.style.background = 'var(--primary-orange)'; btn.style.border = 'none'; btn.style.color = 'var(--white)'; btn.classList.add('active');
+}
+
+async function addToCart(productId) {
+    const token = localStorage.getItem('token');
+    if (!token) { window.location.href = '/login'; return; }
+    const qty = parseInt(document.getElementById('qty').value) || 1;
+    try {
+        const resp = await fetch('/api/cart/items', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+            body: JSON.stringify({product_id: productId, quantity: qty})
+        });
+        if (resp.ok) {
+            if (typeof updateCartCount === 'function') updateCartCount();
+            showToast('Added to cart! <a href="/cart" style="color:#fff;text-decoration:underline;margin-left:6px">View Cart</a>', 'success');
+        }
+        else { const err = await resp.json().catch(() => ({})); showToast(err.detail || 'Failed', 'error'); }
+    } catch(e) { showToast('Network error', 'error'); }
+}
+
+async function addToWishlist(productId) {
+    const token = localStorage.getItem('token');
+    if (!token) { window.location.href = '/login'; return; }
+    try {
+        const resp = await fetch('/api/wishlists', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+            body: JSON.stringify({product_id: productId})
+        });
+        if (resp.ok) {
+            showToast('Added to wishlist!', 'success');
+            const btn = document.querySelector('button[onclick="addToWishlist(' + productId + ')"] i');
+            if (btn) { btn.classList.remove('bi-heart'); btn.classList.add('bi-heart-fill'); }
+        } else {
+            const err = await resp.json().catch(() => ({}));
+            if (resp.status === 400) showToast(err.detail || 'Already in wishlist', 'warning');
+            else if (resp.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; }
+            else showToast(err.detail || 'Failed to add to wishlist', 'error');
+        }
+    } catch(e) { showToast('Network error', 'error'); }
+}
+
+function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;padding:12px 20px;border-radius:10px;color:#fff;font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.3);animation:fadeIn .3s ease;max-width:380px';
+    t.style.background = type === 'success' ? 'linear-gradient(135deg,#198754,#157347)' : 'linear-gradient(135deg,#dc3545,#bb2d3b)';
+    t.innerHTML = '<i class="bi bi-' + (type === 'success' ? 'check-circle-fill' : 'exclamation-circle-fill') + '"></i><span>' + msg + '</span>';
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 4000);
+}
+</script>
+{% endblock %}

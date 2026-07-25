@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}My Wishlist{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-5" data-aos="fade-up">
+        <div>
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Saved For Later</span>
+            <h2 class="text-white mb-0 mt-2">My Wishlist</h2>
+        </div>
+        <span class="text-warm-gray" id="wishlist-count">0 items</span>
+    </div>
+
+    <!-- Wishlist Grid -->
+    <div id="wishlist-grid" class="row g-4"></div>
+
+    <!-- Empty State -->
+    <div id="wishlist-empty" class="text-center py-5 d-none" data-aos="fade-up">
+        <i class="bi bi-heart text-primary-orange" style="font-size: 5rem;"></i>
+        <h3 class="text-white mt-4 mb-3">Your Wishlist is Empty</h3>
+        <p class="text-warm-gray mb-4" style="max-width: 450px; margin: 0 auto;">
+            Save items you love to your wishlist. Review them anytime and easily move them to your cart.
+        </p>
+        <a href="{{ url_for('shop.index') }}" class="btn btn-primary btn-lg px-5">CONTINUE SHOPPING</a>
+    </div>
+</div>
+
+<style>
+    .wishlist-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .wishlist-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    .wishlist-card .remove-btn {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .wishlist-card:hover .remove-btn {
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;padding:12px 20px;border-radius:10px;color:#fff;font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.3);animation:fadeIn .3s ease;max-width:380px';
+    t.style.background = type === 'success' ? 'linear-gradient(135deg,#198754,#157347)' : type === 'warning' ? 'linear-gradient(135deg,#ffc107,#e0a800)' : 'linear-gradient(135deg,#dc3545,#bb2d3b)';
+    t.innerHTML = '<i class="bi bi-' + (type === 'success' ? 'check-circle-fill' : type === 'warning' ? 'exclamation-triangle-fill' : 'exclamation-circle-fill') + '"></i><span>' + msg + '</span>';
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const grid = document.getElementById('wishlist-grid');
+    const emptyState = document.getElementById('wishlist-empty');
+    const countEl = document.getElementById('wishlist-count');
+
+    async function loadWishlist() {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = '/login'; return; }
+            const res = await fetch('/api/wishlists', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; return; }
+            const items = await res.json();
+            const list = Array.isArray(items) ? items : (items.wishlists || items.items || []);
+
+            if (!Array.isArray(list) || list.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('d-none');
+                countEl.textContent = '0 items';
+                return;
+            }
+
+            emptyState.classList.add('d-none');
+            countEl.textContent = list.length + ' item' + (list.length !== 1 ? 's' : '');
+            grid.innerHTML = '';
+
+            list.forEach((item, index) => {
+                const product = item.product || item;
+                const id = product.id || item.id;
+                const name = product.name || product.title || 'Product';
+                const price = product.price || 0;
+                const image = product.image || product.image_url || 'https://via.placeholder.com/300x300/121010/DBD2CB?text=Product';
+                const slug = product.slug || id;
+
+                grid.innerHTML += `
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="${(index % 3) * 100}">
+                        <div class="card card-custom border-0 h-100 wishlist-card">
+                            <div class="position-relative overflow-hidden">
+                                <button class="btn btn-sm btn-danger rounded-circle shadow-sm position-absolute top-0 start-0 m-3 z-3 remove-btn" onclick="removeFromWishlist(${id})" title="Remove">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                                <div class="product-actions position-absolute top-0 end-0 m-3 z-3 d-flex flex-column gap-2">
+                                    <button class="btn btn-sm btn-light rounded-circle shadow-sm" onclick="addToCart(${id})" title="Add to Cart">
+                                        <i class="bi bi-cart-plus"></i>
+                                    </button>
+                                </div>
+                                <img src="${image}" class="card-img-top p-3" alt="${name}" style="height: 250px; object-fit: contain;">
+                            </div>
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title text-white fw-bold mb-2">${name}</h5>
+                                <div class="mt-auto d-flex justify-content-between align-items-center">
+                                    <span class="text-white fw-bold fs-5">GHS ${Number(price).toLocaleString()}</span>
+                                    <button class="btn btn-primary rounded-circle" style="width: 40px; height: 40px; padding: 0;" onclick="addToCart(${id})">
+                                        <i class="bi bi-cart-plus fs-5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        } catch (err) {
+            grid.innerHTML = '';
+            emptyState.classList.remove('d-none');
+        }
+    }
+
+    window.removeFromWishlist = async function(productId) {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = '/login'; return; }
+            const resp = await fetch('/api/wishlists/' + productId, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (resp.ok) loadWishlist();
+            else showToast('Failed to remove item', 'error');
+        } catch (err) {
+            console.error('Failed to remove from wishlist:', err);
+            showToast('Network error', 'error');
+        }
+    };
+
+    window.addToCart = async function(productId) {
+        try {
+            const resp = await fetch('/api/cart/items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: productId, quantity: 1 })
+            });
+            if (resp.ok) {
+                showToast('Added to cart!', 'success');
+                removeFromWishlist(productId);
+            } else {
+                const err = await resp.json().catch(() => ({}));
+                showToast(err.detail || 'Failed to add to cart', 'error');
+            }
+        } catch (err) {
+            console.error('Failed to add to cart:', err);
+            showToast('Network error', 'error');
+        }
+    };
+
+    loadWishlist();
+});
+</script>
+{% endblock %}

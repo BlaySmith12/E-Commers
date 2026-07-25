@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}All Categories - Asah's Primenest{% endblock %}
+
+{% block content %}
+<section class="py-5" style="background:var(--darker-bg)">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <div class="section-label">Browse</div>
+            <h1 class="section-title">All Categories</h1>
+            <p class="text-warm-gray mt-2" style="max-width:600px;margin:0 auto">Find everything you need for your home, office, and construction projects across Ghana.</p>
+        </div>
+
+        <div class="row g-3 g-md-4">
+            {% for c in categories %}
+            <div class="col-4 col-md-3 col-lg-3">
+                <a href="/categories/{{ c.slug }}" class="text-decoration-none">
+                    <div class="category-card" style="min-height:280px">
+                        <img src="{{ c.image }}" class="category-card-img" alt="{{ c.name }}">
+                        <div class="category-card-overlay" style="justify-content:flex-end;padding:1.2rem">
+                            <div>
+                                <div class="category-card-title text-white" style="font-size:1.05rem">{{ c.name }}</div>
+                                <div class="category-card-count" style="opacity:.85;font-size:.78rem">{{ c.subcategories|length }} products</div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

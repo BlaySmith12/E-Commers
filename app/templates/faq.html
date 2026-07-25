@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block title %}Frequently Asked Questions{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="position-relative" style="background: linear-gradient(rgba(18,16,16,0.85), rgba(18,16,16,0.95)), url('{{ url_for("static", filename="images/hero_bg.png") }}') center/cover no-repeat; padding: 120px 0 60px;">
+    <div class="container position-relative" style="z-index: 2;">
+        <div class="text-center" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Help Center</span>
+            <h1 class="display-4 fw-bold text-white mt-3">Frequently Asked Questions</h1>
+            <p class="text-warm-gray mx-auto mt-3" style="max-width:550px;">Find answers to the most common questions about shopping with Asah's Primenest.</p>
+            <nav aria-label="breadcrumb" class="mt-3">
+                <ol class="breadcrumb justify-content-center mb-0">
+                    <li class="breadcrumb-item"><a href="/" class="text-warm-gray text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item active text-primary-orange" aria-current="page">FAQ</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ Accordion -->
+<section class="py-5" style="background-color: var(--dark-bg);">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-9">
+
+                <!-- Orders & Payments -->
+                <div class="mb-4" data-aos="fade-up">
+                    <h4 class="text-primary-orange fw-bold mb-4"><i class="bi bi-cart-check me-2"></i>Orders & Payments</h4>
+                    <div class="accordion" id="faqOrders">
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#order1" aria-expanded="false" aria-controls="order1">
+                                    <span class="text-white fw-bold">How do I place an order?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="order1" class="collapse" data-bs-parent="#faqOrders">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">Placing an order on Asah's Primenest is simple. Browse our shop, add items to your cart, and proceed to checkout. You'll need to provide your delivery address, select a payment method, and confirm your order. You'll receive an order confirmation email once your order is successfully placed.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#order2" aria-expanded="false" aria-controls="order2">
+                                    <span class="text-white fw-bold">What payment methods do you accept?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="order2" class="collapse" data-bs-parent="#faqOrders">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">We accept a variety of payment methods for your convenience: Mobile Money (MTN, Vodafone, AirtelTigo), Bank Transfer, Credit/Debit Cards (Visa, Mastercard), and Cash on Delivery. All online transactions are secured with SSL encryption.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#order3" aria-expanded="false" aria-controls="order3">
+                                    <span class="text-white fw-bold">What should I do if my payment fails?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="order3" class="collapse" data-bs-parent="#faqOrders">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">If your payment fails, first check that your card details or Mobile Money PIN are correct. Ensure you have sufficient funds and that your internet connection is stable. You can retry the payment or choose a different payment method. If the issue persists, please contact our support team for assistance.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#order4" aria-expanded="false" aria-controls="order4">
+                                    <span class="text-white fw-bold">Can I modify my order after placing it?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="order4" class="collapse" data-bs-parent="#faqOrders">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">You can modify your order if it hasn't been processed yet. Contact us as soon as possible with your order number and the changes you'd like to make. Once the order has been dispatched, modifications are no longer possible, but you can use our return process after delivery.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shipping & Delivery -->
+                <div class="mb-4" data-aos="fade-up" data-aos-delay="100">
+                    <h4 class="text-primary-orange fw-bold mb-4"><i class="bi bi-truck me-2"></i>Shipping & Delivery</h4>
+                    <div class="accordion" id="faqShipping">
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#ship1" aria-expanded="false" aria-controls="ship1">
+                                    <span class="text-white fw-bold">How long does delivery take?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="ship1" class="collapse" data-bs-parent="#faqShipping">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">Delivery times depend on your location: <strong class="text-primary-orange">Greater Accra:</strong> 1–2 business days | <strong class="text-primary-orange">Other Regions:</strong> 3–5 business days | <strong class="text-primary-orange">Remote Areas:</strong> 5–7 business days. Orders placed before 2:00 PM are processed the same day.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#ship2" aria-expanded="false" aria-controls="ship2">
+                                    <span class="text-white fw-bold">How can I track my order?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="ship2" class="collapse" data-bs-parent="#faqShipping">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">Once your order is dispatched, you'll receive an email with a tracking number. You can use our <a href="/order-tracking" class="text-primary-orange text-decoration-none fw-bold">Order Tracking</a> page to check the status of your delivery at any time by entering your order number and email address.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#ship3" aria-expanded="false" aria-controls="ship3">
+                                    <span class="text-white fw-bold">Do you deliver nationwide?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="ship3" class="collapse" data-bs-parent="#faqShipping">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">Yes! We deliver to all regions across Ghana, including remote areas. Delivery fees and timeframes vary depending on your location. Free shipping is available for orders over GHS 500.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#ship4" aria-expanded="false" aria-controls="ship4">
+                                    <span class="text-white fw-bold">What if I'm not home during delivery?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="ship4" class="collapse" data-bs-parent="#faqShipping">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">Our delivery team will contact you before arrival to confirm your availability. If you're not available, they will attempt redelivery on the next business day. You can also provide special delivery instructions or designate an alternative delivery address.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Returns & Refunds -->
+                <div class="mb-4" data-aos="fade-up" data-aos-delay="200">
+                    <h4 class="text-primary-orange fw-bold mb-4"><i class="bi bi-arrow-return-left me-2"></i>Returns & Refunds</h4>
+                    <div class="accordion" id="faqReturns">
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#ret1" aria-expanded="false" aria-controls="ret1">
+                                    <span class="text-white fw-bold">How do I return a product?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="ret1" class="collapse" data-bs-parent="#faqReturns">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">To return a product, email us at <strong class="text-primary-orange">support@asahsprimenest.com</strong> or call our support line within 14 days of delivery. Provide your order number and reason for return. Our team will guide you through the return process and provide an RMA number.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#ret2" aria-expanded="false" aria-controls="ret2">
+                                    <span class="text-white fw-bold">How long does it take to receive my refund?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="ret2" class="collapse" data-bs-parent="#faqReturns">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">Refunds are processed within 5–10 business days after we receive and inspect your returned item. The refund is issued to your original payment method. Mobile Money refunds are typically faster, while bank transfers may take an additional 2–3 business days.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#ret3" aria-expanded="false" aria-controls="ret3">
+                                    <span class="text-white fw-bold">Can I exchange a product instead of returning it?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="ret3" class="collapse" data-bs-parent="#faqReturns">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">Yes, you can exchange your product for another item of equal or lesser value. If the new item costs more, you'll pay the difference. If it costs less, the difference is refunded. Exchanges are subject to product availability and must be requested within 14 days.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#ret4" aria-expanded="false" aria-controls="ret4">
+                                    <span class="text-white fw-bold">What if I received a damaged or defective item?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="ret4" class="collapse" data-bs-parent="#faqReturns">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">Contact us immediately within 48 hours with photos of the damage. We'll arrange a free return pickup and send a replacement at no extra cost, or issue a full refund. You won't need to pay any return shipping fees for defective items.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account & Support -->
+                <div class="mb-4" data-aos="fade-up" data-aos-delay="300">
+                    <h4 class="text-primary-orange fw-bold mb-4"><i class="bi bi-person-gear me-2"></i>Account & Support</h4>
+                    <div class="accordion" id="faqAccount">
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#acc1" aria-expanded="false" aria-controls="acc1">
+                                    <span class="text-white fw-bold">How do I create an account?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="acc1" class="collapse" data-bs-parent="#faqAccount">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">Click the "Login" button in the top navigation bar, then select "Register." Fill in your name, email address, phone number, and create a password. You can also register during checkout. Having an account lets you track orders, save addresses, and access your purchase history.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#acc2" aria-expanded="false" aria-controls="acc2">
+                                    <span class="text-white fw-bold">How do I reset my password?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="acc2" class="collapse" data-bs-parent="#faqAccount">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">On the login page, click "Forgot Password." Enter your registered email address, and we'll send you a password reset link. Check your inbox (and spam folder) for the email. Click the link to create a new password. If you don't receive the email, contact our support team.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card card-custom mb-3 border-0">
+                            <div class="card-header border-0 p-0" style="background: transparent;">
+                                <button class="btn btn-link text-decoration-none w-100 text-start p-4 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#acc3" aria-expanded="false" aria-controls="acc3">
+                                    <span class="text-white fw-bold">How do I contact customer support?</span>
+                                    <i class="bi bi-chevron-down text-primary-orange fs-5 transition-icon"></i>
+                                </button>
+                            </div>
+                            <div id="acc3" class="collapse" data-bs-parent="#faqAccount">
+                                <div class="card-body px-4 pb-4 pt-0">
+                                    <p class="text-warm-gray mb-0" style="line-height: 1.8;">You can reach our support team via: <strong class="text-primary-orange">Email:</strong> support@asahsprimenest.com | <strong class="text-primary-orange">Phone:</strong> +233 30 277 1234 | <strong class="text-primary-orange">WhatsApp:</strong> +233 24 123 4567 | Or visit our <a href="/contact" class="text-primary-orange text-decoration-none fw-bold">Contact Page</a>. Our team is available Mon–Fri 8AM–6PM and Sat 9AM–4PM.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="py-5" style="background: linear-gradient(135deg, var(--primary-orange), #d1560c);">
+    <div class="container py-5 text-center" data-aos="fade-up">
+        <h2 class="text-white fw-bold mb-3">Still Have Questions?</h2>
+        <p class="text-white mb-4" style="opacity:0.9; max-width:500px; margin:0 auto;">Our friendly support team is always happy to help with anything you need.</p>
+        <a href="/contact" class="btn btn-light btn-lg px-5 fw-bold">CONTACT SUPPORT</a>
+    </div>
+</section>
+
+<style>
+    .transition-icon { transition: transform 0.3s ease; }
+    .accordion-button:not(.collapsed) .transition-icon { transform: rotate(180deg); }
+    .accordion-button:focus { box-shadow: none; }
+    .accordion-button::after { display: none; }
+    .accordion .card-custom { background: rgba(255,255,255,0.03); }
+    .accordion .card-custom .btn-link { color: inherit; }
+    .accordion .card-custom .btn-link:hover { color: var(--primary-orange); }
+</style>
+{% endblock %}

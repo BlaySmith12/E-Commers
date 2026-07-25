@@ -1,0 +1,881 @@
+{% extends "admin_base.html" %}
+
+{% block head %}
+<style>
+    .stat-card-mini {
+        padding: 16px 20px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-card);
+        transition: all 0.2s;
+    }
+    .stat-card-mini:hover {
+        border-color: rgba(242, 102, 15, 0.3);
+    }
+    .stat-card-mini .stat-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+    }
+    .stat-card-mini .stat-value {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--text-light);
+    }
+    .stat-card-mini .stat-sub {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+    }
+    .method-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .method-badge.cod { background: rgba(25, 135, 84, 0.15); color: #198754; }
+    .method-badge.momo { background: rgba(255, 193, 7, 0.15); color: #ffc107; }
+    .method-badge.telecel { background: rgba(220, 53, 69, 0.15); color: #dc3545; }
+    .method-badge.card { background: rgba(13, 110, 253, 0.15); color: #0d6efd; }
+    .method-badge.other { background: rgba(108, 117, 125, 0.15); color: #9a9a9a; }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+    }
+    .status-badge.completed { background: rgba(25, 135, 84, 0.15); color: #198754; }
+    .status-badge.pending { background: rgba(255, 193, 7, 0.15); color: #ffc107; }
+    .status-badge.failed { background: rgba(220, 53, 69, 0.15); color: #dc3545; }
+    .status-badge.refunded { background: rgba(108, 117, 125, 0.15); color: #9a9a9a; }
+    .tx-id {
+        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        font-size: 0.78rem;
+        color: var(--primary-orange);
+        background: rgba(242, 102, 15, 0.08);
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: transparent;
+        color: var(--text-muted);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.8rem;
+    }
+    .action-btn:hover {
+        background: var(--primary-orange);
+        border-color: var(--primary-orange);
+        color: #fff;
+    }
+    .action-btn.danger:hover {
+        background: #dc3545;
+        border-color: #dc3545;
+    }
+    .pagination-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-top: 1px solid var(--border-color);
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .pagination-info {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+    .page-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        background: transparent;
+        color: var(--text-muted);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+    }
+    .page-btn:hover, .page-btn.active {
+        background: var(--primary-orange);
+        border-color: var(--primary-orange);
+        color: #fff;
+    }
+    .page-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    .detail-item {
+        padding: 10px 14px;
+        background: rgba(255,255,255,0.02);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+    .detail-item .label {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    .detail-item .value {
+        font-size: 0.92rem;
+        color: var(--text-light);
+        font-weight: 600;
+    }
+    .timeline {
+        position: relative;
+        padding-left: 24px;
+    }
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 7px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--border-color);
+    }
+    .timeline-item {
+        position: relative;
+        padding-bottom: 16px;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -20px;
+        top: 4px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--primary-orange);
+        border: 2px solid var(--bg-dark);
+    }
+    .timeline-item .tl-time {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+    }
+    .timeline-item .tl-text {
+        font-size: 0.85rem;
+        color: var(--text-light);
+    }
+    .toast-container {
+        position: fixed;
+        top: 80px;
+        right: 24px;
+        z-index: 9999;
+    }
+    .search-box {
+        position: relative;
+    }
+    .search-box i {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+    .search-box input {
+        padding-left: 34px;
+    }
+    .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border-color);
+        background: rgba(255,255,255,0.01);
+        flex-wrap: wrap;
+    }
+    .copy-feedback {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: var(--bg-darker);
+        border: 1px solid var(--primary-orange);
+        color: var(--primary-orange);
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        z-index: 9999;
+        animation: fadeUp 0.3s ease;
+    }
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">Payments</h3>
+        <p class="text-muted mb-0">Track and manage all payment transactions.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <span class="badge bg-secondary rounded-pill px-3 py-2" id="totalPayCount">0 transactions</span>
+        <button class="btn btn-primary-custom btn-sm" onclick="exportPaymentsCSV()">
+            <i class="bi bi-download me-1"></i> Export CSV
+        </button>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Stats Bar -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-xl">
+        <div class="stat-card-mini">
+            <div class="stat-label">Total Revenue</div>
+            <div class="stat-value text-success" id="statRevenue">GHS 0.00</div>
+            <div class="stat-sub" id="statRevenueSub">0 transactions</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="stat-card-mini">
+            <div class="stat-label">Completed</div>
+            <div class="stat-value" style="color:#198754;" id="statCompleted">GHS 0.00</div>
+            <div class="stat-sub" id="statCompletedSub">0 payments</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="stat-card-mini">
+            <div class="stat-label">Pending</div>
+            <div class="stat-value" style="color:#ffc107;" id="statPending">GHS 0.00</div>
+            <div class="stat-sub" id="statPendingSub">0 payments</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="stat-card-mini">
+            <div class="stat-label">Failed</div>
+            <div class="stat-value" style="color:#dc3545;" id="statFailed">GHS 0.00</div>
+            <div class="stat-sub" id="statFailedSub">0 payments</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="stat-card-mini">
+            <div class="stat-label">Refunded</div>
+            <div class="stat-value" style="color:#9a9a9a;" id="statRefunded">GHS 0.00</div>
+            <div class="stat-sub" id="statRefundedSub">0 payments</div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Table Card -->
+<div class="card card-custom p-0 overflow-hidden">
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <div class="search-box position-relative flex-grow-1" style="max-width:280px;">
+            <i class="bi bi-search"></i>
+            <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Search by TX ID or customer..." id="searchInput" oninput="applyFilters()" style="padding-left:34px;">
+        </div>
+        <select class="form-select form-select-sm bg-dark text-light border-secondary" id="statusFilter" onchange="applyFilters()" style="width:140px;">
+            <option value="">All Status</option>
+            <option value="Completed">Completed</option>
+            <option value="Pending">Pending</option>
+            <option value="Failed">Failed</option>
+            <option value="Refunded">Refunded</option>
+        </select>
+        <select class="form-select form-select-sm bg-dark text-light border-secondary" id="methodFilter" onchange="applyFilters()" style="width:160px;">
+            <option value="">All Methods</option>
+            <option value="COD">COD</option>
+            <option value="MTN MoMo">MTN MoMo</option>
+            <option value="Telecel">Telecel</option>
+            <option value="Card">Card</option>
+        </select>
+        <input type="date" class="form-control form-control-sm bg-dark text-light border-secondary" id="dateFilter" onchange="applyFilters()" style="width:160px;">
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0 align-middle" style="--bs-table-bg: transparent;">
+            <thead>
+                <tr>
+                    <th class="text-muted fw-normal border-secondary px-3 py-3">Transaction ID</th>
+                    <th class="text-muted fw-normal border-secondary">Order</th>
+                    <th class="text-muted fw-normal border-secondary">Customer</th>
+                    <th class="text-muted fw-normal border-secondary">Amount</th>
+                    <th class="text-muted fw-normal border-secondary">Method</th>
+                    <th class="text-muted fw-normal border-secondary">Status</th>
+                    <th class="text-muted fw-normal border-secondary">Date</th>
+                    <th class="text-muted fw-normal border-secondary text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="paymentsTable">
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted border-secondary">
+                        <div class="spinner-border spinner-border-sm mb-2" role="status"></div>
+                        <p class="small mb-0">Loading payments...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-wrapper" id="paginationWrapper" style="display:none;">
+        <span class="pagination-info" id="paginationInfo">Showing 0-0 of 0</span>
+        <div class="d-flex gap-1" id="paginationControls"></div>
+    </div>
+</div>
+
+<!-- Payment Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white">Payment Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailBody">
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger btn-sm" id="detailRefundBtn" onclick="openRefundModal()" style="display:none;">
+                    <i class="bi bi-arrow-return-left me-1"></i> Refund
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Refund Modal -->
+<div class="modal fade" id="refundModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Refund Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning bg-warning bg-opacity-10 border-warning border-opacity-25 text-warning small mb-3">
+                    <i class="bi bi-info-circle me-1"></i> This action cannot be undone. The payment status will be changed to "Refunded".
+                </div>
+                <div id="refundSummary" class="mb-3"></div>
+                <div class="mb-3">
+                    <label class="form-label text-light">Refund Reason <span class="text-danger">*</span></label>
+                    <textarea class="form-control bg-dark text-light border-secondary" id="refundReason" rows="3" required placeholder="Enter the reason for this refund..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmRefundBtn" onclick="confirmRefund()">
+                    <i class="bi bi-arrow-return-left me-1"></i> Confirm Refund
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API = '/api/admin/payments';
+let allPayments = [];
+let filteredPayments = [];
+let currentPage = 1;
+const perPage = 15;
+let currentDetailPayment = null;
+let refundingPayment = null;
+
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const iconMap = {
+        success: 'bi-check-circle-fill text-success',
+        error: 'bi-x-circle-fill text-danger',
+        warning: 'bi-exclamation-triangle-fill text-warning',
+        info: 'bi-info-circle-fill text-info'
+    };
+    const id = 'toast-' + Date.now();
+    const html = `
+        <div id="${id}" class="toast align-items-center border-0 mb-2" role="alert" style="background:var(--bg-darker);border:1px solid var(--border-color) !important;min-width:300px;">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center">
+                    <i class="bi ${iconMap[type] || iconMap.info} me-2"></i>
+                    <span class="text-light">${message}</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>`;
+    container.insertAdjacentHTML('beforeend', html);
+    const toastEl = document.getElementById(id);
+    const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+    toast.show();
+    toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+}
+
+function escHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function formatMoney(val) {
+    return 'GHS ' + parseFloat(val || 0).toFixed(2);
+}
+
+function getMethodClass(method) {
+    if (!method) return 'other';
+    const m = method.toLowerCase();
+    if (m.includes('cod')) return 'cod';
+    if (m.includes('momo') || m.includes('mtn')) return 'momo';
+    if (m.includes('telecel')) return 'telecel';
+    if (m.includes('card') || m.includes('visa') || m.includes('master')) return 'card';
+    return 'other';
+}
+
+function getMethodIcon(method) {
+    if (!method) return 'bi-wallet2';
+    const m = method.toLowerCase();
+    if (m.includes('cod')) return 'bi-cash-stack';
+    if (m.includes('momo') || m.includes('mtn')) return 'bi-phone';
+    if (m.includes('telecel')) return 'bi-phone';
+    if (m.includes('card')) return 'bi-credit-card';
+    return 'bi-wallet2';
+}
+
+function getStatusClass(status) {
+    const s = (status || '').toLowerCase();
+    if (s === 'completed') return 'completed';
+    if (s === 'pending') return 'pending';
+    if (s === 'failed') return 'failed';
+    if (s === 'refunded') return 'refunded';
+    return 'pending';
+}
+
+async function loadPayments() {
+    try {
+        const res = await fetch(API);
+        if (!res.ok) throw new Error('Failed to load payments');
+        allPayments = await res.json();
+        updateStats();
+        applyFilters();
+    } catch (err) {
+        document.getElementById('paymentsTable').innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-5 text-muted border-secondary">
+                    <i class="bi bi-exclamation-circle fs-3 d-block mb-3 opacity-50"></i>
+                    <p class="mb-2">Failed to load payments.</p>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadPayments()"><i class="bi bi-arrow-clockwise me-1"></i> Retry</button>
+                </td>
+            </tr>`;
+    }
+}
+
+function updateStats() {
+    const total = allPayments.length;
+    const completed = allPayments.filter(p => p.status === 'Completed');
+    const pending = allPayments.filter(p => p.status === 'Pending');
+    const failed = allPayments.filter(p => p.status === 'Failed');
+    const refunded = allPayments.filter(p => p.status === 'Refunded');
+
+    const sumAmount = arr => arr.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+
+    document.getElementById('statRevenue').textContent = formatMoney(sumAmount(allPayments));
+    document.getElementById('statRevenueSub').textContent = total + ' transactions';
+    document.getElementById('statCompleted').textContent = formatMoney(sumAmount(completed));
+    document.getElementById('statCompletedSub').textContent = completed.length + ' payments';
+    document.getElementById('statPending').textContent = formatMoney(sumAmount(pending));
+    document.getElementById('statPendingSub').textContent = pending.length + ' payments';
+    document.getElementById('statFailed').textContent = formatMoney(sumAmount(failed));
+    document.getElementById('statFailedSub').textContent = failed.length + ' payments';
+    document.getElementById('statRefunded').textContent = formatMoney(sumAmount(refunded));
+    document.getElementById('statRefundedSub').textContent = refunded.length + ' payments';
+    document.getElementById('totalPayCount').textContent = total + ' transactions';
+}
+
+function applyFilters() {
+    const search = document.getElementById('searchInput').value.toLowerCase().trim();
+    const status = document.getElementById('statusFilter').value;
+    const method = document.getElementById('methodFilter').value;
+    const date = document.getElementById('dateFilter').value;
+
+    filteredPayments = allPayments.filter(p => {
+        if (search) {
+            const txId = (p.transaction_id || String(p.id) || '').toLowerCase();
+            const cust = (p.customer_name || p.customer_email || '').toLowerCase();
+            const ordNum = (p.order_number || String(p.order_id || '')).toLowerCase();
+            if (!txId.includes(search) && !cust.includes(search) && !ordNum.includes(search)) return false;
+        }
+        if (status && p.status !== status) return false;
+        if (method && (p.payment_method || '') !== method) return false;
+        if (date) {
+            const pDate = (p.created_at || '').split('T')[0];
+            if (pDate !== date) return false;
+        }
+        return true;
+    });
+
+    currentPage = 1;
+    renderTable();
+}
+
+function renderTable() {
+    const tbody = document.getElementById('paymentsTable');
+    const start = (currentPage - 1) * perPage;
+    const pageData = filteredPayments.slice(start, start + perPage);
+
+    if (!pageData.length) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-5 text-muted border-secondary">
+                    <i class="bi bi-credit-card fs-1 d-block mb-3 opacity-50"></i>
+                    <p class="mb-2">No payments match your filters.</p>
+                    <button class="btn btn-sm btn-outline-primary" onclick="clearFilters()">Clear Filters</button>
+                </td>
+            </tr>`;
+        document.getElementById('paginationWrapper').style.display = 'none';
+        return;
+    }
+
+    tbody.innerHTML = pageData.map(p => {
+        const txId = p.transaction_id || p.id || '-';
+        const ordNum = p.order_number || p.order_id || '-';
+        const methodCls = getMethodClass(p.payment_method);
+        const statusCls = getStatusClass(p.status);
+        const date = p.created_at ? new Date(p.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+        const time = p.created_at ? new Date(p.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+
+        return `
+        <tr>
+            <td class="border-secondary px-3">
+                <span class="tx-id">${escHtml(String(txId))}</span>
+            </td>
+            <td class="border-secondary text-light">#${escHtml(String(ordNum))}</td>
+            <td class="border-secondary">
+                <div class="text-light fw-bold" style="font-size:0.85rem;">${escHtml(p.customer_name || 'N/A')}</div>
+                <div class="text-muted small">${escHtml(p.customer_email || '')}</div>
+            </td>
+            <td class="border-secondary text-light fw-bold">${formatMoney(p.amount)}</td>
+            <td class="border-secondary">
+                <span class="method-badge ${methodCls}">
+                    <i class="bi ${getMethodIcon(p.payment_method)}"></i>
+                    ${escHtml(p.payment_method || 'N/A')}
+                </span>
+            </td>
+            <td class="border-secondary">
+                <span class="status-badge ${statusCls}">${escHtml(p.status || 'N/A')}</span>
+            </td>
+            <td class="border-secondary">
+                <div class="text-muted small">${date}</div>
+                <div class="text-muted" style="font-size:0.7rem;">${time}</div>
+            </td>
+            <td class="border-secondary text-end pe-4">
+                <div class="d-flex gap-1 justify-content-end">
+                    <button class="action-btn" title="View Details" onclick="viewPaymentDetail(${p.id})">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                    ${p.status === 'Completed' ? `
+                    <button class="action-btn danger" title="Refund" onclick="initiateRefund(${p.id})">
+                        <i class="bi bi-arrow-return-left"></i>
+                    </button>` : ''}
+                    <button class="action-btn" title="Copy TX ID" onclick="copyTxId('${escHtml(String(txId))}')">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+
+    renderPagination();
+}
+
+function renderPagination() {
+    const totalPages = Math.ceil(filteredPayments.length / perPage);
+    const start = (currentPage - 1) * perPage + 1;
+    const end = Math.min(currentPage * perPage, filteredPayments.length);
+
+    document.getElementById('paginationInfo').textContent =
+        `Showing ${start}-${end} of ${filteredPayments.length}`;
+
+    const controls = document.getElementById('paginationControls');
+    if (totalPages <= 1) {
+        controls.innerHTML = '';
+        document.getElementById('paginationWrapper').style.display = filteredPayments.length > 0 ? 'flex' : 'none';
+        return;
+    }
+
+    let html = '';
+    html += `<button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="bi bi-chevron-left" style="font-size:0.7rem;"></i></button>`;
+
+    const maxVisible = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+    if (endPage - startPage < maxVisible - 1) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+
+    if (startPage > 1) {
+        html += `<button class="page-btn" onclick="goToPage(1)">1</button>`;
+        if (startPage > 2) html += `<span class="text-muted px-1">...</span>`;
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) html += `<span class="text-muted px-1">...</span>`;
+        html += `<button class="page-btn" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+    }
+
+    html += `<button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="bi bi-chevron-right" style="font-size:0.7rem;"></i></button>`;
+
+    controls.innerHTML = html;
+    document.getElementById('paginationWrapper').style.display = 'flex';
+}
+
+function goToPage(page) {
+    const totalPages = Math.ceil(filteredPayments.length / perPage);
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    renderTable();
+    document.querySelector('.card-custom').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('methodFilter').value = '';
+    document.getElementById('dateFilter').value = '';
+    applyFilters();
+}
+
+function viewPaymentDetail(id) {
+    const p = allPayments.find(x => x.id === id);
+    if (!p) return;
+    currentDetailPayment = p;
+
+    const txId = p.transaction_id || p.id || '-';
+    const ordNum = p.order_number || p.order_id || '-';
+    const methodCls = getMethodClass(p.payment_method);
+    const statusCls = getStatusClass(p.status);
+    const date = p.created_at ? new Date(p.created_at).toLocaleString() : '-';
+
+    const html = `
+        <div class="detail-grid mb-4">
+            <div class="detail-item">
+                <div class="label">Transaction ID</div>
+                <div class="value"><span class="tx-id">${escHtml(String(txId))}</span></div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Order Number</div>
+                <div class="value">#${escHtml(String(ordNum))}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Amount</div>
+                <div class="value" style="font-size:1.2rem;color:#198754;">${formatMoney(p.amount)}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Status</div>
+                <div class="value"><span class="status-badge ${statusCls}">${escHtml(p.status || 'N/A')}</span></div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Payment Method</div>
+                <div class="value"><span class="method-badge ${methodCls}"><i class="bi ${getMethodIcon(p.payment_method)}"></i> ${escHtml(p.payment_method || 'N/A')}</span></div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Date & Time</div>
+                <div class="value" style="font-size:0.85rem;">${date}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Customer Name</div>
+                <div class="value">${escHtml(p.customer_name || 'N/A')}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Customer Email</div>
+                <div class="value" style="font-size:0.85rem;">${escHtml(p.customer_email || 'N/A')}</div>
+            </div>
+        </div>
+        ${p.phone ? `
+        <div class="detail-item mb-3">
+            <div class="label">Phone Number</div>
+            <div class="value">${escHtml(p.phone)}</div>
+        </div>` : ''}
+        <h6 class="text-white fw-bold mb-3">Status Timeline</h6>
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="tl-time">${date}</div>
+                <div class="tl-text">Payment created</div>
+            </div>
+            ${p.status === 'Completed' ? `
+            <div class="timeline-item">
+                <div class="tl-time">${date}</div>
+                <div class="tl-text text-success">Payment confirmed</div>
+            </div>` : ''}
+            ${p.status === 'Pending' ? `
+            <div class="timeline-item">
+                <div class="tl-time">${date}</div>
+                <div class="tl-text text-warning">Awaiting confirmation</div>
+            </div>` : ''}
+            ${p.status === 'Failed' ? `
+            <div class="timeline-item">
+                <div class="tl-time">${date}</div>
+                <div class="tl-text text-danger">Payment failed</div>
+            </div>` : ''}
+            ${p.status === 'Refunded' ? `
+            <div class="timeline-item">
+                <div class="tl-time">${date}</div>
+                <div class="tl-text text-secondary">Payment refunded</div>
+            </div>` : ''}
+        </div>`;
+
+    document.getElementById('detailBody').innerHTML = html;
+    document.getElementById('detailRefundBtn').style.display = p.status === 'Completed' ? 'inline-flex' : 'none';
+    new bootstrap.Modal(document.getElementById('detailModal')).show();
+}
+
+function initiateRefund(id) {
+    const p = allPayments.find(x => x.id === id);
+    if (!p) return;
+    refundingPayment = p;
+
+    document.getElementById('refundSummary').innerHTML = `
+        <div class="p-3 rounded" style="background:rgba(255,255,255,0.02);border:1px solid var(--border-color);">
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Transaction</span>
+                <span class="tx-id">${escHtml(String(p.transaction_id || p.id))}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Amount</span>
+                <span class="text-danger fw-bold">${formatMoney(p.amount)}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">Customer</span>
+                <span class="text-light">${escHtml(p.customer_name || 'N/A')}</span>
+            </div>
+        </div>`;
+    document.getElementById('refundReason').value = '';
+    document.getElementById('confirmRefundBtn').disabled = false;
+    document.getElementById('confirmRefundBtn').innerHTML = '<i class="bi bi-arrow-return-left me-1"></i> Confirm Refund';
+    new bootstrap.Modal(document.getElementById('refundModal')).show();
+}
+
+function openRefundModal() {
+    bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
+    setTimeout(() => {
+        if (currentDetailPayment) initiateRefund(currentDetailPayment.id);
+    }, 300);
+}
+
+async function confirmRefund() {
+    if (!refundingPayment) return;
+    const reason = document.getElementById('refundReason').value.trim();
+    if (!reason) {
+        document.getElementById('refundReason').classList.add('is-invalid');
+        return;
+    }
+    document.getElementById('refundReason').classList.remove('is-invalid');
+
+    const btn = document.getElementById('confirmRefundBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing...';
+
+    try {
+        const res = await fetch(`${API}/${refundingPayment.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                status: 'Refunded',
+                refund_reason: reason
+            })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || err.message || 'Refund failed');
+        }
+        bootstrap.Modal.getInstance(document.getElementById('refundModal')).hide();
+        showToast(`Refund of ${formatMoney(refundingPayment.amount)} processed successfully`);
+        await loadPayments();
+    } catch (err) {
+        showToast('Refund failed: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-return-left me-1"></i> Confirm Refund';
+    }
+}
+
+function copyTxId(txId) {
+    navigator.clipboard.writeText(txId).then(() => {
+        const el = document.createElement('div');
+        el.className = 'copy-feedback';
+        el.innerHTML = '<i class="bi bi-check2 me-1"></i> TX ID copied: ' + escHtml(txId);
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 2000);
+    }).catch(() => {
+        showToast('Failed to copy TX ID', 'error');
+    });
+}
+
+function exportPaymentsCSV() {
+    const data = filteredPayments.length ? filteredPayments : allPayments;
+    if (!data.length) {
+        showToast('No payments to export', 'warning');
+        return;
+    }
+    const columns = ['Transaction ID', 'Order #', 'Customer', 'Email', 'Amount', 'Method', 'Status', 'Date'];
+    const rows = data.map(p => [
+        p.transaction_id || p.id || '',
+        p.order_number || p.order_id || '',
+        p.customer_name || '',
+        p.customer_email || '',
+        parseFloat(p.amount || 0).toFixed(2),
+        p.payment_method || '',
+        p.status || '',
+        p.created_at || ''
+    ]);
+
+    const escape = val => {
+        const s = String(val || '');
+        if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+            return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+    };
+
+    let csv = columns.map(escape).join(',') + '\n';
+    rows.forEach(row => {
+        csv += row.map(escape).join(',') + '\n';
+    });
+
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `payments_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${data.length} payments to CSV`);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadPayments();
+});
+</script>
+{% endblock %}

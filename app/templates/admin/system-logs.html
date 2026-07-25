@@ -1,0 +1,221 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">System Logs</h3>
+        <p class="text-muted mb-0">Monitor application logs and system health.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="autoRefreshBtn" onclick="toggleAutoRefresh()">
+            <i class="bi bi-arrow-repeat me-1"></i> <span id="autoRefreshText">Auto-refresh: Off</span>
+        </button>
+        <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="clearLogs()">
+            <i class="bi bi-trash me-1"></i> Clear Display
+        </button>
+    </div>
+</div>
+
+<div class="card card-custom p-0 overflow-hidden">
+    <div class="p-3 border-bottom border-secondary bg-dark bg-opacity-50">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label text-muted small">Log Level</label>
+                <select class="form-select form-select-sm bg-dark text-light border-secondary" id="levelFilter">
+                    <option value="">All Levels</option>
+                    <option value="DEBUG">Debug</option>
+                    <option value="INFO">Info</option>
+                    <option value="WARNING">Warning</option>
+                    <option value="ERROR">Error</option>
+                    <option value="CRITICAL">Critical</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small">Source</label>
+                <select class="form-select form-select-sm bg-dark text-light border-secondary" id="sourceFilter">
+                    <option value="">All Sources</option>
+                    <option value="app">App</option>
+                    <option value="database">Database</option>
+                    <option value="auth">Auth</option>
+                    <option value="api">API</option>
+                    <option value="scheduler">Scheduler</option>
+                    <option value="worker">Worker</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small">Search Message</label>
+                <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Search log messages..." id="searchInput">
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button class="btn btn-sm btn-primary-custom flex-fill" onclick="fetchLogs(1)">
+                    <i class="bi bi-funnel me-1"></i> Filter
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="resetFilters()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="col-md-3 d-flex justify-content-end gap-2">
+                <span class="badge rounded-pill px-3 py-2" id="logStats">Loading...</span>
+            </div>
+        </div>
+    </div>
+    <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+        <table class="table table-dark table-hover mb-0 align-middle" style="--bs-table-bg: transparent;">
+            <thead>
+                <tr>
+                    <th class="text-muted fw-normal border-secondary px-3 py-3" style="width: 180px;">Timestamp</th>
+                    <th class="text-muted fw-normal border-secondary" style="width: 100px;">Level</th>
+                    <th class="text-muted fw-normal border-secondary" style="width: 120px;">Source</th>
+                    <th class="text-muted fw-normal border-secondary">Message</th>
+                </tr>
+            </thead>
+            <tbody id="logsTable">
+                <tr>
+                    <td colspan="4" class="text-center py-5 text-muted border-secondary">
+                        <div class="spinner-border text-primary mb-3" role="status" style="color: var(--primary-orange) !important;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mb-0">Loading system logs...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="p-3 border-top border-secondary d-flex justify-content-between align-items-center">
+        <span class="text-muted small" id="logCount">Loading...</span>
+        <nav>
+            <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API = '/api/audit/system';
+let currentPage = 1;
+let autoRefreshInterval = null;
+const perPage = 50;
+
+const levelConfig = {
+    'DEBUG': { class: 'bg-secondary', icon: 'bi-bug' },
+    'INFO': { class: 'bg-info text-dark', icon: 'bi-info-circle' },
+    'WARNING': { class: 'bg-warning text-dark', icon: 'bi-exclamation-triangle' },
+    'ERROR': { class: 'bg-danger', icon: 'bi-x-circle' },
+    'CRITICAL': { class: 'bg-danger', icon: 'bi-exclamation-octagon' },
+};
+
+async function fetchLogs(page) {
+    currentPage = page || 1;
+    const tbody = document.getElementById('logsTable');
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 border-secondary"><div class="spinner-border text-primary" role="status" style="color: var(--primary-orange) !important;"></div></td></tr>';
+
+    const params = new URLSearchParams();
+    params.set('page', currentPage);
+    params.set('per_page', perPage);
+    const level = document.getElementById('levelFilter').value;
+    const source = document.getElementById('sourceFilter').value;
+    if (level) params.set('level', level);
+    if (source) params.set('source', source);
+
+    try {
+        const res = await fetch(`${API}?${params.toString()}`);
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        const logs = data.logs || data.items || data || [];
+        const total = data.total || logs.length;
+        const totalPages = Math.ceil(total / perPage) || 1;
+
+        const stats = { DEBUG: 0, INFO: 0, WARNING: 0, ERROR: 0, CRITICAL: 0 };
+        logs.forEach(l => { if (stats[l.level] !== undefined) stats[l.level]++; });
+
+        if (logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-5 text-muted border-secondary"><i class="bi bi-terminal fs-1 d-block mb-3 opacity-50"></i>No system logs found.</td></tr>';
+        } else {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            tbody.innerHTML = logs.filter(l => {
+                if (!search) return true;
+                return (l.message || '').toLowerCase().includes(search) || (l.source || '').toLowerCase().includes(search);
+            }).map(l => {
+                const cfg = levelConfig[l.level] || { class: 'bg-secondary', icon: 'bi-circle' };
+                return `
+                <tr>
+                    <td class="border-secondary px-3 text-muted small" style="font-family: monospace; white-space: nowrap;">${formatTime(l.timestamp || l.created_at)}</td>
+                    <td class="border-secondary"><span class="badge ${cfg.class} rounded-pill px-3 py-2"><i class="bi ${cfg.icon} me-1"></i>${l.level || 'UNKNOWN'}</span></td>
+                    <td class="border-secondary text-light small">${l.source || '-'}</td>
+                    <td class="border-secondary text-muted small" style="max-width: 500px; word-break: break-word;">${escapeHtml(l.message || l.details || '-')}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        document.getElementById('logCount').textContent = `${logs.length} entries (page ${currentPage} of ${totalPages})`;
+        const statParts = Object.entries(stats).filter(([, v]) => v > 0).map(([k, v]) => {
+            const cfg = levelConfig[k];
+            return `<span class="badge ${cfg.class} rounded-pill px-2 py-1 ms-1">${k}: ${v}</span>`;
+        }).join('');
+        document.getElementById('logStats').innerHTML = statParts || 'No logs';
+        renderPagination(totalPages);
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-5 text-danger border-secondary"><i class="bi bi-exclamation-triangle d-block mb-2"></i>Error loading system logs.</td></tr>';
+    }
+}
+
+function renderPagination(total) {
+    const el = document.getElementById('pagination');
+    if (total <= 1) { el.innerHTML = ''; return; }
+    let html = '';
+    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link bg-dark border-secondary text-muted" href="#" onclick="fetchLogs(${currentPage - 1}); return false;">&laquo;</a></li>`;
+    for (let i = 1; i <= total; i++) {
+        if (i === 1 || i === total || Math.abs(i - currentPage) <= 2) {
+            html += `<li class="page-item ${i === currentPage ? 'active' : ''}"><a class="page-link ${i === currentPage ? '' : 'bg-dark border-secondary text-muted'}" href="#" style="${i === currentPage ? 'background-color: var(--primary-orange); border-color: var(--primary-orange);' : ''}" onclick="fetchLogs(${i}); return false;">${i}</a></li>`;
+        } else if (Math.abs(i - currentPage) === 3) {
+            html += '<li class="page-item disabled"><a class="page-link bg-dark border-secondary text-muted" href="#">...</a></li>';
+        }
+    }
+    html += `<li class="page-item ${currentPage === total ? 'disabled' : ''}"><a class="page-link bg-dark border-secondary text-muted" href="#" onclick="fetchLogs(${currentPage + 1}); return false;">&raquo;</a></li>`;
+    el.innerHTML = html;
+}
+
+function formatTime(ts) {
+    if (!ts) return '-';
+    const d = new Date(ts);
+    return d.toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function resetFilters() {
+    document.getElementById('levelFilter').value = '';
+    document.getElementById('sourceFilter').value = '';
+    document.getElementById('searchInput').value = '';
+    fetchLogs(1);
+}
+
+function clearLogs() {
+    document.getElementById('logsTable').innerHTML = '<tr><td colspan="4" class="text-center py-5 text-muted border-secondary"><i class="bi bi-check-circle fs-1 d-block mb-3 opacity-50"></i>Display cleared. Click Filter to reload.</td></tr>';
+    document.getElementById('logCount').textContent = 'Cleared';
+    document.getElementById('logStats').innerHTML = '';
+}
+
+function toggleAutoRefresh() {
+    const btn = document.getElementById('autoRefreshBtn');
+    const text = document.getElementById('autoRefreshText');
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        text.textContent = 'Auto-refresh: Off';
+        btn.classList.remove('btn-outline-success');
+        btn.classList.add('btn-outline-secondary');
+    } else {
+        autoRefreshInterval = setInterval(() => fetchLogs(currentPage), 10000);
+        text.textContent = 'Auto-refresh: 10s';
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-outline-success');
+    }
+}
+
+fetchLogs(1);
+</script>
+{% endblock %}

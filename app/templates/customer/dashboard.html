@@ -1,0 +1,784 @@
+{% extends "base.html" %}
+{% block title %}My Account{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/customer-dashboard.css"><style>@media(min-width:992px){.top-bar,#mainNav,.site-footer{display:none!important}}.cd-mobile-toggle{display:none!important}</style>{% endblock %}
+
+{% block content %}
+<div class="cd-layout" id="cdRoot">
+    <div class="cd-loading-overlay" id="cdLoading">
+        <div class="cd-spinner"></div>
+        <p>Loading your account...</p>
+    </div>
+
+    <button class="cd-mobile-toggle" id="mobileToggle" onclick="toggleMobileSidebar()"><i class="bi bi-list"></i></button>
+    <div class="cd-mobile-overlay" id="mobileOverlay" onclick="toggleMobileSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside class="cd-sidebar" id="cdSidebar">
+        <a href="/" class="cd-sidebar-logo">
+            <img src="/static/images/logo.png" alt="Logo">
+            <span class="cd-sidebar-logo-text">PRIMENEST</span>
+        </a>
+        <nav class="cd-sidebar-nav" id="cdNav">
+            <a class="cd-nav-link active" data-section="overview" onclick="showSection('overview',this)"><i class="bi bi-grid-1x2"></i><span>Dashboard</span></a>
+            <a class="cd-nav-link" data-section="orders" onclick="showSection('orders',this)"><i class="bi bi-bag"></i><span>My Orders</span></a>
+            <a class="cd-nav-link" data-section="track" onclick="showSection('track',this)"><i class="bi bi-geo-alt"></i><span>Track Orders</span></a>
+            <a class="cd-nav-link" data-section="addresses" onclick="showSection('addresses',this)"><i class="bi bi-house-door"></i><span>Addresses</span></a>
+            <a class="cd-nav-link" data-section="payment" onclick="showSection('payment',this)"><i class="bi bi-credit-card"></i><span>Payment Methods</span></a>
+            <a class="cd-nav-link" data-section="coupons" onclick="showSection('coupons',this)"><i class="bi bi-ticket"></i><span>Coupons & Rewards</span></a>
+            <a class="cd-nav-link" data-section="notifications" onclick="showSection('notifications',this)"><i class="bi bi-bell"></i><span>Notifications</span><span class="cd-nav-badge d-none" id="notifBadge">0</span></a>
+            <a class="cd-nav-link" data-section="account" onclick="showSection('account',this)"><i class="bi bi-person-gear"></i><span>Account Details</span></a>
+            <a class="cd-nav-link" data-section="security" onclick="showSection('security',this)"><i class="bi bi-shield-lock"></i><span>Security</span></a>
+            <a class="cd-nav-link" data-section="support" onclick="showSection('support',this)"><i class="bi bi-headset"></i><span>Support</span></a>
+        </nav>
+        <div class="cd-sidebar-footer">
+            <a class="cd-nav-link cd-logout" onclick="doLogout()"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="cd-main">
+        <div class="cd-topbar">
+            <h6 class="cd-topbar-title" id="sectionTitle">Dashboard</h6>
+            <div class="cd-topbar-right">
+                <span class="cd-topbar-user" id="topbarUser">User</span>
+                <div class="cd-avatar-sm" id="topbarAvatar">U</div>
+            </div>
+        </div>
+
+        <div class="cd-content">
+
+            <!-- OVERVIEW -->
+            <div class="cd-section active" id="sec-overview">
+                <div class="cd-welcome">
+                    <h2>Welcome back, <span id="welcomeName">User</span>!</h2>
+                    <p>Here's what's happening with your account.</p>
+                </div>
+                <div class="cd-stats-grid">
+                    <div class="cd-stat-card"><div class="cd-stat-icon"><i class="bi bi-bag"></i></div><div class="cd-stat-info"><h3 id="statTotal">0</h3><p>Total Orders</p></div></div>
+                    <div class="cd-stat-card"><div class="cd-stat-icon cd-icon-pending"><i class="bi bi-clock"></i></div><div class="cd-stat-info"><h3 id="statPending">0</h3><p>Pending</p></div></div>
+                    <div class="cd-stat-card"><div class="cd-stat-icon cd-icon-success"><i class="bi bi-check-circle"></i></div><div class="cd-stat-info"><h3 id="statCompleted">0</h3><p>Delivered</p></div></div>
+                    <div class="cd-stat-card"><div class="cd-stat-icon cd-icon-money"><i class="bi bi-wallet2"></i></div><div class="cd-stat-info"><h3 id="statSpent">GHS 0</h3><p>Total Spent</p></div></div>
+                    <div class="cd-stat-card"><div class="cd-stat-icon cd-icon-star"><i class="bi bi-award"></i></div><div class="cd-stat-info"><h3 id="statPoints">0</h3><p>Points</p></div></div>
+                </div>
+
+                <div class="cd-section-header"><h5>Recent Orders</h5><a class="cd-btn cd-btn-outline cd-btn-sm" onclick="showSection('orders',document.querySelector('[data-section=orders]'))">View All</a></div>
+                <div id="recentOrdersList"><div class="cd-skeleton-card"></div></div>
+
+                <div class="cd-section-header mt-4" style="margin-top:24px"><h5>Quick Actions</h5></div>
+                <div class="cd-quick-actions">
+                    <a class="cd-quick-action" onclick="showSection('track',document.querySelector('[data-section=track]'))"><i class="bi bi-geo-alt"></i><span>Track Order</span></a>
+                    <a class="cd-quick-action" onclick="showSection('orders',document.querySelector('[data-section=orders]'))"><i class="bi bi-bag"></i><span>My Orders</span></a>
+                    <a class="cd-quick-action" onclick="showSection('addresses',document.querySelector('[data-section=addresses]'))"><i class="bi bi-house-door"></i><span>Addresses</span></a>
+                    <a class="cd-quick-action" onclick="showSection('support',document.querySelector('[data-section=support]'))"><i class="bi bi-headset"></i><span>Support</span></a>
+                </div>
+            </div>
+
+            <!-- ORDERS -->
+            <div class="cd-section" id="sec-orders">
+                <div class="cd-tabs" id="orderTabs">
+                    <button class="cd-tab active" onclick="filterOrders('')">All</button>
+                    <button class="cd-tab" onclick="filterOrders('Pending')">Pending</button>
+                    <button class="cd-tab" onclick="filterOrders('Processing')">Processing</button>
+                    <button class="cd-tab" onclick="filterOrders('Shipped')">Shipped</button>
+                    <button class="cd-tab" onclick="filterOrders('Delivered')">Delivered</button>
+                    <button class="cd-tab" onclick="filterOrders('Cancelled')">Cancelled</button>
+                </div>
+                <div id="ordersList"><div class="cd-skeleton-card"></div></div>
+            </div>
+
+            <!-- TRACK -->
+            <div class="cd-section" id="sec-track">
+                <div class="cd-card">
+                    <h5 style="margin-bottom:16px">Track Your Order</h5>
+                    <div class="cd-form-row">
+                        <input type="text" class="cd-input" id="trackInput" placeholder="Enter order number (e.g. ORD-20260722...)">
+                        <button class="cd-btn cd-btn-primary" onclick="trackOrder()">Track</button>
+                    </div>
+                </div>
+                <div id="trackResult" style="margin-top:20px"></div>
+            </div>
+
+            <!-- ADDRESSES -->
+            <div class="cd-section" id="sec-addresses">
+                <div class="cd-section-header"><h5>My Addresses</h5><button class="cd-btn cd-btn-primary cd-btn-sm" onclick="showAddressForm()">Add New</button></div>
+                <div class="cd-address-grid" id="addressGrid"><div class="cd-skeleton-card"></div></div>
+                <div id="addressFormArea" class="cd-card d-none" style="margin-top:20px">
+                    <h5 id="addressFormTitle">Add Address</h5>
+                    <form onsubmit="saveAddress(event)">
+                        <input type="hidden" id="addrId">
+                        <div class="cd-form-grid">
+                            <div class="cd-form-group"><label>Street Address *</label><input class="cd-input" id="addrStreet" required></div>
+                            <div class="cd-form-group"><label>City *</label><input class="cd-input" id="addrCity" required></div>
+                            <div class="cd-form-group"><label>State</label><input class="cd-input" id="addrState"></div>
+                            <div class="cd-form-group"><label>Country</label><input class="cd-input" id="addrCountry" value="Ghana"></div>
+                            <div class="cd-form-group"><label>Zip Code</label><input class="cd-input" id="addrZip"></div>
+                            <div class="cd-form-group cd-form-check"><label><input type="checkbox" id="addrDefault"> Set as default</label></div>
+                        </div>
+                        <div class="cd-form-actions"><button type="button" class="cd-btn cd-btn-outline" onclick="hideAddressForm()">Cancel</button><button type="submit" class="cd-btn cd-btn-primary">Save Address</button></div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- PAYMENT -->
+            <div class="cd-section" id="sec-payment">
+                <div class="cd-card">
+                    <h5 style="margin-bottom:16px">Payment Methods</h5>
+                    <p class="cd-text-muted" style="margin-bottom:20px;font-size:0.85rem">Your payment information is securely processed. We never store your card details.</p>
+                    <div class="cd-payment-methods">
+                        <div class="cd-payment-card"><i class="bi bi-cash-stack"></i><h6>Cash on Delivery</h6><p>Pay when you receive</p></div>
+                        <div class="cd-payment-card"><i class="bi bi-phone"></i><h6>Mobile Money</h6><p>MTN, Vodafone, AirtelTigo</p></div>
+                        <div class="cd-payment-card"><i class="bi bi-bank"></i><h6>Bank Transfer</h6><p>Direct bank payment</p></div>
+                        <div class="cd-payment-card"><i class="bi bi-credit-card"></i><h6>Credit/Debit Card</h6><p>Secure online payment</p></div>
+                    </div>
+                </div>
+                <div class="cd-card">
+                    <h5 style="margin-bottom:16px">Preferred Payment Method</h5>
+                    <select class="cd-select" id="preferredPayment" onchange="localStorage.setItem('preferredPayment',this.value)" style="max-width:320px">
+                        <option value="cod">Cash on Delivery</option>
+                        <option value="momo">Mobile Money</option>
+                        <option value="bank">Bank Transfer</option>
+                        <option value="card">Credit/Debit Card</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- COUPONS -->
+            <div class="cd-section" id="sec-coupons">
+                <div class="cd-tabs">
+                    <button class="cd-tab active" onclick="showCouponTab('available',this)">Available Coupons</button>
+                    <button class="cd-tab" onclick="showCouponTab('rewards',this)">Rewards</button>
+                </div>
+                <div id="couponsAvailable"><div id="couponsList"><div class="cd-skeleton-card"></div></div></div>
+                <div id="couponsRewards" class="d-none">
+                    <div class="cd-card">
+                        <h5>Reward Points</h5>
+                        <div class="cd-reward-balance"><h2 id="rewardPointsDisplay">0</h2><span>Points</span></div>
+                        <div class="cd-reward-tier" id="rewardTier">
+                            <div class="cd-tier-label"><span id="tierName">Bronze</span><span id="tierNext">Silver at 1,000 pts</span></div>
+                            <div class="cd-progress-bar"><div class="cd-progress-fill" id="tierProgress" style="width:0%"></div></div>
+                        </div>
+                        <p class="cd-text-muted" style="margin-top:16px;font-size:0.82rem">Earn 10 points for every GHS 1 spent. Redeem for discounts.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NOTIFICATIONS -->
+            <div class="cd-section" id="sec-notifications">
+                <div class="cd-section-header"><h5>Notifications</h5><button class="cd-btn cd-btn-outline cd-btn-sm" onclick="markAllRead()">Mark All Read</button></div>
+                <div id="notifList"><div class="cd-skeleton-card"></div></div>
+            </div>
+
+            <!-- ACCOUNT -->
+            <div class="cd-section" id="sec-account">
+                <div class="cd-card">
+                    <h5 style="margin-bottom:20px">Account Details</h5>
+                    <form onsubmit="saveProfile(event)">
+                        <div class="cd-form-grid">
+                            <div class="cd-form-group"><label>First Name</label><input class="cd-input" id="profFirstName"></div>
+                            <div class="cd-form-group"><label>Last Name</label><input class="cd-input" id="profLastName"></div>
+                            <div class="cd-form-group"><label>Email</label><input class="cd-input" type="email" id="profEmail"></div>
+                            <div class="cd-form-group"><label>Phone</label><input class="cd-input" id="profPhone"></div>
+                            <div class="cd-form-group"><label>Username</label><input class="cd-input" id="profUsername" disabled></div>
+                        </div>
+                        <button type="submit" class="cd-btn cd-btn-primary" style="margin-top:16px">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- SECURITY -->
+            <div class="cd-section" id="sec-security">
+                <div class="cd-card">
+                    <h5 style="margin-bottom:20px">Change Password</h5>
+                    <form onsubmit="changePassword(event)">
+                        <div class="cd-form-grid">
+                            <div class="cd-form-group"><label>Current Password</label><input class="cd-input" type="password" id="secCurrentPw" required></div>
+                            <div class="cd-form-group"><label>New Password</label><input class="cd-input" type="password" id="secNewPw" required minlength="6"></div>
+                            <div class="cd-form-group"><label>Confirm New Password</label><input class="cd-input" type="password" id="secConfirmPw" required></div>
+                        </div>
+                        <button type="submit" class="cd-btn cd-btn-primary" style="margin-top:16px">Update Password</button>
+                    </form>
+                </div>
+                <div class="cd-card">
+                    <h5 style="margin-bottom:12px">Two-Factor Authentication</h5>
+                    <div class="cd-security-item"><div><h6>Authenticator App</h6><p>Add an extra layer of security to your account</p></div><span class="cd-badge cd-badge-warning">Coming Soon</span></div>
+                </div>
+                <div class="cd-card">
+                    <h5 style="margin-bottom:12px">Active Sessions</h5>
+                    <div class="cd-security-item"><div><h6><i class="bi bi-browser-chrome me-2"></i>Current Session</h6><p>Active now on this device</p></div><span class="cd-badge cd-badge-success">Active</span></div>
+                </div>
+                <div class="cd-card">
+                    <h5 style="margin-bottom:12px">Security Tips</h5>
+                    <ul class="cd-tips-list">
+                        <li>Use a strong, unique password</li>
+                        <li>Never share your login credentials</li>
+                        <li>Always log out on shared devices</li>
+                        <li>Enable two-factor authentication when available</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- SUPPORT -->
+            <div class="cd-section" id="sec-support">
+                <div class="cd-card">
+                    <h5 style="margin-bottom:20px">Create Support Ticket</h5>
+                    <form onsubmit="createTicket(event)">
+                        <div class="cd-form-group"><label>Subject</label><input class="cd-input" id="ticketSubject" required></div>
+                        <div class="cd-form-group"><label>Category</label><select class="cd-select" id="ticketCategory"><option>Order Issue</option><option>Product Inquiry</option><option>Payment Issue</option><option>Shipping</option><option>Return/Refund</option><option>Account</option><option>Other</option></select></div>
+                        <div class="cd-form-group"><label>Message</label><textarea class="cd-textarea" id="ticketMessage" rows="4" required></textarea></div>
+                        <button type="submit" class="cd-btn cd-btn-primary">Submit Ticket</button>
+                    </form>
+                </div>
+                <div class="cd-section-header" style="margin-top:24px"><h5>My Tickets</h5></div>
+                <div id="ticketsList"><div class="cd-empty-state"><i class="bi bi-headset"></i><p>No support tickets yet</p></div></div>
+                <div class="cd-card" style="margin-top:16px">
+                    <h6>Contact Us</h6>
+                    <div class="cd-contact-info">
+                        <p><i class="bi bi-envelope me-2"></i>support@primenest.com</p>
+                        <p><i class="bi bi-telephone me-2"></i>+233 XX XXX XXXX</p>
+                        <p><i class="bi bi-clock me-2"></i>Mon-Sat: 8AM - 8PM</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- Review Modal (kept for API compatibility but reviews section removed from sidebar) -->
+<div class="cd-modal d-none" id="reviewModal">
+    <div class="cd-modal-content">
+        <div class="cd-modal-header"><h5 id="reviewModalTitle">Write a Review</h5><button class="cd-modal-close" onclick="closeReviewModal()">&times;</button></div>
+        <form onsubmit="submitReview(event)">
+            <div class="cd-modal-body">
+                <input type="hidden" id="revEditId">
+                <div class="cd-form-group"><label>Product ID</label><input class="cd-input" id="revProductId" required></div>
+                <div class="cd-form-group"><label>Rating</label><div class="cd-star-rating" id="starRating"><i class="bi bi-star" onclick="setRating(1)"></i><i class="bi bi-star" onclick="setRating(2)"></i><i class="bi bi-star" onclick="setRating(3)"></i><i class="bi bi-star" onclick="setRating(4)"></i><i class="bi bi-star" onclick="setRating(5)"></i></div><input type="hidden" id="revRating" value="5"></div>
+                <div class="cd-form-group"><label>Review</label><textarea class="cd-textarea" id="revComment" rows="3"></textarea></div>
+            </div>
+            <div class="cd-modal-footer"><button type="button" class="cd-btn cd-btn-outline" onclick="closeReviewModal()">Cancel</button><button type="submit" class="cd-btn cd-btn-primary">Submit</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="cd-toast-container" id="toastContainer"></div>
+
+<script>
+const CD = {
+    token: localStorage.getItem('token'),
+    user: null,
+    orders: [],
+    addresses: [],
+    notifications: [],
+    async api(url, opts) {
+        opts = opts || {};
+        var headers = {'Content-Type':'application/json'};
+        if (opts.headers) { for (var k in opts.headers) headers[k] = opts.headers[k]; }
+        if (this.token) headers['Authorization'] = 'Bearer ' + this.token;
+        var r = await fetch(url, {method: opts.method||'GET', headers: headers, body: opts.body||undefined});
+        if (r.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href='/login'; return null; }
+        if (!r.ok) { var e; try { e = await r.json(); } catch(x) { e = {detail:'Error'}; } throw new Error(e.detail || 'Request failed'); }
+        return await r.json();
+    },
+    toast: function(msg, type) {
+        type = type || 'info';
+        var c = document.getElementById('toastContainer');
+        var t = document.createElement('div');
+        var icon = type==='success'?'check-circle-fill':type==='error'?'exclamation-circle-fill':'info-circle-fill';
+        t.className = 'cd-toast cd-toast-' + type;
+        t.innerHTML = '<i class="bi bi-' + icon + '"></i><span>' + msg + '</span>';
+        c.appendChild(t);
+        setTimeout(function(){ t.classList.add('show'); }, 10);
+        setTimeout(function(){ t.classList.remove('show'); setTimeout(function(){ t.remove(); }, 300); }, 3000);
+    }
+};
+
+function toggleMobileSidebar() {
+    document.getElementById('cdSidebar').classList.toggle('open');
+    document.getElementById('mobileOverlay').classList.toggle('show');
+}
+
+function showSection(name, el) {
+    var sections = document.querySelectorAll('.cd-section');
+    for (var i = 0; i < sections.length; i++) sections[i].classList.remove('active');
+    var sec = document.getElementById('sec-' + name);
+    if (sec) sec.classList.add('active');
+    var links = document.querySelectorAll('.cd-nav-link');
+    for (var i = 0; i < links.length; i++) links[i].classList.remove('active');
+    if (el) el.classList.add('active');
+    var titles = {overview:'Dashboard',orders:'My Orders',track:'Track Orders',addresses:'Addresses',payment:'Payment Methods',coupons:'Coupons & Rewards',notifications:'Notifications',account:'Account Details',security:'Security',support:'Support'};
+    document.getElementById('sectionTitle').textContent = titles[name] || 'Dashboard';
+    document.getElementById('cdSidebar').classList.remove('open');
+    document.getElementById('mobileOverlay').classList.remove('show');
+    if (name==='overview') loadOverview();
+    if (name==='orders') loadOrders();
+    if (name==='addresses') loadAddresses();
+    if (name==='notifications') loadNotifications();
+    if (name==='coupons') loadCoupons();
+    if (name==='account') loadProfile();
+}
+
+function doLogout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/';
+}
+
+function fmt(n) { return 'GHS ' + Number(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+function fmtDateTime(d) {
+    if (!d) return '';
+    var dt = new Date(d);
+    return dt.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) + ' ' + dt.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+}
+function timeAgo(d) {
+    if(!d) return '';
+    var s = Math.floor((Date.now() - new Date(d)) / 1000);
+    if(s<60) return 'Just now';
+    if(s<3600) return Math.floor(s/60) + 'm ago';
+    if(s<86400) return Math.floor(s/3600) + 'h ago';
+    return Math.floor(s/86400) + 'd ago';
+}
+function statusBadge(s) {
+    var m = {Pending:'pending',Processing:'processing',Shipped:'shipped',Delivered:'delivered',Cancelled:'cancelled',Refunded:'refunded'};
+    return '<span class="cd-badge cd-badge-' + (m[s]||'pending') + '">' + s + '</span>';
+}
+
+function trackStep(status) {
+    var steps = ['Placed','Confirmed','Processing','Packed','Shipped','Delivering','Delivered'];
+    var map = {'Pending':1,'Processing':3,'Shipped':5,'Delivered':7,'Cancelled':0};
+    var current = map[status] || 0;
+    var h = '<div class="cd-timeline">';
+    for (var i = 0; i < steps.length; i++) {
+        var cls = i < current ? 'completed' : i === current - 1 ? 'active' : 'pending';
+        h += '<div class="cd-timeline-step ' + cls + '"><div class="cd-timeline-dot"></div><div class="cd-timeline-label">' + steps[i] + '</div></div>';
+    }
+    return h + '</div>';
+}
+
+/* OVERVIEW */
+async function loadOverview() {
+    try {
+        var orders = await CD.api('/api/orders?limit=100');
+        CD.orders = orders || [];
+        var pending = 0, completed = 0, spent = 0;
+        for (var i = 0; i < CD.orders.length; i++) {
+            var o = CD.orders[i];
+            if (o.status==='Pending'||o.status==='Processing') pending++;
+            if (o.status==='Delivered') completed++;
+            spent += o.total_amount || 0;
+        }
+        document.getElementById('statTotal').textContent = CD.orders.length;
+        document.getElementById('statPending').textContent = pending;
+        document.getElementById('statCompleted').textContent = completed;
+        document.getElementById('statSpent').textContent = fmt(spent);
+        document.getElementById('statPoints').textContent = Math.floor(spent * 10).toLocaleString();
+        var rl = document.getElementById('recentOrdersList');
+        if (CD.orders.length === 0) {
+            rl.innerHTML = '<div class="cd-empty-state"><i class="bi bi-bag"></i><p>No orders yet. <a href="/shop">Start shopping!</a></p></div>';
+        } else {
+            var h = '<div class="cd-table-wrap"><table class="cd-table"><thead><tr><th>Order</th><th>Date</th><th>Status</th><th>Total</th><th></th></tr></thead><tbody>';
+            var show = CD.orders.length > 5 ? CD.orders.slice(0, 5) : CD.orders;
+            for (var i = 0; i < show.length; i++) {
+                var o = show[i];
+                h += '<tr><td>' + o.order_number + '</td><td>' + timeAgo(o.created_at) + '</td><td>' + statusBadge(o.status) + '</td><td>' + fmt(o.total_amount) + '</td><td><button class="cd-btn cd-btn-outline cd-btn-xs" onclick="viewOrder(' + o.id + ')">View</button></td></tr>';
+            }
+            h += '</tbody></table></div>';
+            rl.innerHTML = h;
+        }
+    } catch(e) { console.error(e); }
+}
+
+/* ORDERS */
+var currentOrderFilter = '';
+async function loadOrders(status) {
+    if (status !== undefined) currentOrderFilter = status;
+    var url = '/api/orders?limit=100' + (currentOrderFilter ? '&status=' + currentOrderFilter : '');
+    try {
+        CD.orders = await CD.api(url) || [];
+        renderOrders();
+    } catch(e) { console.error(e); }
+}
+function filterOrders(status) {
+    var tabs = document.querySelectorAll('#orderTabs .cd-tab');
+    for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+    event.target.classList.add('active');
+    loadOrders(status);
+}
+function renderOrders() {
+    var el = document.getElementById('ordersList');
+    if (CD.orders.length === 0) { el.innerHTML = '<div class="cd-empty-state"><i class="bi bi-bag"></i><p>No orders found.</p></div>'; return; }
+    var html = '';
+    for (var i = 0; i < CD.orders.length; i++) {
+        var o = CD.orders[i];
+        var items = o.items || [];
+        var canCancel = o.status === 'Pending' || o.status === 'Processing';
+        var productCount = items.length;
+        html += '<div class="cd-card cd-order-card">';
+        html += '<div class="cd-order-header"><div><h6 class="mb-0">' + o.order_number + '</h6><small class="cd-text-muted">' + timeAgo(o.created_at) + '</small></div><div class="cd-order-header-right">' + statusBadge(o.status) + '<span class="cd-order-total">' + fmt(o.total_amount) + '</span></div></div>';
+        if (items.length > 0) {
+            html += '<div class="cd-order-products">';
+            for (var j = 0; j < Math.min(items.length, 3); j++) {
+                var item = items[j];
+                var img = item.product_image || item.image_url || '/static/images/placeholder.jpg';
+                var name = item.product_name || item.name || ('Product #' + item.product_id);
+                var slug = item.product_slug || '';
+                var brand = item.product_brand || '';
+                var sku = item.product_sku || '';
+                html += '<div class="cd-order-product-row">';
+                html += '<img src="' + img + '" alt="' + name + '" class="cd-order-product-thumb" onerror="this.src=\'/static/images/placeholder.jpg\'">';
+                html += '<div class="cd-order-product-info">';
+                html += '<span class="cd-order-product-name">' + name + '</span>';
+                if (brand || sku) html += '<span class="cd-order-product-meta">' + [brand, sku].filter(Boolean).join(' · ') + '</span>';
+                html += '<span class="cd-order-product-qty">Qty: ' + item.quantity + ' &times; ' + fmt(item.price) + '</span>';
+                html += '</div></div>';
+            }
+            if (items.length > 3) html += '<div class="cd-order-more-items">+' + (items.length - 3) + ' more item(s)</div>';
+            html += '</div>';
+        } else {
+            html += '<div class="cd-order-products"><p class="cd-text-muted mb-0" style="padding:8px 0">No items</p></div>';
+        }
+        html += '<div class="cd-order-actions">';
+        html += '<button class="cd-btn cd-btn-sm cd-btn-primary" onclick="viewOrder(' + o.id + ')">View Details</button>';
+        if (canCancel) html += '<button class="cd-btn cd-btn-sm cd-btn-danger" onclick="cancelOrder(' + o.id + ')">Cancel</button>';
+        html += '<button class="cd-btn cd-btn-sm cd-btn-outline" onclick="printInvoice(' + o.id + ')"><i class="bi bi-printer"></i></button>';
+        html += '</div>';
+        html += '<div class="cd-order-timeline-toggle" onclick="toggleTimeline(this)"><i class="bi bi-chevron-down"></i> Track Order</div>';
+        html += '<div class="cd-order-timeline" style="display:none">' + trackStep(o.status) + '</div></div>';
+    }
+    el.innerHTML = html;
+}
+function toggleTimeline(el) {
+    var tl = el.nextElementSibling;
+    tl.style.display = tl.style.display === 'none' ? 'block' : 'none';
+    el.querySelector('i').className = tl.style.display === 'none' ? 'bi bi-chevron-down' : 'bi bi-chevron-up';
+}
+async function viewOrder(id) {
+    showSection('orders', document.querySelector('[data-section=orders]'));
+    try {
+        var o = await CD.api('/api/orders/' + id);
+        if (!o) return;
+        var items = o.items || [];
+        var canCancel = o.status === 'Pending' || o.status === 'Processing';
+        var html = '<div class="cd-card"><div class="cd-section-header"><h5>' + o.order_number + '</h5>' + statusBadge(o.status) + '</div>';
+        html += trackStep(o.status);
+        html += '<div class="cd-order-detail-items">';
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            var img = item.product_image || item.image_url || '/static/images/placeholder.jpg';
+            var name = item.product_name || item.name || ('Product #' + item.product_id);
+            var slug = item.product_slug || '';
+            var sku = item.product_sku || '';
+            var brand = item.product_brand || '';
+            var variant = item.product_variant || '';
+            var lineTotal = item.line_total || (item.price * item.quantity);
+            var link = slug ? '/shop/product/' + slug : '#';
+            html += '<div class="cd-order-detail-item">';
+            html += '<a href="' + link + '" class="cd-order-detail-img-link"><img src="' + img + '" alt="' + name + '" class="cd-order-detail-img" onerror="this.src=\'/static/images/placeholder.jpg\'"></a>';
+            html += '<div class="cd-order-detail-info">';
+            html += '<a href="' + link + '" class="cd-order-detail-name">' + name + '</a>';
+            if (brand) html += '<span class="cd-order-detail-sku">Brand: ' + brand + '</span>';
+            if (sku) html += '<span class="cd-order-detail-sku">SKU: ' + sku + '</span>';
+            if (variant) html += '<span class="cd-order-detail-sku">Variant: ' + variant + '</span>';
+            html += '<div class="cd-order-detail-price-row">';
+            html += '<span class="cd-order-detail-unit-price">' + fmt(item.price) + ' each</span>';
+            html += '<span class="cd-order-detail-qty">&times; ' + item.quantity + '</span>';
+            html += '<span class="cd-order-detail-line-total">' + fmt(lineTotal) + '</span>';
+            html += '</div></div></div>';
+        }
+        html += '</div>';
+        html += '<div class="cd-order-summary-box">';
+        html += '<div class="cd-order-summary-row"><span>Subtotal</span><span>' + fmt(o.total_amount) + '</span></div>';
+        if (o.shipping_address) html += '<div class="cd-order-summary-row"><span>Shipping</span><span>' + o.shipping_address + '</span></div>';
+        html += '<div class="cd-order-summary-row cd-order-summary-total"><span>Total</span><span>' + fmt(o.total_amount) + '</span></div>';
+        html += '</div>';
+        if (o.payment_status) {
+            html += '<div class="cd-card" style="margin-top:16px"><h6 style="margin-bottom:8px"><i class="bi bi-credit-card"></i> Payment</h6>';
+            html += '<div class="cd-order-summary-row"><span>Method</span><span>' + (o.payment_method || 'N/A') + '</span></div>';
+            html += '<div class="cd-order-summary-row"><span>Status</span><span>' + (o.payment_status || 'N/A') + '</span></div>';
+            if (o.paid_at) html += '<div class="cd-order-summary-row"><span>Paid</span><span>' + fmtDateTime(o.paid_at) + '</span></div>';
+            html += '</div>';
+        }
+        html += '<div class="cd-order-detail-actions">';
+        if (canCancel) html += '<button class="cd-btn cd-btn-danger" onclick="cancelOrder(' + o.id + ')">Cancel Order</button>';
+        html += '<button class="cd-btn cd-btn-outline" onclick="loadOrders()"><i class="bi bi-arrow-left"></i> Back to Orders</button>';
+        html += '<button class="cd-btn cd-btn-outline" onclick="printInvoice(' + o.id + ')"><i class="bi bi-printer"></i> Print Invoice</button>';
+        html += '</div></div>';
+        document.getElementById('ordersList').innerHTML = html;
+    } catch(e) { console.error(e); }
+}
+async function cancelOrder(id) {
+    if (!confirm('Are you sure you want to cancel this order?')) return;
+    try {
+        await CD.api('/api/orders/' + id + '/cancel', {method:'POST'});
+        CD.toast('Order cancelled', 'success');
+        loadOrders();
+    } catch(e) { CD.toast('Failed to cancel order', 'error'); }
+}
+function printInvoice(orderId) { if(orderId) window.open('/order/invoice?order_id='+orderId, '_blank'); }
+
+/* TRACK */
+async function trackOrder() {
+    var num = document.getElementById('trackInput').value.trim();
+    if (!num) { CD.toast('Please enter an order number', 'error'); return; }
+    var el = document.getElementById('trackResult');
+    el.innerHTML = '<div class="cd-skeleton-card"></div>';
+    try {
+        var orders = await CD.api('/api/orders?limit=100');
+        var o = null;
+        for (var i = 0; i < orders.length; i++) { if (orders[i].order_number === num) { o = orders[i]; break; } }
+        if (!o) { el.innerHTML = '<div class="cd-empty-state"><i class="bi bi-search"></i><p>Order not found</p></div>'; return; }
+        el.innerHTML = '<div class="cd-card"><h5>' + o.order_number + '</h5><div style="margin:8px 0">' + statusBadge(o.status) + '</div><div class="cd-order-total">' + fmt(o.total_amount) + '</div>' + trackStep(o.status) + '</div>';
+    } catch(e) { el.innerHTML = '<div class="cd-empty-state"><p>Error tracking order</p></div>'; }
+}
+
+/* ADDRESSES */
+async function loadAddresses() {
+    try {
+        CD.addresses = await CD.api('/api/customers/me/addresses') || [];
+        var grid = document.getElementById('addressGrid');
+        if (CD.addresses.length === 0) { grid.innerHTML = '<div class="cd-empty-state"><i class="bi bi-house-door"></i><p>No addresses saved yet</p></div>'; return; }
+        var html = '';
+        for (var i = 0; i < CD.addresses.length; i++) {
+            var a = CD.addresses[i];
+            html += '<div class="cd-card cd-address-card">';
+            if (a.is_default) html += '<span class="cd-badge cd-badge-success">Default</span>';
+            html += '<p class="cd-address-text">' + a.street + ', ' + a.city + (a.state ? ', ' + a.state : '') + ', ' + a.country + (a.zip_code ? ' ' + a.zip_code : '') + '</p>';
+            html += '<div class="cd-address-actions">';
+            html += '<button class="cd-btn cd-btn-outline cd-btn-xs" onclick="editAddress(' + a.id + ')">Edit</button>';
+            if (!a.is_default) html += '<button class="cd-btn cd-btn-outline cd-btn-xs" onclick="setDefault(' + a.id + ')">Set Default</button>';
+            html += '<button class="cd-btn cd-btn-danger cd-btn-xs" onclick="deleteAddress(' + a.id + ')">Delete</button>';
+            html += '</div></div>';
+        }
+        grid.innerHTML = html;
+    } catch(e) { console.error(e); }
+}
+function showAddressForm(addr) {
+    document.getElementById('addressFormArea').classList.remove('d-none');
+    document.getElementById('addressFormTitle').textContent = addr ? 'Edit Address' : 'Add Address';
+    document.getElementById('addrId').value = addr ? addr.id : '';
+    document.getElementById('addrStreet').value = addr ? addr.street : '';
+    document.getElementById('addrCity').value = addr ? addr.city : '';
+    document.getElementById('addrState').value = addr ? (addr.state || '') : '';
+    document.getElementById('addrCountry').value = addr ? (addr.country || 'Ghana') : 'Ghana';
+    document.getElementById('addrZip').value = addr ? (addr.zip_code || '') : '';
+    document.getElementById('addrDefault').checked = addr ? addr.is_default : false;
+}
+function hideAddressForm() { document.getElementById('addressFormArea').classList.add('d-none'); }
+function editAddress(id) {
+    for (var i = 0; i < CD.addresses.length; i++) {
+        if (CD.addresses[i].id === id) { showAddressForm(CD.addresses[i]); return; }
+    }
+}
+async function saveAddress(e) {
+    e.preventDefault();
+    var id = document.getElementById('addrId').value;
+    var data = { street: document.getElementById('addrStreet').value, city: document.getElementById('addrCity').value, state: document.getElementById('addrState').value, country: document.getElementById('addrCountry').value, zip_code: document.getElementById('addrZip').value, is_default: document.getElementById('addrDefault').checked };
+    try {
+        if (id) { await CD.api('/api/customers/me/addresses/' + id, {method:'PUT', body:JSON.stringify(data)}); }
+        else { await CD.api('/api/customers/me/addresses', {method:'POST', body:JSON.stringify(data)}); }
+        CD.toast('Address saved!', 'success');
+        hideAddressForm();
+        loadAddresses();
+    } catch(e) { CD.toast('Failed to save address', 'error'); }
+}
+async function setDefault(id) {
+    var a = null;
+    for (var i = 0; i < CD.addresses.length; i++) { if (CD.addresses[i].id === id) { a = CD.addresses[i]; break; } }
+    if (!a) return;
+    try {
+        await CD.api('/api/customers/me/addresses/' + id, {method:'PUT', body:JSON.stringify({street:a.street,city:a.city,state:a.state,country:a.country,zip_code:a.zip_code,is_default:true})});
+        CD.toast('Default address updated', 'success');
+        loadAddresses();
+    } catch(e) {}
+}
+async function deleteAddress(id) {
+    if (!confirm('Delete this address?')) return;
+    try { await CD.api('/api/customers/me/addresses/' + id, {method:'DELETE'}); CD.toast('Address deleted', 'success'); loadAddresses(); } catch(e) {}
+}
+
+/* COUPONS */
+function showCouponTab(tab, el) {
+    var tabs = document.querySelectorAll('#sec-coupons .cd-tab');
+    for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+    el.classList.add('active');
+    document.getElementById('couponsAvailable').classList.toggle('d-none', tab !== 'available');
+    document.getElementById('couponsRewards').classList.toggle('d-none', tab !== 'rewards');
+    if (tab === 'rewards') loadRewards();
+}
+async function loadCoupons() {
+    try {
+        var coupons = await CD.api('/api/coupons/available') || [];
+        var el = document.getElementById('couponsList');
+        if (!coupons.length) { el.innerHTML = '<div class="cd-empty-state"><i class="bi bi-ticket"></i><p>No coupons available at the moment</p></div>'; return; }
+        var html = '';
+        for (var i = 0; i < coupons.length; i++) {
+            var c = coupons[i];
+            if (!c.is_active) continue;
+            var disc = c.discount_type === 'percentage' ? c.discount_value + '%' : 'GHS ' + c.discount_value;
+            html += '<div class="cd-card cd-coupon-card"><div class="cd-coupon-discount">' + disc + ' OFF</div><div class="cd-coupon-code">' + c.code + '</div><p class="cd-text-muted" style="font-size:0.82rem">' + (c.description || 'Use this coupon on your next order') + '</p><div class="cd-coupon-meta"><span>Min. order: ' + fmt(c.min_order_amount) + '</span>' + (c.end_date ? '<span>Expires: ' + new Date(c.end_date).toLocaleDateString() + '</span>' : '') + '</div><button class="cd-btn cd-btn-outline cd-btn-xs" onclick="copyCoupon(\'' + c.code + '\')"><i class="bi bi-clipboard"></i> Copy</button></div>';
+        }
+        el.innerHTML = html;
+    } catch(e) {}
+}
+function copyCoupon(code) { navigator.clipboard.writeText(code).then(function(){ CD.toast('Copied!', 'success'); }).catch(function(){ CD.toast('Copy failed', 'error'); }); }
+function loadRewards() {
+    var spent = 0;
+    for (var i = 0; i < CD.orders.length; i++) spent += CD.orders[i].total_amount || 0;
+    var points = Math.floor(spent * 10);
+    var tier = 'Bronze', next = 'Silver at 1,000 pts', pct = points / 10;
+    if (points >= 10000) { tier = 'Platinum'; next = 'Max tier'; pct = 100; }
+    else if (points >= 5000) { tier = 'Gold'; next = 'Platinum at 10,000 pts'; pct = ((points-5000)/5000)*100; }
+    else if (points >= 1000) { tier = 'Silver'; next = 'Gold at 5,000 pts'; pct = ((points-1000)/4000)*100; }
+    document.getElementById('rewardPointsDisplay').textContent = points.toLocaleString();
+    document.getElementById('tierName').textContent = tier;
+    document.getElementById('tierNext').textContent = next;
+    document.getElementById('tierProgress').style.width = Math.min(pct, 100) + '%';
+}
+
+/* NOTIFICATIONS */
+async function loadNotifications() {
+    try {
+        CD.notifications = await CD.api('/api/notifications?limit=50') || [];
+        var unread = 0;
+        for (var i = 0; i < CD.notifications.length; i++) { if (!CD.notifications[i].is_read) unread++; }
+        var badge = document.getElementById('notifBadge');
+        if (unread > 0) { badge.textContent = unread; badge.classList.remove('d-none'); } else { badge.classList.add('d-none'); }
+        var el = document.getElementById('notifList');
+        if (CD.notifications.length === 0) { el.innerHTML = '<div class="cd-empty-state"><i class="bi bi-bell"></i><p>No notifications</p></div>'; return; }
+        var html = '';
+        var icons = {info:'info-circle',success:'check-circle',warning:'exclamation-triangle',error:'exclamation-circle'};
+        for (var i = 0; i < CD.notifications.length; i++) {
+            var n = CD.notifications[i];
+            html += '<div class="cd-notif-item' + (n.is_read ? '' : ' cd-unread') + '"><div class="cd-notif-icon"><i class="bi bi-' + (icons[n.type] || 'bell') + '"></i></div><div class="cd-notif-body"><h6>' + n.title + '</h6><p class="cd-text-muted" style="font-size:0.8rem">' + (n.message || '') + '</p><small class="cd-text-muted">' + timeAgo(n.created_at) + '</small></div><div class="cd-notif-actions">';
+            if (!n.is_read) html += '<button class="cd-btn cd-btn-outline cd-btn-xs" onclick="markRead(' + n.id + ')"><i class="bi bi-check"></i></button>';
+            html += '<button class="cd-btn cd-btn-outline cd-btn-xs" onclick="deleteNotif(' + n.id + ')"><i class="bi bi-trash"></i></button></div></div>';
+        }
+        el.innerHTML = html;
+    } catch(e) { console.error(e); }
+}
+async function markRead(id) {
+    try { await CD.api('/api/notifications/' + id + '/read', {method:'PATCH'}); loadNotifications(); } catch(e) {}
+}
+async function markAllRead() {
+    try { await CD.api('/api/notifications/read-all', {method:'PATCH'}); CD.toast('All marked as read', 'success'); loadNotifications(); } catch(e) {}
+}
+async function deleteNotif(id) {
+    try { await CD.api('/api/notifications/' + id, {method:'DELETE'}); loadNotifications(); } catch(e) {}
+}
+
+/* PROFILE */
+function loadProfile() {
+    if (!CD.user) return;
+    document.getElementById('profFirstName').value = CD.user.first_name || '';
+    document.getElementById('profLastName').value = CD.user.last_name || '';
+    document.getElementById('profEmail').value = CD.user.email || '';
+    document.getElementById('profPhone').value = CD.user.phone || '';
+    document.getElementById('profUsername').value = CD.user.username || '';
+}
+async function saveProfile(e) {
+    e.preventDefault();
+    try {
+        CD.user = await CD.api('/api/customers/me', {method:'PATCH', body:JSON.stringify({
+            first_name: document.getElementById('profFirstName').value,
+            last_name: document.getElementById('profLastName').value,
+            email: document.getElementById('profEmail').value,
+            phone: document.getElementById('profPhone').value
+        })});
+        CD.toast('Profile updated!', 'success');
+        updateTopbar();
+    } catch(e) { CD.toast('Failed to update profile', 'error'); }
+}
+
+/* SECURITY */
+function changePassword(e) {
+    e.preventDefault();
+    var np = document.getElementById('secNewPw').value;
+    var cp = document.getElementById('secConfirmPw').value;
+    if (np !== cp) { CD.toast('Passwords do not match', 'error'); return; }
+    if (np.length < 6) { CD.toast('Password must be at least 6 characters', 'error'); return; }
+    CD.toast('Password change requires API support. Please contact support.', 'info');
+}
+
+/* SUPPORT */
+function getTickets() { try { return JSON.parse(localStorage.getItem('supportTickets')||'[]'); } catch(e) { return []; } }
+function saveTickets(t) { localStorage.setItem('supportTickets', JSON.stringify(t)); }
+function createTicket(e) {
+    e.preventDefault();
+    var tickets = getTickets();
+    tickets.push({ id: Date.now(), subject: document.getElementById('ticketSubject').value, category: document.getElementById('ticketCategory').value, message: document.getElementById('ticketMessage').value, status: 'Open', created_at: new Date().toISOString() });
+    saveTickets(tickets);
+    document.getElementById('ticketSubject').value = '';
+    document.getElementById('ticketMessage').value = '';
+    CD.toast('Ticket created!', 'success');
+    renderTickets();
+}
+function renderTickets() {
+    var tickets = getTickets();
+    var el = document.getElementById('ticketsList');
+    if (!tickets.length) { el.innerHTML = '<div class="cd-empty-state"><i class="bi bi-headset"></i><p>No support tickets yet</p></div>'; return; }
+    var html = '';
+    for (var i = 0; i < tickets.length; i++) {
+        var t = tickets[i];
+        html += '<div class="cd-card cd-ticket"><div class="cd-ticket-header"><h6>' + t.subject + '</h6>' + statusBadge(t.status) + '</div><p class="cd-text-muted" style="font-size:0.8rem">' + t.category + ' - ' + timeAgo(t.created_at) + '</p><p style="font-size:0.85rem">' + t.message + '</p>';
+        if (t.status !== 'Closed') html += '<button class="cd-btn cd-btn-outline cd-btn-xs" onclick="closeTicket(' + t.id + ')">Close</button>';
+        else html += '<button class="cd-btn cd-btn-outline cd-btn-xs" onclick="reopenTicket(' + t.id + ')">Reopen</button>';
+        html += '</div>';
+    }
+    el.innerHTML = html;
+}
+function closeTicket(id) { var tickets = getTickets(); for (var i = 0; i < tickets.length; i++) { if (tickets[i].id === id) { tickets[i].status = 'Closed'; break; } } saveTickets(tickets); CD.toast('Ticket closed', 'success'); renderTickets(); }
+function reopenTicket(id) { var tickets = getTickets(); for (var i = 0; i < tickets.length; i++) { if (tickets[i].id === id) { tickets[i].status = 'Open'; break; } } saveTickets(tickets); CD.toast('Ticket reopened', 'success'); renderTickets(); }
+
+/* TOPBAR */
+function updateTopbar() {
+    if (!CD.user) return;
+    var el;
+    el = document.getElementById('topbarUser'); if (el) el.textContent = CD.user.username;
+    el = document.getElementById('topbarAvatar'); if (el) el.textContent = (CD.user.username || 'U')[0].toUpperCase();
+    el = document.getElementById('welcomeName'); if (el) el.textContent = CD.user.first_name || CD.user.username;
+}
+
+/* INIT */
+(function() {
+    var loadEl = document.getElementById('cdLoading');
+    function hideLoading() { if (loadEl) loadEl.classList.add('d-none'); }
+
+    if (!CD.token) { window.location.href = '/login'; return; }
+
+    fetch('/api/auth/me', {
+        headers: {'Authorization':'Bearer ' + CD.token, 'Content-Type':'application/json'}
+    }).then(function(r) {
+        if (r.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/login'; return null; }
+        if (!r.ok) throw new Error('Failed to load account');
+        return r.json();
+    }).then(function(user) {
+        if (!user) return;
+        CD.user = user;
+        hideLoading();
+        updateTopbar();
+        try { var pp = localStorage.getItem('preferredPayment'); if (pp) document.getElementById('preferredPayment').value = pp; } catch(e) {}
+        loadOverview();
+        loadNotifications();
+        renderTickets();
+    }).catch(function(e) {
+        hideLoading();
+        CD.toast('Failed to load. Please refresh.', 'error');
+    });
+})();
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var _dbToggler = document.querySelector('.navbar-toggler');
+if (_dbToggler) {
+    _dbToggler.removeAttribute('data-bs-toggle');
+    _dbToggler.removeAttribute('data-bs-target');
+    _dbToggler.onclick = function(e) {
+        e.preventDefault();
+        document.getElementById('cdSidebar').classList.toggle('open');
+        document.getElementById('mobileOverlay').classList.toggle('show');
+    };
+}
+</script>
+{% endblock %}

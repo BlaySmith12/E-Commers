@@ -1,0 +1,174 @@
+{% extends "admin/auth_base.html" %}
+
+{% block title %}Admin Login — ASAH'S PRIMENEST{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3">
+    <div class="row justify-content-center">
+        <div class="col-12 col-sm-10 col-md-8 col-lg-5 col-xl-4">
+            <div class="auth-card p-4 p-sm-5">
+                <!-- Logo -->
+                <div class="auth-logo">
+                    <a href="/" class="auth-logo-fallback">
+                        <img src="/static/images/logo.png" alt="ASAH'S PRIMENEST"
+                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                        <div class="auth-logo-icon" style="display:none;">A</div>
+                    </a>
+                </div>
+
+                <!-- Heading -->
+                <h1 class="auth-heading">Welcome Back</h1>
+                <p class="auth-subheading">Sign in to your admin account to continue</p>
+
+                <!-- Error Message -->
+                <div id="login-error" class="auth-alert auth-alert-error d-none">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                    <span id="login-error-text"></span>
+                </div>
+
+                <!-- Login Form -->
+                <form id="loginForm" class="auth-form" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="username">Username or Email</label>
+                        <input type="text" class="form-control" id="username" name="username"
+                               placeholder="Enter your username or email" required autocomplete="username" autofocus>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="password">Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" class="form-control pe-5" id="password" name="password"
+                                   placeholder="Enter your password" required autocomplete="current-password">
+                            <button type="button" class="password-toggle" id="togglePassword" tabindex="-1"
+                                    aria-label="Toggle password visibility">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                            <label class="form-check-label" for="remember">Remember me</label>
+                        </div>
+                        <a href="/admin/forgot-password" class="auth-link" style="font-size:0.82rem;">Forgot Password?</a>
+                    </div>
+
+                    <button type="submit" class="btn-auth" id="loginBtn">
+                        <span id="loginBtnText">Sign In</span>
+                        <span id="loginBtnSpinner" class="d-none">
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                            Authenticating...
+                        </span>
+                    </button>
+                </form>
+
+                <!-- Footer -->
+                <div class="auth-footer">
+                    Don't have an account? <a href="/">Contact Administrator</a>
+                </div>
+
+                <a href="/" class="auth-back-store d-block text-center mt-3">
+                    <i class="bi bi-arrow-left"></i> Back to Store
+                </a>
+
+                <!-- Security Badge -->
+                <div class="secure-badge">
+                    <i class="bi bi-shield-lock"></i>
+                    Secured with 256-bit encryption
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    const form = document.getElementById('loginForm');
+    const errEl = document.getElementById('login-error');
+    const errText = document.getElementById('login-error-text');
+    const btnText = document.getElementById('loginBtnText');
+    const btnSpinner = document.getElementById('loginBtnSpinner');
+    const btn = document.getElementById('loginBtn');
+    const toggleBtn = document.getElementById('togglePassword');
+    const pwInput = document.getElementById('password');
+
+    // Show/hide password
+    toggleBtn.addEventListener('click', function() {
+        const isPassword = pwInput.type === 'password';
+        pwInput.type = isPassword ? 'text' : 'password';
+        this.innerHTML = isPassword
+            ? '<i class="bi bi-eye-slash"></i>'
+            : '<i class="bi bi-eye"></i>';
+    });
+
+    // Clear error on input
+    form.addEventListener('input', function() {
+        errEl.classList.add('d-none');
+    });
+
+    // Handle submit
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        errEl.classList.add('d-none');
+
+        const username = document.getElementById('username').value.trim();
+        const password = pwInput.value;
+
+        if (!username || !password) {
+            showError('Please enter both username and password.');
+            return;
+        }
+
+        // Loading state
+        btn.disabled = true;
+        btnText.classList.add('d-none');
+        btnSpinner.classList.remove('d-none');
+
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username, password: password })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.access_token) {
+                // Verify the user has admin role
+                const userRes = await fetch('/api/auth/me', {
+                    headers: { 'Authorization': 'Bearer ' + data.access_token }
+                });
+                const userData = await userRes.json();
+
+                if (userData && (userData.is_admin || (userData.role && (userData.role.name === 'Admin' || userData.role.name === 'Super Admin' || userData.role.name === 'Manager')))) {
+                    localStorage.setItem('admin_token', data.access_token);
+                    // Set cookie for server-side auth middleware
+                    document.cookie = 'admin_token=' + data.access_token + '; path=/admin; max-age=86400; SameSite=Lax';
+                    // Prevent back-button access to protected pages
+                    history.pushState(null, '', '/admin/login');
+                    window.location.href = '/admin';
+                } else {
+                    showError('Access denied. You do not have administrator privileges.');
+                }
+            } else {
+                showError(data.detail || 'Invalid credentials. Please try again.');
+            }
+        } catch (err) {
+            showError('Connection error. Please check your network and try again.');
+        }
+
+        btn.disabled = false;
+        btnText.classList.remove('d-none');
+        btnSpinner.classList.add('d-none');
+    });
+
+    function showError(msg) {
+        errText.textContent = msg;
+        errEl.classList.remove('d-none');
+    }
+})();
+</script>
+{% endblock %}

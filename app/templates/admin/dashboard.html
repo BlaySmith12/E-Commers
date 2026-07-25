@@ -1,0 +1,692 @@
+{% extends "admin_base.html" %}
+
+{% block head %}
+<style>
+    .stat-card {
+        transition: all 0.3s;
+        border: 1px solid var(--border-color);
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--primary-orange);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    .bg-light-orange {
+        background-color: rgba(242, 102, 15, 0.1);
+        color: var(--primary-orange);
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+
+    .dash-section-title { color: var(--text-primary); }
+    .dash-stat-value { color: var(--text-primary); }
+    .dash-stat-label { color: var(--text-muted); font-size: 0.8rem; font-weight: 500; }
+    .dash-subtitle { color: var(--text-secondary); font-size: 0.85rem; }
+    .dash-subtext { color: var(--text-secondary); }
+    .dash-muted { color: var(--text-muted); }
+    .dash-table-header { color: var(--text-muted); font-weight: 400; }
+    .dash-empty { color: var(--text-muted); }
+    .dash-row-value { color: var(--text-primary); }
+    .dash-meta-value { color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">Dashboard Overview</h3>
+        <p class="dash-subtitle mb-0">Welcome back, Admin. Here's what's happening with your store today.</p>
+    </div>
+    <div>
+        <select class="form-select bg-dark text-light border-secondary d-inline-block w-auto me-2">
+            <option>Today</option>
+            <option>Last 7 Days</option>
+            <option selected>This Month</option>
+            <option>This Year</option>
+        </select>
+        <button class="btn btn-primary-custom" onclick="openExportModal()"><i class="bi bi-cloud-download me-2"></i> Export Report</button>
+    </div>
+</div>
+
+<!-- Key Metrics Row 1 -->
+<div class="row g-4 mb-4">
+    <!-- Revenue Today -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card card-custom stat-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="dash-stat-label mb-1">Revenue Today</h6>
+                    <h3 class="fw-bold mb-0 dash-stat-value">GHS {{ "%.2f"|format(revenue_today) }}</h3>
+                </div>
+                <div class="stat-icon bg-light-orange">
+                    <i class="bi bi-currency-dollar"></i>
+                </div>
+            </div>
+            <div class="d-flex align-items-center mt-auto">
+                <span class="badge bg-success bg-opacity-25 text-success me-2"><i class="bi bi-arrow-up-right"></i> 12.5%</span>
+                <span class="dash-subtext small">vs yesterday</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Revenue Month -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card card-custom stat-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="dash-stat-label mb-1">Revenue This Month</h6>
+                    <h3 class="fw-bold mb-0 dash-stat-value">GHS {{ "%.2f"|format(revenue_month) }}</h3>
+                </div>
+                <div class="stat-icon bg-light-orange">
+                    <i class="bi bi-calendar-check"></i>
+                </div>
+            </div>
+            <div class="d-flex align-items-center mt-auto">
+                <span class="badge bg-success bg-opacity-25 text-success me-2"><i class="bi bi-arrow-up-right"></i> 8.3%</span>
+                <span class="dash-subtext small">vs last month</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Average Order Value -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card card-custom stat-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="dash-stat-label mb-1">Avg Order Value</h6>
+                    <h3 class="fw-bold mb-0 dash-stat-value">GHS {{ "%.2f"|format(revenue_month / 12) if revenue_month > 0 else "0.00" }}</h3>
+                </div>
+                <div class="stat-icon bg-light-orange">
+                    <i class="bi bi-calculator"></i>
+                </div>
+            </div>
+            <div class="d-flex align-items-center mt-auto">
+                <span class="badge bg-danger bg-opacity-25 text-danger me-2"><i class="bi bi-arrow-down-right"></i> 1.5%</span>
+                <span class="dash-subtext small">vs yesterday</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Conversion Rate -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card card-custom stat-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h6 class="dash-stat-label mb-1">Conversion Rate</h6>
+                    <h3 class="fw-bold mb-0 dash-stat-value">3.4%</h3>
+                </div>
+                <div class="stat-icon bg-light-orange">
+                    <i class="bi bi-lightning-charge"></i>
+                </div>
+            </div>
+            <div class="d-flex align-items-center mt-auto">
+                <span class="badge bg-success bg-opacity-25 text-success me-2"><i class="bi bi-arrow-up-right"></i> 0.2%</span>
+                <span class="dash-subtext small">vs yesterday</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mini Stats Row 2 -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card card-custom p-0 overflow-hidden">
+            <div class="row g-0 text-center">
+                <div class="col-6 col-md-3 border-end border-secondary p-3">
+                    <h6 class="dash-stat-label small text-uppercase mb-1">Total Products</h6>
+                    <h4 class="fw-bold mb-0 dash-stat-value">{{ product_count }}</h4>
+                </div>
+                <div class="col-6 col-md-3 border-end border-secondary p-3">
+                    <h6 class="dash-stat-label small text-uppercase mb-1">Total Customers</h6>
+                    <h4 class="fw-bold mb-0 dash-stat-value">{{ customer_count }}</h4>
+                </div>
+                <div class="col-6 col-md-3 border-end border-secondary p-3">
+                    <h6 class="dash-stat-label small text-uppercase mb-1">Pending Orders</h6>
+                    <h4 class="fw-bold mb-0" style="color:#ffc107">{{ pending_orders }}</h4>
+                </div>
+                <div class="col-6 col-md-3 p-3">
+                    <h6 class="dash-stat-label small text-uppercase mb-1">Low Stock Alerts</h6>
+                    <h4 class="fw-bold mb-0" style="color:#dc3545">{{ low_stock }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+    <!-- Main Revenue Chart -->
+    <div class="col-12 col-xl-8">
+        <div class="card card-custom p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="fw-bold mb-0 dash-section-title">Revenue Analytics</h5>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        Monthly
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark">
+                        <li><a class="dropdown-item" href="#">Weekly</a></li>
+                        <li><a class="dropdown-item" href="#">Monthly</a></li>
+                        <li><a class="dropdown-item" href="#">Yearly</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sales by Category Chart -->
+    <div class="col-12 col-xl-4">
+        <div class="card card-custom p-4 h-100">
+            <h5 class="fw-bold mb-4 dash-section-title">Sales by Category</h5>
+            <div class="chart-container d-flex justify-content-center">
+                <canvas id="categoryChart"></canvas>
+            </div>
+            <div class="mt-4">
+                <div class="d-flex justify-content-between small mb-2">
+                    <span class="dash-muted"><span class="d-inline-block rounded-circle me-2" style="width:10px;height:10px;background:#F2660F;"></span>Bathroom</span>
+                    <span class="fw-bold dash-row-value">45%</span>
+                </div>
+                <div class="d-flex justify-content-between small mb-2">
+                    <span class="dash-muted"><span class="d-inline-block rounded-circle me-2" style="width:10px;height:10px;background:#DBD2CB;"></span>Kitchen</span>
+                    <span class="fw-bold dash-row-value">30%</span>
+                </div>
+                <div class="d-flex justify-content-between small mb-2">
+                    <span class="dash-muted"><span class="d-inline-block rounded-circle me-2" style="width:10px;height:10px;background:#4a4542;"></span>Plumbing</span>
+                    <span class="fw-bold dash-row-value">15%</span>
+                </div>
+                <div class="d-flex justify-content-between small">
+                    <span class="dash-muted"><span class="d-inline-block rounded-circle me-2" style="width:10px;height:10px;background:#8a827d;"></span>Lighting</span>
+                    <span class="fw-bold dash-row-value">10%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary Charts Row -->
+<div class="row g-4 mb-4">
+    <!-- Visitors Chart -->
+    <div class="col-12 col-md-6">
+        <div class="card card-custom p-4 h-100">
+            <h5 class="fw-bold mb-4 dash-section-title">Store Visitors</h5>
+            <div class="chart-container" style="height: 200px;">
+                <canvas id="visitorsChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <!-- Customer Growth Chart -->
+    <div class="col-12 col-md-6">
+        <div class="card card-custom p-4 h-100">
+            <h5 class="fw-bold mb-4 dash-section-title">Customer Growth</h5>
+            <div class="chart-container" style="height: 200px;">
+                <canvas id="customersChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity & Orders Row -->
+<div class="row g-4 mb-4">
+    <!-- Recent Orders Table -->
+    <div class="col-12 col-xl-8">
+        <div class="card card-custom p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="fw-bold mb-0 dash-section-title">Recent Orders</h5>
+                <a href="/admin/orders" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover align-middle" style="--bs-table-bg: transparent;">
+                    <thead>
+                        <tr>
+                            <th class="dash-table-header border-secondary">Order ID</th>
+                            <th class="dash-table-header border-secondary">Customer</th>
+                            <th class="dash-table-header border-secondary">Date</th>
+                            <th class="dash-table-header border-secondary">Amount</th>
+                            <th class="dash-table-header border-secondary">Status</th>
+                            <th class="dash-table-header border-secondary text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr>
+                            <td class="border-secondary fw-bold dash-row-value">#{{ order.order_number or order.id }}</td>
+                            <td class="border-secondary">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width:30px;height:30px;font-size:0.8rem;">{{ (order.user.full_name[0] if order.user and order.user.full_name else 'U')|upper }}</div>
+                                    <span>{{ order.user.full_name if order.user and order.user.full_name else 'Guest' }}</span>
+                                </div>
+                            </td>
+                            <td class="border-secondary dash-meta-value">{{ order.created_at.strftime('%b %d, %Y') if order.created_at else '-' }}</td>
+                            <td class="border-secondary fw-bold dash-row-value">GHS {{ "%.2f"|format(order.total_amount) }}</td>
+                            <td class="border-secondary">
+                                {% if order.status == 'delivered' %}
+                                <span class="badge bg-success px-2 py-1 rounded-pill">Delivered</span>
+                                {% elif order.status == 'processing' %}
+                                <span class="badge bg-info text-dark px-2 py-1 rounded-pill">Processing</span>
+                                {% elif order.status == 'pending' %}
+                                <span class="badge bg-warning text-dark px-2 py-1 rounded-pill">Pending</span>
+                                {% elif order.status == 'cancelled' %}
+                                <span class="badge bg-danger px-2 py-1 rounded-pill">Cancelled</span>
+                                {% else %}
+                                <span class="badge bg-secondary px-2 py-1 rounded-pill">{{ order.status|capitalize }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="border-secondary text-end">
+                                <a href="/admin/orders/edit/{{ order.id }}" class="btn btn-sm btn-light rounded-circle dash-row-value" style="width:30px;height:30px;padding:0;"><i class="bi bi-pencil"></i></a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-center dash-empty py-4">No orders yet</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity Feed -->
+    <div class="col-12 col-xl-4">
+        <div class="card card-custom p-4 h-100">
+            <h5 class="fw-bold mb-4 dash-section-title">Recent Activity</h5>
+            
+            {% if recent_orders %}
+            <div class="position-relative ms-3 border-start border-secondary pb-4">
+                <div class="position-absolute top-0 start-0 translate-middle p-1 bg-primary rounded-circle border border-dark border-3"></div>
+                <div class="ps-3 pt-1">
+                    <p class="mb-1 dash-row-value"><strong>New Order placed</strong> <span class="text-primary-orange">#{{ recent_orders[0].order_number or recent_orders[0].id }}</span></p>
+                    <small class="dash-meta-value">{{ recent_orders[0].created_at.strftime('%b %d, %Y %I:%M %p') if recent_orders[0].created_at else 'Recently' }}</small>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if recent_customers %}
+            <div class="position-relative ms-3 border-start border-secondary pb-4">
+                <div class="position-absolute top-0 start-0 translate-middle p-1 bg-success rounded-circle border border-dark border-3"></div>
+                <div class="ps-3 pt-1">
+                    <p class="mb-1 dash-row-value"><strong>New Customer Registration</strong></p>
+                    <p class="mb-1 dash-meta-value small">{{ recent_customers[0].full_name or recent_customers[0].email }} joined the platform.</p>
+                    <small class="dash-meta-value">Recently</small>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if low_stock_products %}
+            <div class="position-relative ms-3 border-start border-secondary pb-4">
+                <div class="position-absolute top-0 start-0 translate-middle p-1 bg-danger rounded-circle border border-dark border-3"></div>
+                <div class="ps-3 pt-1">
+                    <p class="mb-1 dash-row-value"><strong>Low Stock Alert</strong></p>
+                    <p class="mb-1 dash-meta-value small">{{ low_stock_products[0].name }} ({{ low_stock_products[0].stock_quantity }} left)</p>
+                    <small class="dash-meta-value">Check inventory</small>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if recent_reviews %}
+            <div class="position-relative ms-3 border-start border-secondary pb-4">
+                <div class="position-absolute top-0 start-0 translate-middle p-1 bg-warning rounded-circle border border-dark border-3"></div>
+                <div class="ps-3 pt-1">
+                    <p class="mb-1 dash-row-value"><strong>New Review</strong></p>
+                    <p class="mb-1 dash-meta-value small">{{ recent_reviews[0].rating }}-star rating on {{ recent_reviews[0].product.name if recent_reviews[0].product else 'a product' }}</p>
+                    <small class="dash-meta-value">Recently</small>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="position-relative ms-3 border-start border-secondary pb-0">
+                <div class="position-absolute top-0 start-0 translate-middle p-1 bg-info rounded-circle border border-dark border-3"></div>
+                <div class="ps-3 pt-1">
+                    <p class="mb-1 dash-row-value"><strong>System Status</strong></p>
+                    <small class="dash-meta-value">All systems operational</small>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<!-- Export Report Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:var(--bg-panel);border:1px solid var(--border-color);border-radius:12px;">
+            <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,0.08);">
+                <h5 class="modal-title fw-bold" id="exportModalLabel">
+                    <i class="bi bi-cloud-download me-2" style="color:var(--primary);"></i>Export Report
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Report Type -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" style="color:var(--text-secondary);font-size:0.85rem;">Report Type</label>
+                    <select id="exportType" class="form-select" style="background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);border-radius:8px;">
+                        <option value="sales">Sales Report</option>
+                        <option value="revenue">Revenue Report</option>
+                        <option value="orders">Orders Report</option>
+                        <option value="products">Products Report</option>
+                        <option value="inventory">Inventory Report</option>
+                        <option value="customers">Customers Report</option>
+                        <option value="payments">Payments Report</option>
+                    </select>
+                </div>
+                <!-- Date Range -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" style="color:var(--text-secondary);font-size:0.85rem;">Date Range</label>
+                    <select id="exportDateRange" class="form-select" style="background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);border-radius:8px;" onchange="toggleCustomDates()">
+                        <option value="today">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="this_week">This Week</option>
+                        <option value="this_month" selected>This Month</option>
+                        <option value="last_month">Last Month</option>
+                        <option value="this_year">This Year</option>
+                        <option value="custom">Custom Date Range</option>
+                    </select>
+                </div>
+                <!-- Custom Date Range -->
+                <div id="customDates" class="d-none">
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold" style="color:var(--text-secondary);font-size:0.85rem;">From</label>
+                            <input type="date" id="exportDateFrom" class="form-control" style="background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);border-radius:8px;">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold" style="color:var(--text-secondary);font-size:0.85rem;">To</label>
+                            <input type="date" id="exportDateTo" class="form-control" style="background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);border-radius:8px;">
+                        </div>
+                    </div>
+                </div>
+                <!-- Format -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" style="color:var(--text-secondary);font-size:0.85rem;">Format</label>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn flex-fill export-format-btn active" data-format="csv" onclick="selectFormat('csv')" style="background:var(--primary-ghost);border:1px solid var(--primary);color:var(--primary);border-radius:8px;padding:10px;font-size:0.85rem;font-weight:600;">
+                            <i class="bi bi-filetype-csv me-1"></i> CSV
+                        </button>
+                        <button type="button" class="btn flex-fill export-format-btn" data-format="xlsx" onclick="selectFormat('xlsx')" style="background:var(--hover-bg);border:1px solid var(--border-color);color:var(--text-secondary);border-radius:8px;padding:10px;font-size:0.85rem;font-weight:600;">
+                            <i class="bi bi-filetype-xlsx me-1"></i> Excel
+                        </button>
+                        <button type="button" class="btn flex-fill export-format-btn" data-format="pdf" onclick="selectFormat('pdf')" style="background:var(--hover-bg);border:1px solid var(--border-color);color:var(--text-secondary);border-radius:8px;padding:10px;font-size:0.85rem;font-weight:600;">
+                            <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <!-- Export Status -->
+                <div id="exportStatus" class="d-none" style="padding:12px;border-radius:8px;margin-bottom:16px;font-size:0.85rem;"></div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--border-color);">
+                <button type="button" class="btn btn-sm" style="color:var(--text-muted);border:1px solid var(--border-color);" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary-custom" id="exportBtn" onclick="doExport()">
+                    <i class="bi bi-download me-1"></i> Generate Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ─── Export Report Functions ─────────────────────────────────────
+    let selectedFormat = 'csv';
+    let isExporting = false;
+
+    function openExportModal() {
+        const modal = new bootstrap.Modal(document.getElementById('exportModal'));
+        modal.show();
+    }
+
+    function selectFormat(fmt) {
+        selectedFormat = fmt;
+        document.querySelectorAll('.export-format-btn').forEach(btn => {
+            if (btn.dataset.format === fmt) {
+                btn.style.background = 'var(--primary-ghost)';
+                btn.style.borderColor = 'var(--primary)';
+                btn.style.color = 'var(--primary)';
+                btn.classList.add('active');
+            } else {
+                btn.style.background = 'var(--hover-bg)';
+                btn.style.borderColor = 'var(--border-color)';
+                btn.style.color = 'var(--text-secondary)';
+                btn.classList.remove('active');
+            }
+        });
+    }
+
+    function toggleCustomDates() {
+        const val = document.getElementById('exportDateRange').value;
+        const custom = document.getElementById('customDates');
+        if (val === 'custom') {
+            custom.classList.remove('d-none');
+        } else {
+            custom.classList.add('d-none');
+        }
+    }
+
+    function showExportStatus(msg, type) {
+        const el = document.getElementById('exportStatus');
+        el.className = '';
+        if (type === 'loading') {
+            el.style.background = 'var(--primary-ghost)';
+            el.style.border = '1px solid var(--primary)';
+            el.style.color = 'var(--primary)';
+            el.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + msg;
+        } else if (type === 'success') {
+            el.style.background = 'rgba(25,135,84,0.1)';
+            el.style.border = '1px solid rgba(25,135,84,0.3)';
+            el.style.color = '#198754';
+            el.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>' + msg;
+        } else if (type === 'error') {
+            el.style.background = 'rgba(220,53,69,0.1)';
+            el.style.border = '1px solid rgba(220,53,69,0.3)';
+            el.style.color = '#dc3545';
+            el.innerHTML = '<i class="bi bi-x-circle-fill me-2"></i>' + msg;
+        }
+        el.classList.remove('d-none');
+    }
+
+    async function doExport() {
+        if (isExporting) return;
+        isExporting = true;
+
+        const btn = document.getElementById('exportBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generating...';
+        showExportStatus('Generating report...', 'loading');
+
+        const reportType = document.getElementById('exportType').value;
+        const dateRange = document.getElementById('exportDateRange').value;
+        const dateFrom = document.getElementById('exportDateFrom').value;
+        const dateTo = document.getElementById('exportDateTo').value;
+
+        let url = `/api/reports/export?report_type=${reportType}&date_range=${dateRange}&fmt=${selectedFormat}`;
+        if (dateRange === 'custom' && dateFrom && dateTo) {
+            url += `&date_from=${dateFrom}&date_to=${dateTo}`;
+        }
+
+        try {
+            const token = localStorage.getItem('admin_token');
+            const res = await fetch(url, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'Export failed');
+            }
+
+            // Download the file
+            const blob = await res.blob();
+            const disposition = res.headers.get('Content-Disposition') || '';
+            let filename = `report.${selectedFormat}`;
+            const match = disposition.match(/filename="?([^"]+)"?/);
+            if (match) filename = match[1];
+
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 100);
+
+            showExportStatus('Report exported successfully!', 'success');
+        } catch (err) {
+            showExportStatus(err.message || 'Unable to generate report. Please try again.', 'error');
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-download me-1"></i> Generate Report';
+        isExporting = false;
+    }
+    // ─── End Export Functions ────────────────────────────────────────
+    // Global Chart Configuration — uses theme tokens
+    const cs = getComputedStyle(document.documentElement);
+    Chart.defaults.color = cs.getPropertyValue('--text-secondary').trim();
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.plugins.tooltip.backgroundColor = cs.getPropertyValue('--bg-panel').trim();
+    Chart.defaults.plugins.tooltip.titleColor = cs.getPropertyValue('--text-primary').trim();
+    Chart.defaults.plugins.tooltip.bodyColor = cs.getPropertyValue('--text-secondary').trim();
+    Chart.defaults.plugins.tooltip.padding = 10;
+    Chart.defaults.plugins.tooltip.cornerRadius = 8;
+
+    // Revenue data from server
+    const revenueData = {{ revenue_data | tojson }};
+    const categoryData = {{ category_data | tojson }};
+
+    // 1. Revenue Chart (Line)
+    const revCtx = document.getElementById('revenueChart').getContext('2d');
+    
+    // Create gradient
+    let gradient = revCtx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(242, 102, 15, 0.5)');
+    gradient.addColorStop(1, 'rgba(242, 102, 15, 0.0)');
+
+    new Chart(revCtx, {
+        type: 'line',
+        data: {
+            labels: revenueData.map(d => d.label),
+            datasets: [{
+                label: 'Revenue (GHS)',
+                data: revenueData.map(d => d.value),
+                borderColor: '#F2660F',
+                backgroundColor: gradient,
+                borderWidth: 3,
+                pointBackgroundColor: cs.getPropertyValue('--bg-body').trim(),
+                pointBorderColor: '#F2660F',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    grid: { display: false, drawBorder: false }
+                },
+                y: {
+                    grid: { color: cs.getPropertyValue('--border-color').trim(), drawBorder: false },
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) { return 'GHS ' + (value/1000) + 'k'; }
+                    }
+                }
+            }
+        }
+    });
+
+    // 2. Category Chart (Doughnut)
+    const catCtx = document.getElementById('categoryChart').getContext('2d');
+    new Chart(catCtx, {
+        type: 'doughnut',
+        data: {
+            labels: categoryData.map(d => d.name),
+            datasets: [{
+                data: categoryData.map(d => d.value),
+                backgroundColor: ['#F2660F', '#DBD2CB', '#4a4542', '#8a827d', '#6c757d'],
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%',
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+
+    // 3. Visitors Chart (Bar)
+    const visCtx = document.getElementById('visitorsChart').getContext('2d');
+    new Chart(visCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Visitors',
+                data: [1200, 1500, 1100, 1800, 2200, 2800, 2600],
+                backgroundColor: 'rgba(219, 210, 203, 0.7)',
+                hoverBackgroundColor: '#F2660F',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false, drawBorder: false } },
+                y: { grid: { color: cs.getPropertyValue('--border-color').trim(), drawBorder: false }, beginAtZero: true }
+            }
+        }
+    });
+
+    // 4. Customers Chart (Line)
+    const custCtx = document.getElementById('customersChart').getContext('2d');
+    new Chart(custCtx, {
+        type: 'line',
+        data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            datasets: [{
+                label: 'New Customers',
+                data: [120, 150, 180, 250],
+                borderColor: '#198754',
+                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false, drawBorder: false } },
+                y: { grid: { color: cs.getPropertyValue('--border-color').trim(), drawBorder: false }, beginAtZero: true }
+            }
+        }
+    });
+</script>
+{% endblock %}

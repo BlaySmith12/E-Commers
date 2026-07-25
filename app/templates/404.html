@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Page Not Found{% endblock %}
+
+{% block content %}
+<section class="d-flex align-items-center justify-content-center" style="min-height: 80vh; background-color: var(--dark-bg);">
+    <div class="container text-center py-5" data-aos="fade-up">
+        <h1 class="fw-bold" style="font-size: 10rem; line-height: 1; color: rgba(242, 102, 15, 0.15); margin-bottom: -20px;">
+            404
+        </h1>
+        <h2 class="text-white fw-bold mb-3" style="margin-top: -10px;">Page Not Found</h2>
+        <p class="text-warm-gray mx-auto mb-5" style="max-width: 450px;">
+            The page you're looking for doesn't exist or has been moved. Let's get you back on track.
+        </p>
+
+        <!-- Search Bar -->
+        <form id="search-form" class="mx-auto mb-5" style="max-width: 480px;" onsubmit="return handleSearch(event)">
+            <div class="input-group">
+                <input type="text" class="form-control form-control-custom" id="search-input" placeholder="Search for products..." style="border-radius: 8px 0 0 8px;">
+                <button class="btn btn-primary" type="submit" style="border-radius: 0 8px 8px 0;">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </form>
+
+        <!-- Actions -->
+        <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg px-5">
+                <i class="bi bi-house me-2"></i>BACK TO HOME
+            </a>
+            <a href="{{ url_for('shop.index') }}" class="btn btn-outline-primary btn-lg px-5">
+                <i class="bi bi-bag me-2"></i>BROWSE SHOP
+            </a>
+        </div>
+    </div>
+</section>
+
+<style>
+    .form-control-custom::placeholder { color: rgba(219, 210, 203, 0.5); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function handleSearch(e) {
+    e.preventDefault();
+    const query = document.getElementById('search-input').value.trim();
+    if (query) {
+        window.location.href = '/shop?search=' + encodeURIComponent(query);
+    }
+    return false;
+}
+</script>
+{% endblock %}

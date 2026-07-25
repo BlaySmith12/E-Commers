@@ -1,0 +1,774 @@
+{% extends "admin_base.html" %}
+{% block head %}
+<style>
+.cat-card{border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);transition:all .2s;overflow:hidden;position:relative}
+.cat-card:hover{border-color:var(--primary-orange);transform:translateY(-2px);box-shadow:0 8px 24px rgba(242,102,15,.1)}
+.cat-img{width:100%;height:140px;object-fit:cover;border-bottom:1px solid var(--border-color)}
+.cat-img-placeholder{width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:rgba(242,102,15,.05);border-bottom:1px solid var(--border-color);font-size:2rem;color:var(--primary-orange)}
+.cat-badge{font-size:.72rem;padding:3px 10px;border-radius:20px;font-weight:600;background:rgba(242,102,15,.12);color:var(--primary-orange)}
+.stat-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:.8rem;font-weight:600;background:rgba(255,255,255,.04);border:1px solid var(--border-color)}
+.toolbar-filter{min-width:130px;font-size:.8rem}
+.filter-tag{background:rgba(242,102,15,.15);color:var(--primary-orange);border:none;font-size:.72rem;padding:3px 8px;border-radius:20px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin:2px}
+.filter-tag:hover{background:rgba(242,102,15,.25)}
+.page-link-custom{background:var(--bg-card);border:1px solid var(--border-color);color:var(--text-muted);padding:6px 12px;font-size:.82rem;transition:all .15s;cursor:pointer}
+.page-link-custom:hover{background:rgba(242,102,15,.1);border-color:var(--primary-orange);color:var(--primary-orange)}
+.page-link-custom.active{background:var(--primary-orange);border-color:var(--primary-orange);color:#fff}
+.page-link-custom:disabled{opacity:.4;cursor:not-allowed}
+.toast-container{position:fixed;top:84px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast-item{padding:12px 20px;border-radius:10px;font-size:.85rem;font-weight:500;color:#fff;min-width:280px;max-width:400px;display:flex;align-items:center;gap:10px;animation:slideInRight .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.toast-success{background:linear-gradient(135deg,#198754,#157347)}
+.toast-error{background:linear-gradient(135deg,#dc3545,#bb2d3b)}
+.toast-info{background:linear-gradient(135deg,#0d6efd,#0b5ed7)}
+@keyframes slideInRight{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.spinner-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(18,16,16,.7);display:flex;align-items:center;justify-content:center;z-index:50;border-radius:12px}
+.spinner-border-custom{width:2.5rem;height:2.5rem;border-width:3px;border-color:var(--primary-orange);border-top-color:transparent}
+.view-toggle .btn{font-size:.8rem;padding:4px 10px}
+.view-toggle .btn.active{background:var(--primary-orange);border-color:var(--primary-orange);color:#fff}
+.empty-state-icon{width:80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:2rem}
+.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+.sortable:hover{color:var(--primary-orange)!important}
+.sort-icon{font-size:.7rem;margin-left:4px;opacity:.7}
+.sortable.asc .sort-icon,.sortable.desc .sort-icon{opacity:1;color:var(--primary-orange)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <h3 class="fw-bold mb-1">Categories</h3>
+        <p class="text-muted mb-0 small">Organize your products into categories for better discoverability.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <button class="btn btn-sm btn-outline-secondary" onclick="exportCSV()" title="Export to CSV"><i class="bi bi-download me-1"></i> Export CSV</button>
+        <button class="btn btn-sm btn-primary-custom" onclick="resetForm(); openModal()"><i class="bi bi-plus-lg me-1"></i> Add Category</button>
+    </div>
+</div>
+
+<!-- Stats Bar -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-pill w-100 justify-content-center"><i class="bi bi-tags"></i> <span id="statTotal">0</span> Categories</div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-pill w-100 justify-content-center"><i class="bi bi-box-seam text-success"></i> <span id="statTotalProducts">0</span> Products</div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-pill w-100 justify-content-center"><i class="bi bi-image text-info"></i> <span id="statWithImages">0</span> With Images</div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-pill w-100 justify-content-center"><i class="bi bi-arrow-down-circle text-warning"></i> <span id="statEmpty">0</span> Empty</div>
+    </div>
+</div>
+
+<!-- Main Card -->
+<div class="card card-custom overflow-hidden" style="position:relative">
+    <div class="spinner-overlay" id="mainSpinner" style="display:none">
+        <div class="spinner-border spinner-border-custom"></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="p-3 border-bottom border-secondary bg-dark bg-opacity-50">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" id="bulkActionsBtn" disabled>
+                        Bulk Actions (<span id="selectedCount">0</span>)
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark">
+                        <li><button class="dropdown-item text-danger" onclick="bulkDelete()"><i class="bi bi-trash me-2"></i>Delete Selected</button></li>
+                    </ul>
+                </div>
+                <div class="position-relative">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-2 text-muted" style="font-size:.85rem"></i>
+                    <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary ps-4" placeholder="Search categories..." style="width:220px" id="searchInput" oninput="handleSearch()">
+                </div>
+                <button class="btn btn-sm btn-outline-secondary" id="clearFiltersBtn" style="display:none" onclick="clearFilters()"><i class="bi bi-x-lg me-1"></i> Clear</button>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="btn-group btn-group-sm view-toggle" role="group">
+                    <button type="button" class="btn btn-outline-secondary active" id="gridViewBtn" onclick="setView('grid')"><i class="bi bi-grid-3x3-gap"></i></button>
+                    <button type="button" class="btn btn-outline-secondary" id="listViewBtn" onclick="setView('list')"><i class="bi bi-list-ul"></i></button>
+                </div>
+            </div>
+        </div>
+        <div id="activeFilterTags" class="d-flex flex-wrap gap-1" style="display:none!important"></div>
+    </div>
+
+    <!-- Grid View -->
+    <div id="gridView" class="p-3">
+        <div class="row g-3" id="categoriesGrid"></div>
+    </div>
+
+    <!-- List View -->
+    <div id="listView" style="display:none">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0 align-middle" style="--bs-table-bg:transparent">
+                <thead>
+                    <tr>
+                        <th class="border-secondary px-3 py-3" style="width:44px">
+                            <input class="form-check-input bg-dark border-secondary" type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                        </th>
+                        <th class="text-muted fw-normal border-secondary py-3 sortable" data-sort="name" onclick="handleSort('name')">Name <span class="sort-icon"><i class="bi bi-arrow-down-up"></i></span></th>
+                        <th class="text-muted fw-normal border-secondary py-3">Slug</th>
+                        <th class="text-muted fw-normal border-secondary py-3 sortable" data-sort="products" onclick="handleSort('products')">Products <span class="sort-icon"><i class="bi bi-arrow-down-up"></i></span></th>
+                        <th class="text-muted fw-normal border-secondary py-3">Description</th>
+                        <th class="text-muted fw-normal border-secondary py-3 text-end pe-4" style="width:120px">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="categoriesTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" style="display:none" class="py-5 text-center">
+        <div class="empty-state-icon bg-dark"><i class="bi bi-tags text-muted"></i></div>
+        <h5 class="text-muted mb-2">No categories found</h5>
+        <p class="text-muted small mb-3" id="emptyStateMsg">Get started by creating your first product category.</p>
+        <button class="btn btn-sm btn-primary-custom" onclick="resetForm(); openModal()"><i class="bi bi-plus-lg me-1"></i> Add Category</button>
+    </div>
+
+    <!-- Pagination -->
+    <div class="p-3 border-top border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <span class="text-muted small" id="paginationInfo">Showing 0 of 0 categories</span>
+            <select class="form-select form-select-sm bg-dark text-light border-secondary" style="width:auto;font-size:.8rem" id="perPageSelect" onchange="changePerPage()">
+                <option value="12">12 per page</option>
+                <option value="24" selected>24 per page</option>
+                <option value="48">48 per page</option>
+            </select>
+        </div>
+        <nav>
+            <ul class="pagination pagination-sm mb-0 d-flex gap-1" id="paginationControls"></ul>
+        </nav>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="categoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h6 class="modal-title fw-bold" id="modalTitle"><i class="bi bi-tag me-2 text-primary-orange"></i>Add Category</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="categoryForm" onsubmit="saveCategory(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="catId">
+                    <div class="row g-4">
+                        <div class="col-md-7">
+                            <div class="mb-3">
+                                <label class="form-label text-light small fw-semibold">Category Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" id="catName" required placeholder="e.g. Water Heaters" oninput="autoSlug()">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-light small fw-semibold">Slug <span class="text-danger">*</span></label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-dark border-secondary text-muted">/category/</span>
+                                    <input type="text" class="form-control bg-dark text-light border-secondary" id="catSlug" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-light small fw-semibold">Description</label>
+                                <textarea class="form-control bg-dark text-light border-secondary" id="catDesc" rows="3" placeholder="Brief description for SEO and display..." oninput="updateCharCount(this,'descCount',160)"></textarea>
+                                <div class="form-text text-muted"><span id="descCount">0</span>/160 characters</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-light small fw-semibold">Category Image</label>
+                                <div id="catImageUpload"></div>
+                                <input type="hidden" id="catImage" value="">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-light small fw-semibold">Banner Image</label>
+                                <div id="catBannerUpload"></div>
+                                <input type="hidden" id="catBanner" value="">
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label text-light small fw-semibold">Preview</label>
+                            <div class="cat-card">
+                                <div id="imagePreviewArea" class="cat-img-placeholder">
+                                    <i class="bi bi-image"></i>
+                                </div>
+                                <div class="p-3">
+                                    <div class="fw-bold text-light mb-1" id="namePreview">Category Name</div>
+                                    <div class="text-muted small mb-2" id="slugPreview">/category/slug</div>
+                                    <div class="text-muted small" id="descPreview" style="font-size:.78rem">Description will appear here...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-primary-custom" id="saveBtn"><i class="bi bi-check-lg me-1"></i> Save Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h6 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Confirm Delete</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-0" id="deleteModalText">Are you sure you want to delete this category? Products in this category will become uncategorized.</p>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-danger" id="confirmDeleteBtn" onclick="confirmDelete()"><i class="bi bi-trash me-1"></i>Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+    const API = '/api/admin';
+    let allCategories = [];
+    let filteredCategories = [];
+    let selectedIds = new Set();
+    let currentPage = 1;
+    let perPage = 24;
+    let sortField = 'name';
+    let sortDir = 'asc';
+    let searchQuery = '';
+    let editingId = null;
+    let deleteTargetId = null;
+    let deleteMode = 'single';
+    let currentView = 'grid';
+    let productCounts = {};
+
+    document.addEventListener('DOMContentLoaded', init);
+
+    async function init() {
+        await loadCategories();
+        initCategoryUploaders();
+    }
+
+    async function apiFetch(url, opts = {}) {
+        try {
+            const resp = await fetch(API + url, opts);
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({detail: resp.statusText}));
+                throw new Error(err.detail || 'Request failed');
+            }
+            return await resp.json();
+        } catch (e) {
+            showToast(e.message, 'error');
+            throw e;
+        }
+    }
+
+    async function loadCategories() {
+        showSpinner(true);
+        try {
+            const data = await apiFetch('/categories');
+            allCategories = data;
+            filteredCategories = [...data];
+
+            let productData = [];
+            try { productData = await apiFetch('/products?limit=200&skip=0'); } catch(e) {}
+            productCounts = {};
+            productData.forEach(p => {
+                if (p.category_id) productCounts[p.category_id] = (productCounts[p.category_id] || 0) + 1;
+            });
+
+            updateStats();
+            applySearch();
+        } catch(e) {
+            allCategories = [];
+            filteredCategories = [];
+        }
+        showSpinner(false);
+    }
+
+    function updateStats() {
+        document.getElementById('statTotal').textContent = allCategories.length;
+        let totalProducts = 0;
+        Object.values(productCounts).forEach(c => totalProducts += c);
+        document.getElementById('statTotalProducts').textContent = totalProducts;
+        document.getElementById('statWithImages').textContent = allCategories.filter(c => c.image_url).length;
+        document.getElementById('statEmpty').textContent = allCategories.filter(c => !productCounts[c.id]).length;
+    }
+
+    function applySearch() {
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            filteredCategories = allCategories.filter(c =>
+                (c.name||'').toLowerCase().includes(q) ||
+                (c.slug||'').toLowerCase().includes(q) ||
+                (c.description||'').toLowerCase().includes(q)
+            );
+        } else {
+            filteredCategories = [...allCategories];
+        }
+        filteredCategories.sort((a, b) => {
+            let va, vb;
+            if (sortField === 'products') {
+                va = productCounts[a.id] || 0;
+                vb = productCounts[b.id] || 0;
+            } else {
+                va = (a[sortField] || '').toLowerCase();
+                vb = (b[sortField] || '').toLowerCase();
+            }
+            if (va < vb) return sortDir === 'asc' ? -1 : 1;
+            if (va > vb) return sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+        currentPage = 1;
+        renderView();
+    }
+
+    function renderView() {
+        if (currentView === 'grid') renderGrid();
+        else renderTable();
+        updatePaginationInfo();
+        renderPagination();
+        updateBulkButton();
+        updateFilterTags();
+
+        const hasFilter = searchQuery;
+        document.getElementById('clearFiltersBtn').style.display = hasFilter ? 'inline-flex' : 'none';
+
+        const total = filteredCategories.length;
+        document.getElementById('emptyState').style.display = total === 0 ? 'block' : 'none';
+        document.getElementById('gridView').style.display = (currentView === 'grid' && total > 0) ? 'block' : 'none';
+        document.getElementById('listView').style.display = (currentView === 'list' && total > 0) ? 'block' : 'none';
+    }
+
+    function renderGrid() {
+        const container = document.getElementById('categoriesGrid');
+        const total = filteredCategories.length;
+        const totalPages = Math.max(1, Math.ceil(total / perPage));
+        if (currentPage > totalPages) currentPage = totalPages;
+        const start = (currentPage - 1) * perPage;
+        const pageItems = filteredCategories.slice(start, start + perPage);
+
+        container.innerHTML = pageItems.map(c => {
+            const count = productCounts[c.id] || 0;
+            const imgHTML = c.image_url
+                ? `<img src="${esc(c.image_url)}" class="cat-img" onerror="this.parentElement.innerHTML='<div class=\\'cat-img-placeholder\\'><i class=\\'bi bi-image\\'></i></div>'">`
+                : `<div class="cat-img-placeholder"><i class="bi bi-tags"></i></div>`;
+            const checked = selectedIds.has(c.id) ? 'checked' : '';
+            return `<div class="col-sm-6 col-md-4 col-lg-3">
+                <div class="cat-card h-100">
+                    <div style="position:absolute;top:8px;left:8px;z-index:2">
+                        <input class="form-check-input bg-dark border-secondary" type="checkbox" ${checked} onchange="toggleSelect(${c.id})">
+                    </div>
+                    <div style="position:absolute;top:8px;right:8px;z-index:2">
+                        <span class="cat-badge">${count} products</span>
+                    </div>
+                    ${imgHTML}
+                    <div class="p-3">
+                        <div class="fw-bold text-light mb-1" style="font-size:.95rem">${esc(c.name)}</div>
+                        <div class="text-muted small mb-2" style="font-size:.78rem">/${esc(c.slug)}</div>
+                        <p class="text-muted mb-3" style="font-size:.8rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(c.description || 'No description')}</p>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-primary flex-grow-1" onclick='editCategory(${JSON.stringify(c).replace(/'/g,"&#39;")})'><i class="bi bi-pencil me-1"></i>Edit</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="promptDelete(${c.id}, '${esc(c.name).replace(/'/g,"\\'")}', ${count})"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('categoriesTableBody');
+        const total = filteredCategories.length;
+        const totalPages = Math.max(1, Math.ceil(total / perPage));
+        if (currentPage > totalPages) currentPage = totalPages;
+        const start = (currentPage - 1) * perPage;
+        const pageItems = filteredCategories.slice(start, start + perPage);
+
+        document.querySelectorAll('.sortable').forEach(el => {
+            el.classList.remove('asc', 'desc');
+            if (el.dataset.sort === sortField) el.classList.add(sortDir);
+        });
+
+        tbody.innerHTML = pageItems.map(c => {
+            const count = productCounts[c.id] || 0;
+            const checked = selectedIds.has(c.id) ? 'checked' : '';
+            return `<tr>
+                <td class="border-secondary px-3"><input class="form-check-input bg-dark border-secondary" type="checkbox" ${checked} onchange="toggleSelect(${c.id})"></td>
+                <td class="border-secondary">
+                    <div class="d-flex align-items-center">
+                        ${c.image_url ? `<img src="${esc(c.image_url)}" style="width:36px;height:36px;object-fit:cover;border-radius:8px;border:1px solid var(--border-color);margin-right:10px;flex-shrink:0" onerror="this.style.display='none'">` : `<div style="width:36px;height:36px;border-radius:8px;background:rgba(242,102,15,.1);display:flex;align-items:center;justify-content:center;margin-right:10px;flex-shrink:0;color:var(--primary-orange);font-size:.85rem"><i class="bi bi-tag"></i></div>`}
+                        <div>
+                            <div class="fw-bold text-light" style="font-size:.88rem">${esc(c.name)}</div>
+                            <div class="text-muted" style="font-size:.75rem">/${esc(c.slug)}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="border-secondary text-muted" style="font-size:.85rem">/${esc(c.slug)}</td>
+                <td class="border-secondary"><span class="cat-badge">${count}</span></td>
+                <td class="border-secondary text-muted small" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.description || '-')}</td>
+                <td class="border-secondary text-end pe-3">
+                    <button class="btn btn-sm btn-outline-primary rounded-circle me-1" style="width:32px;height:32px;padding:0" onclick='editCategory(${JSON.stringify(c).replace(/'/g,"&#39;")})'><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger rounded-circle" style="width:32px;height:32px;padding:0" onclick="promptDelete(${c.id}, '${esc(c.name).replace(/'/g,"\\'")}', ${count})"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function renderPagination() {
+        const totalPages = Math.max(1, Math.ceil(filteredCategories.length / perPage));
+        const container = document.getElementById('paginationControls');
+        let html = `<li class="page-item"><button class="page-link page-link-custom" onclick="goToPage(${currentPage-1})" ${currentPage<=1?'disabled':''}><i class="bi bi-chevron-left"></i></button></li>`;
+        const range = getPageRange(currentPage, totalPages);
+        range.forEach(p => {
+            if (p === '...') html += `<li class="page-item"><span class="page-link page-link-custom" style="cursor:default">...</span></li>`;
+            else html += `<li class="page-item"><button class="page-link page-link-custom ${p===currentPage?'active':''}" onclick="goToPage(${p})">${p}</button></li>`;
+        });
+        html += `<li class="page-item"><button class="page-link page-link-custom" onclick="goToPage(${currentPage+1})" ${currentPage>=totalPages?'disabled':''}><i class="bi bi-chevron-right"></i></button></li>`;
+        container.innerHTML = html;
+    }
+
+    function getPageRange(cur, tot) {
+        if (tot <= 7) return Array.from({length: tot}, (_, i) => i+1);
+        const pages = [];
+        if (cur <= 4) { for (let i=1;i<=5;i++) pages.push(i); pages.push('...',tot); }
+        else if (cur >= tot-3) { pages.push(1,'...'); for (let i=tot-4;i<=tot;i++) pages.push(i); }
+        else { pages.push(1,'...',cur-1,cur,cur+1,'...',tot); }
+        return pages;
+    }
+
+    function updatePaginationInfo() {
+        const total = filteredCategories.length;
+        const start = total === 0 ? 0 : (currentPage-1)*perPage+1;
+        const end = Math.min(currentPage*perPage, total);
+        document.getElementById('paginationInfo').textContent = total === 0
+            ? 'Showing 0 of 0 categories'
+            : `Showing ${start}\u2013${end} of ${total} categories`;
+    }
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+    window.handleSearch = function() {
+        searchQuery = document.getElementById('searchInput').value.trim();
+        applySearch();
+    };
+
+    window.clearFilters = function() {
+        document.getElementById('searchInput').value = '';
+        searchQuery = '';
+        applySearch();
+    };
+
+    window.handleSort = function(field) {
+        if (sortField === field) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        else { sortField = field; sortDir = 'asc'; }
+        applySearch();
+    };
+
+    window.goToPage = function(p) {
+        const total = Math.ceil(filteredCategories.length / perPage);
+        if (p < 1 || p > total) return;
+        currentPage = p;
+        renderView();
+    };
+
+    window.changePerPage = function() {
+        perPage = parseInt(document.getElementById('perPageSelect').value);
+        currentPage = 1;
+        renderView();
+    };
+
+    window.setView = function(view) {
+        currentView = view;
+        document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
+        document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
+        renderView();
+    };
+
+    window.toggleSelectAll = function() {
+        const checked = document.getElementById('selectAll').checked;
+        const start = (currentPage-1)*perPage;
+        const pageItems = filteredCategories.slice(start, start+perPage);
+        pageItems.forEach(c => { if (checked) selectedIds.add(c.id); else selectedIds.delete(c.id); });
+        document.querySelectorAll('#categoriesTableBody input[type=checkbox]').forEach(cb => cb.checked = checked);
+        document.querySelectorAll('#gridView .form-check-input').forEach(cb => cb.checked = checked);
+        updateBulkButton();
+    };
+
+    window.toggleSelect = function(id) {
+        if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+        updateBulkButton();
+    };
+
+    function updateBulkButton() {
+        document.getElementById('selectedCount').textContent = selectedIds.size;
+        document.getElementById('bulkActionsBtn').disabled = selectedIds.size === 0;
+    }
+
+    window.bulkDelete = function() {
+        if (selectedIds.size === 0) return;
+        deleteMode = 'bulk';
+        document.getElementById('deleteModalText').textContent = `Are you sure you want to delete ${selectedIds.size} category(ies)? Products in these categories will become uncategorized.`;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    };
+
+    window.promptDelete = function(id, name, count) {
+        deleteMode = 'single';
+        deleteTargetId = id;
+        const extra = count > 0 ? ` ${count} product(s) in this category will become uncategorized.` : '';
+        document.getElementById('deleteModalText').textContent = `Are you sure you want to delete "${name}"?${extra} This action cannot be undone.`;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    };
+
+    window.confirmDelete = async function() {
+        const btn = document.getElementById('confirmDeleteBtn');
+        btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Deleting...';
+        try {
+            if (deleteMode === 'bulk') {
+                for (const id of selectedIds) {
+                    await apiFetch(`/categories/${id}`, { method: 'DELETE' });
+                }
+                showToast(`Deleted ${selectedIds.size} categories`, 'success');
+                selectedIds.clear();
+            } else {
+                await apiFetch(`/categories/${deleteTargetId}`, { method: 'DELETE' });
+                showToast('Category deleted', 'success');
+            }
+            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+            await loadCategories();
+        } catch(e) {}
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-trash me-1"></i>Delete';
+    };
+
+    window.openModal = function() {
+        new bootstrap.Modal(document.getElementById('categoryModal')).show();
+    };
+
+    window.editCategory = function(cat) {
+        editingId = cat.id;
+        document.getElementById('catId').value = cat.id;
+        document.getElementById('catName').value = cat.name;
+        document.getElementById('catSlug').value = cat.slug;
+        document.getElementById('catDesc').value = cat.description || '';
+        document.getElementById('catImage').value = cat.image_url || '';
+        document.getElementById('catBanner').value = cat.banner_url || '';
+        document.getElementById('modalTitle').innerHTML = '<i class="bi bi-pencil me-2 text-primary-orange"></i>Edit Category';
+        document.getElementById('saveBtn').innerHTML = '<i class="bi bi-check-lg me-1"></i> Update Category';
+        previewImage();
+        document.getElementById('namePreview').textContent = cat.name;
+        document.getElementById('slugPreview').textContent = '/' + cat.slug;
+        document.getElementById('descPreview').textContent = cat.description || 'No description';
+        updateCharCount(document.getElementById('catDesc'), 'descCount', 160);
+
+        if (cat.image_url) {
+            const zones = document.querySelectorAll('#catImageUpload .asaah-upload-zone');
+            if (zones.length > 0) {
+                const uid = zones[0].id.replace('_zone', '');
+                document.getElementById(uid + '_previewImg').src = cat.image_url;
+                document.getElementById(uid + '_preview').style.display = '';
+                document.getElementById(uid + '_ph').style.display = 'none';
+            }
+        }
+        if (cat.banner_url) {
+            const zones = document.querySelectorAll('#catBannerUpload .asaah-upload-zone');
+            if (zones.length > 0) {
+                const uid = zones[0].id.replace('_zone', '');
+                document.getElementById(uid + '_previewImg').src = cat.banner_url;
+                document.getElementById(uid + '_preview').style.display = '';
+                document.getElementById(uid + '_ph').style.display = 'none';
+            }
+        }
+
+        new bootstrap.Modal(document.getElementById('categoryModal')).show();
+    };
+
+    window.autoSlug = function() {
+        if (editingId) return;
+        const name = document.getElementById('catName').value;
+        document.getElementById('catSlug').value = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        document.getElementById('slugPreview').textContent = '/' + document.getElementById('catSlug').value;
+    };
+
+    window.previewImage = function() {
+        const url = document.getElementById('catImage').value;
+        const area = document.getElementById('imagePreviewArea');
+        if (url) {
+            area.innerHTML = `<img src="${esc(url)}" style="width:100%;height:140px;object-fit:cover;border-bottom:1px solid var(--border-color)" onerror="this.parentElement.innerHTML='<div class=\\'cat-img-placeholder\\'><i class=\\'bi bi-image\\'></i></div>'">`;
+        } else {
+            area.innerHTML = '<i class="bi bi-image"></i>';
+        }
+    };
+
+    document.getElementById('catName').addEventListener('input', function() {
+        document.getElementById('namePreview').textContent = this.value || 'Category Name';
+    });
+    document.getElementById('catSlug').addEventListener('input', function() {
+        document.getElementById('slugPreview').textContent = '/' + (this.value || 'slug');
+    });
+    document.getElementById('catDesc').addEventListener('input', function() {
+        document.getElementById('descPreview').textContent = this.value || 'Description will appear here...';
+    });
+
+    window.updateCharCount = function(el, countId, max) {
+        document.getElementById(countId).textContent = el.value.length;
+    };
+
+    async function saveCategory(e) {
+        e.preventDefault();
+        const payload = {
+            name: document.getElementById('catName').value,
+            slug: document.getElementById('catSlug').value,
+            description: document.getElementById('catDesc').value || null,
+            image_url: document.getElementById('catImage').value || null,
+            banner_url: document.getElementById('catBanner').value || null,
+        };
+        const method = editingId ? 'PUT' : 'POST';
+        const url = editingId ? `/categories/${editingId}` : '/categories';
+        try {
+            await apiFetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            showToast(editingId ? 'Category updated' : 'Category created', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('categoryModal')).hide();
+            await loadCategories();
+        } catch(e) {}
+    }
+    document.getElementById('categoryForm').addEventListener('submit', saveCategory);
+
+    window.exportCSV = function() {
+        if (filteredCategories.length === 0) { showToast('No categories to export', 'error'); return; }
+        const headers = ['ID','Name','Slug','Description','Products','Image URL'];
+        const rows = filteredCategories.map(c => [
+            c.id, `"${(c.name||'').replace(/"/g,'""')}"`, c.slug,
+            `"${(c.description||'').replace(/"/g,'""')}"`, productCounts[c.id]||0,
+            c.image_url || ''
+        ]);
+        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csv], {type:'text/csv'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = 'categories_export_' + new Date().toISOString().slice(0,10) + '.csv';
+        a.click(); URL.revokeObjectURL(a.href);
+        showToast('Exported ' + filteredCategories.length + ' categories', 'success');
+    };
+
+    function updateFilterTags() {
+        const container = document.getElementById('activeFilterTags');
+        let html = '';
+        if (searchQuery) html += `<span class="filter-tag" onclick="document.getElementById('searchInput').value='';handleSearch()">Search: "${esc(searchQuery)}" <i class="bi bi-x"></i></span>`;
+        container.innerHTML = html;
+        container.style.display = html ? 'flex' : 'none';
+    }
+
+    function initCategoryUploaders() {
+        createCatUploader('catImageUpload', 'catImage', 'categories', function(url) {
+            document.getElementById('catImage').value = url;
+            previewImage();
+        });
+        createCatUploader('catBannerUpload', 'catBanner', 'categories', function(url) {
+            document.getElementById('catBanner').value = url;
+        });
+    }
+
+    function createCatUploader(containerId, inputId, folder, callback) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const uid = 'upl_' + Math.random().toString(36).substr(2, 8);
+        container.innerHTML = `
+            <div class="asaah-upload-zone" id="${uid}_zone" style="border:2px dashed var(--border-color);border-radius:8px;padding:20px 12px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg-card);">
+                <div id="${uid}_preview" style="display:none;position:relative;">
+                    <img id="${uid}_previewImg" style="max-width:100%;max-height:150px;border-radius:6px;object-fit:contain;" src="" alt="">
+                    <button type="button" class="btn btn-sm" style="position:absolute;top:4px;right:4px;background:rgba(220,53,69,0.9);color:#fff;border:none;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;" onclick="event.stopPropagation();removeCatPreview('${uid}','${inputId}')">&times;</button>
+                </div>
+                <div id="${uid}_ph">
+                    <i class="bi bi-cloud-arrow-up" style="font-size:1.5rem;color:var(--primary);display:block;margin-bottom:6px;"></i>
+                    <p style="color:var(--text-secondary);font-size:0.8rem;margin:0;"><strong>Click to upload</strong> or drag & drop</p>
+                    <p style="color:var(--text-muted);font-size:0.7rem;margin:2px 0 0;">JPG, PNG, WEBP</p>
+                </div>
+                <input type="file" id="${uid}_input" accept="image/*" style="display:none;">
+            </div>
+            <div id="${uid}_progress" style="display:none;margin-top:6px;">
+                <div class="progress" style="height:3px;background:var(--bg-input);border-radius:2px;">
+                    <div class="progress-bar" style="background:var(--primary);width:0%;transition:width 0.3s;border-radius:2px;"></div>
+                </div>
+            </div>`;
+        const zone = document.getElementById(uid + '_zone');
+        const input = document.getElementById(uid + '_input');
+        zone.addEventListener('click', () => input.click());
+        zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.style.borderColor = 'var(--primary)'; });
+        zone.addEventListener('dragleave', () => { zone.style.borderColor = 'var(--border-color)'; });
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault(); zone.style.borderColor = 'var(--border-color)';
+            if (e.dataTransfer.files.length > 0) uploadCatFile(uid, folder, e.dataTransfer.files[0], callback);
+        });
+        input.addEventListener('change', () => { if (input.files.length > 0) uploadCatFile(uid, folder, input.files[0], callback); });
+    }
+
+    async function uploadCatFile(uid, folder, file, callback) {
+        const progressEl = document.getElementById(uid + '_progress');
+        const bar = progressEl.querySelector('.progress-bar');
+        progressEl.style.display = ''; bar.style.width = '30%';
+        const fd = new FormData(); fd.append('file', file); fd.append('folder', folder); fd.append('media_type', 'entity_category');
+        try {
+            const resp = await fetch('/api/media/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') }, body: fd });
+            bar.style.width = '80%';
+            if (resp.ok) {
+                const data = await resp.json(); bar.style.width = '100%';
+                document.getElementById(uid + '_previewImg').src = data.url;
+                document.getElementById(uid + '_preview').style.display = '';
+                document.getElementById(uid + '_ph').style.display = 'none';
+                setTimeout(() => { progressEl.style.display = 'none'; bar.style.width = '0%'; }, 800);
+                if (callback) callback(data.url);
+            } else { const err = await resp.json(); showToast(err.detail || 'Upload failed', 'error'); progressEl.style.display = 'none'; }
+        } catch(e) { showToast('Upload failed', 'error'); progressEl.style.display = 'none'; }
+    }
+
+    window.removeCatPreview = function(uid, inputId) {
+        document.getElementById(uid + '_preview').style.display = 'none';
+        document.getElementById(uid + '_ph').style.display = '';
+        document.getElementById(inputId).value = '';
+    };
+
+    window.resetForm = function() {
+        editingId = null;
+        document.getElementById('categoryForm').reset();
+        document.getElementById('catId').value = '';
+        document.getElementById('catImage').value = '';
+        document.getElementById('catBanner').value = '';
+        document.getElementById('modalTitle').innerHTML = '<i class="bi bi-tag me-2 text-primary-orange"></i>Add Category';
+        document.getElementById('saveBtn').innerHTML = '<i class="bi bi-check-lg me-1"></i> Save Category';
+        document.getElementById('imagePreviewArea').innerHTML = '<i class="bi bi-image"></i>';
+        document.getElementById('namePreview').textContent = 'Category Name';
+        document.getElementById('slugPreview').textContent = '/category/slug';
+        document.getElementById('descPreview').textContent = 'Description will appear here...';
+        document.getElementById('descCount').textContent = '0';
+        document.querySelectorAll('#catImageUpload .asaah-upload-zone, #catBannerUpload .asaah-upload-zone').forEach(zone => {
+            const uid = zone.id.replace('_zone', '');
+            const preview = document.getElementById(uid + '_preview');
+            const ph = document.getElementById(uid + '_ph');
+            if (preview) preview.style.display = 'none';
+            if (ph) ph.style.display = '';
+        });
+    };
+
+    function showSpinner(show) { document.getElementById('mainSpinner').style.display = show ? 'flex' : 'none'; }
+
+    function showToast(msg, type) {
+        const c = document.getElementById('toastContainer');
+        const t = document.createElement('div');
+        t.className = 'toast-item toast-' + type;
+        t.innerHTML = `<i class="bi bi-${type==='success'?'check-circle-fill':type==='error'?'exclamation-circle-fill':'info-circle-fill'}"></i><span>${msg}</span>`;
+        c.appendChild(t);
+        setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(50px)'; t.style.transition='all .3s'; setTimeout(() => t.remove(), 300); }, 3500);
+    }
+})();
+</script>
+{% endblock %}

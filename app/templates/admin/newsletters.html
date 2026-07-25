@@ -1,0 +1,133 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h3 class="fw-bold mb-1">Newsletter Subscribers</h3>
+    <p class="text-muted mb-0">View and manage email subscribers.</p>
+</div>
+
+<div class="card card-custom p-0 overflow-hidden">
+    <div class="p-3 border-bottom border-secondary bg-dark bg-opacity-50 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+            <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Search by email..." id="searchInput" style="width: 280px;" oninput="filterSubscribers()">
+            <select class="form-select form-select-sm bg-dark text-light border-secondary" id="activeFilter" onchange="filterSubscribers()" style="width: 130px;">
+                <option value="">All Status</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small" id="subscriberCount">
+                {% if subscribers %}{{ subscribers|length }} subscribers{% else %}0 subscribers{% endif %}
+            </span>
+            <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="exportSubscribers()">
+                <i class="bi bi-download me-1"></i> Export CSV
+            </button>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0 align-middle" style="--bs-table-bg: transparent;">
+            <thead>
+                <tr>
+                    <th class="text-muted fw-normal border-secondary px-3 py-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                        </div>
+                    </th>
+                    <th class="text-muted fw-normal border-secondary">Email</th>
+                    <th class="text-muted fw-normal border-secondary">Status</th>
+                    <th class="text-muted fw-normal border-secondary">Subscribed</th>
+                    <th class="text-muted fw-normal border-secondary text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="subscribersTable">
+                {% if subscribers %}
+                    {% for s in subscribers %}
+                    <tr data-active="{{ s.is_active|lower }}" data-search="{{ s.email|lower }}">
+                        <td class="border-secondary px-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="{{ s.id }}" name="subscriberCheck">
+                            </div>
+                        </td>
+                        <td class="border-secondary text-light">{{ s.email }}</td>
+                        <td class="border-secondary">
+                            {% if s.is_active %}
+                            <span class="badge bg-success rounded-pill px-3 py-2">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary rounded-pill px-3 py-2">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td class="border-secondary text-muted small">{{ s.created_at.strftime('%Y-%m-%d %H:%M') if s.created_at else '-' }}</td>
+                        <td class="border-secondary text-end pe-4">
+                            <button class="btn btn-sm btn-outline-danger rounded-circle" style="width:32px;height:32px;padding:0;" onclick="deleteSubscriber({{ s.id }})" title="Delete"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center py-5 text-muted border-secondary">
+                        <i class="bi bi-envelope-paper fs-1 d-block mb-3 opacity-50"></i>
+                        No newsletter subscribers found.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API = '/api/newsletters';
+
+function filterSubscribers() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const active = document.getElementById('activeFilter').value;
+    let count = 0;
+    document.querySelectorAll('#subscribersTable tr[data-search]').forEach(tr => {
+        const matchSearch = !search || tr.dataset.search.includes(search);
+        const matchActive = !active || tr.dataset.active === active;
+        const visible = matchSearch && matchActive;
+        tr.style.display = visible ? '' : 'none';
+        if (visible) count++;
+    });
+    document.getElementById('subscriberCount').textContent = count + ' subscribers';
+}
+
+function toggleSelectAll() {
+    const checked = document.getElementById('selectAll').checked;
+    document.querySelectorAll('input[name="subscriberCheck"]').forEach(cb => cb.checked = checked);
+}
+
+async function deleteSubscriber(id) {
+    if (!confirm('Delete this subscriber?')) return;
+    try {
+        const res = await fetch(`${API}/${id}`, { method: 'DELETE' });
+        if (!res.ok) { alert('Error deleting subscriber'); return; }
+        location.reload();
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+
+function exportSubscribers() {
+    const rows = [['Email', 'Status', 'Subscribed Date']];
+    document.querySelectorAll('#subscribersTable tr[data-search]:not([style*="display: none"])').forEach(tr => {
+        const email = tr.querySelector('td:nth-child(2)')?.textContent.trim() || '';
+        const status = tr.querySelector('td:nth-child(3)')?.textContent.trim() || '';
+        const date = tr.querySelector('td:nth-child(4)')?.textContent.trim() || '';
+        if (email) rows.push([email, status, date]);
+    });
+    if (rows.length <= 1) { alert('No subscribers to export.'); return; }
+    const csv = rows.map(r => r.map(c => '"' + c.replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'subscribers_' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}

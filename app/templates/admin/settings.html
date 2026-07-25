@@ -1,0 +1,978 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">Website Settings</h3>
+        <p class="text-muted mb-0">Configure every aspect of your store from one place.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <span id="unsavedBadge" class="badge bg-warning text-dark px-3 py-2" style="display:none;">
+            <i class="bi bi-exclamation-triangle me-1"></i>Unsaved Changes
+        </span>
+        <button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Reset
+        </button>
+    </div>
+</div>
+
+<div class="card card-custom overflow-hidden">
+    <div class="row g-0" style="min-height: 75vh;">
+
+        <!-- Left Sidebar Nav -->
+        <div class="col-lg-3 col-md-4 border-end border-secondary" style="border-color: var(--border-color) !important;">
+            <div class="p-3">
+                <div class="position-relative mb-3">
+                    <i class="bi bi-search position-absolute text-muted" style="left:12px; top:50%; transform:translateY(-50%);"></i>
+                    <input type="text" id="settingsSearch" class="form-control bg-dark text-light border-secondary ps-4" placeholder="Search settings..." oninput="filterSettings(this.value)">
+                </div>
+            </div>
+            <nav class="settings-nav px-2 pb-3" id="settingsNav" style="max-height: calc(75vh - 100px); overflow-y: auto;">
+                <a class="settings-nav-link active" data-group="general" onclick="switchGroup('general')">
+                    <i class="bi bi-shop"></i><span>General</span>
+                </a>
+                <a class="settings-nav-link" data-group="currency" onclick="switchGroup('currency')">
+                    <i class="bi bi-currency-exchange"></i><span>Currency</span>
+                </a>
+                <a class="settings-nav-link" data-group="tax" onclick="switchGroup('tax')">
+                    <i class="bi bi-percent"></i><span>Tax</span>
+                </a>
+                <a class="settings-nav-link" data-group="shipping" onclick="switchGroup('shipping')">
+                    <i class="bi bi-truck"></i><span>Shipping</span>
+                </a>
+                <a class="settings-nav-link" data-group="payments" onclick="switchGroup('payments')">
+                    <i class="bi bi-credit-card"></i><span>Payments</span>
+                </a>
+                <a class="settings-nav-link" data-group="email" onclick="switchGroup('email')">
+                    <i class="bi bi-envelope-at"></i><span>Email</span>
+                </a>
+                <a class="settings-nav-link" data-group="social" onclick="switchGroup('social')">
+                    <i class="bi bi-share"></i><span>Social</span>
+                </a>
+                <a class="settings-nav-link" data-group="seo" onclick="switchGroup('seo')">
+                    <i class="bi bi-search-heart"></i><span>SEO</span>
+                </a>
+                <a class="settings-nav-link" data-group="maintenance" onclick="switchGroup('maintenance')">
+                    <i class="bi bi-tools"></i><span>Maintenance</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Right Content Area -->
+        <div class="col-lg-9 col-md-8">
+            <div class="p-4" id="settingsContent">
+
+                <!-- Loading State -->
+                <div id="settingsLoading" class="text-center py-5">
+                    <div class="spinner-border text-warning" role="status"></div>
+                    <p class="text-muted mt-3">Loading settings...</p>
+                </div>
+
+                <!-- General Settings -->
+                <div class="settings-panel" id="panel-general" style="display:none;">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-shop text-warning fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">General</h5>
+                            <small class="text-muted">Basic store information and branding.</small>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Store Name</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary setting-input" data-key="store_name" placeholder="My Store">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Contact Email</label>
+                            <input type="email" class="form-control bg-dark text-light border-secondary setting-input" data-key="contact_email" placeholder="hello@store.com">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-bold">Store Description</label>
+                            <textarea class="form-control bg-dark text-light border-secondary setting-input" data-key="store_description" rows="3" placeholder="Brief description of your store..."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Store Logo</label>
+                            <div id="siteLogoUpload"></div>
+                            <input type="hidden" class="setting-input" data-key="store_logo" value="">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Favicon</label>
+                            <div id="siteFaviconUpload"></div>
+                            <input type="hidden" class="setting-input" data-key="favicon_url" value="">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Contact Phone</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-telephone"></i></span>
+                                <input type="tel" class="form-control bg-dark text-light border-secondary setting-input" data-key="contact_phone" placeholder="+233 XX XXX XXXX">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold"><i class="bi bi-telephone me-1"></i> Secondary Phone (optional)</label>
+                            <input type="tel" class="form-control bg-dark text-light border-secondary setting-input" data-key="contact_phone_secondary" placeholder="+233 XX XXX XXXX">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Store Address</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary setting-input" data-key="store_address" placeholder="123 Main St, Accra, Ghana">
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top border-secondary">
+                        <button class="btn btn-primary-custom" onclick="saveGroup('general')">
+                            <i class="bi bi-check-lg me-1"></i>Save General Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Currency Settings -->
+                <div class="settings-panel" id="panel-currency" style="display:none;">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;background:rgba(40,167,69,0.1);">
+                            <i class="bi bi-currency-exchange text-success fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Currency</h5>
+                            <small class="text-muted">Configure how prices are displayed across the store.</small>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold">Currency Code</label>
+                            <select class="form-select bg-dark text-light border-secondary setting-input" data-key="currency_code">
+                                <option value="GHS">GHS - Ghanaian Cedi</option>
+                                <option value="USD">USD - US Dollar</option>
+                                <option value="EUR">EUR - Euro</option>
+                                <option value="GBP">GBP - British Pound</option>
+                                <option value="NGN">NGN - Nigerian Naira</option>
+                                <option value="KES">KES - Kenyan Shilling</option>
+                                <option value="ZAR">ZAR - South African Rand</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold">Currency Symbol</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary setting-input" data-key="currency_symbol" placeholder="GH&#8373;">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold">Decimal Places</label>
+                            <select class="form-select bg-dark text-light border-secondary setting-input" data-key="currency_decimal_places">
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2" selected>2</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Thousand Separator</label>
+                            <select class="form-select bg-dark text-light border-secondary setting-input" data-key="currency_thousand_separator">
+                                <option value=",">, (comma)</option>
+                                <option value=".">. (period)</option>
+                                <option value=" "> (space)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top border-secondary">
+                        <button class="btn btn-primary-custom" onclick="saveGroup('currency')">
+                            <i class="bi bi-check-lg me-1"></i>Save Currency Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tax Settings -->
+                <div class="settings-panel" id="panel-tax" style="display:none;">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;background:rgba(111,66,193,0.1);">
+                            <i class="bi bi-percent text-purple fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Tax</h5>
+                            <small class="text-muted">Manage tax rates and pricing behavior.</small>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold">Tax Rate (%)</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" min="0" max="100" class="form-control bg-dark text-light border-secondary setting-input" data-key="tax_rate" placeholder="15.00">
+                                <span class="input-group-text bg-dark border-secondary text-muted">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold">Tax Name</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary setting-input" data-key="tax_name" placeholder="VAT">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold">Tax Inclusive Pricing</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input setting-input" type="checkbox" data-key="tax_inclusive" id="taxInclusive" role="switch">
+                                <label class="form-check-label text-muted" for="taxInclusive">Prices include tax</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top border-secondary">
+                        <button class="btn btn-primary-custom" onclick="saveGroup('tax')">
+                            <i class="bi bi-check-lg me-1"></i>Save Tax Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Shipping Settings -->
+                <div class="settings-panel" id="panel-shipping" style="display:none;">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;background:rgba(23,162,184,0.1);">
+                            <i class="bi bi-truck text-info fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Shipping</h5>
+                            <small class="text-muted">Configure shipping fees and methods.</small>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Default Shipping Fee</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-currency-dollar"></i></span>
+                                <input type="number" step="0.01" min="0" class="form-control bg-dark text-light border-secondary setting-input" data-key="shipping_fee" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Free Shipping Threshold</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-gift"></i></span>
+                                <input type="number" step="0.01" min="0" class="form-control bg-dark text-light border-secondary setting-input" data-key="free_shipping_threshold" placeholder="0.00">
+                            </div>
+                            <small class="text-muted">Set to 0 to disable.</small>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-bold">Shipping Methods</label>
+                            <div class="border border-secondary rounded-3 p-3" id="shippingMethodsContainer">
+                                <div id="shippingMethodsList" class="d-flex flex-wrap gap-2 mb-3">
+                                </div>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" id="newShippingMethod" class="form-control bg-dark text-light border-secondary" placeholder="Add method (e.g. Standard Delivery)">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="addShippingMethod()">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <input type="hidden" class="setting-input" data-key="shipping_methods">
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top border-secondary">
+                        <button class="btn btn-primary-custom" onclick="saveGroup('shipping')">
+                            <i class="bi bi-check-lg me-1"></i>Save Shipping Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Payment Settings -->
+                <div class="settings-panel" id="panel-payments" style="display:none;">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-credit-card text-warning fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Payments</h5>
+                            <small class="text-muted">Configure payment gateways and methods.</small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Enabled Payment Methods</label>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card bg-dark border-secondary h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-cash-stack text-success me-2 fs-5"></i>
+                                            <span class="fw-bold text-light">Cash on Delivery</span>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input setting-input" type="checkbox" data-key="payment_cod" role="switch">
+                                        </div>
+                                    </div>
+                                    <p class="text-muted small mb-0">Accept cash payments when order is delivered.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card bg-dark border-secondary h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-phone text-warning me-2 fs-5"></i>
+                                            <span class="fw-bold text-light">MTN MoMo</span>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input setting-input" type="checkbox" data-key="payment_mtn_momo" role="switch">
+                                        </div>
+                                    </div>
+                                    <label class="form-label text-muted small mt-2">API Key</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="password" class="form-control bg-dark text-light border-secondary setting-input" data-key="mtn_momo_api_key" placeholder="Enter API key">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this)">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card bg-dark border-secondary h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-phone text-danger me-2 fs-5"></i>
+                                            <span class="fw-bold text-light">Telecel Cash</span>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input setting-input" type="checkbox" data-key="payment_telecel" role="switch">
+                                        </div>
+                                    </div>
+                                    <label class="form-label text-muted small mt-2">API Key</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="password" class="form-control bg-dark text-light border-secondary setting-input" data-key="telecel_api_key" placeholder="Enter API key">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this)">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card bg-dark border-secondary h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-credit-card-2-front text-primary me-2 fs-5"></i>
+                                            <span class="fw-bold text-light">Card Payments</span>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input setting-input" type="checkbox" data-key="payment_card" role="switch">
+                                        </div>
+                                    </div>
+                                    <label class="form-label text-muted small mt-2">Gateway API Key</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="password" class="form-control bg-dark text-light border-secondary setting-input" data-key="card_gateway_api_key" placeholder="Enter API key">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this)">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                    <label class="form-label text-muted small mt-2">Gateway Secret</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="password" class="form-control bg-dark text-light border-secondary setting-input" data-key="card_gateway_secret" placeholder="Enter secret">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this)">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top border-secondary">
+                        <button class="btn btn-primary-custom" onclick="saveGroup('payments')">
+                            <i class="bi bi-check-lg me-1"></i>Save Payment Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Email Settings -->
+                <div class="settings-panel" id="panel-email" style="display:none;">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;background:rgba(220,53,69,0.1);">
+                            <i class="bi bi-envelope-at text-danger fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Email</h5>
+                            <small class="text-muted">SMTP configuration for transactional emails.</small>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label text-muted small fw-bold">SMTP Host</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-hdd-network"></i></span>
+                                <input type="text" class="form-control bg-dark text-light border-secondary setting-input" data-key="smtp_host" placeholder="smtp.gmail.com">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold">SMTP Port</label>
+                            <input type="number" class="form-control bg-dark text-light border-secondary setting-input" data-key="smtp_port" placeholder="587">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">SMTP Username</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-person"></i></span>
+                                <input type="text" class="form-control bg-dark text-light border-secondary setting-input" data-key="smtp_username" placeholder="username">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">SMTP Password</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control bg-dark text-light border-secondary setting-input" data-key="smtp_password" placeholder="password">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility(this)">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">From Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-envelope"></i></span>
+                                <input type="email" class="form-control bg-dark text-light border-secondary setting-input" data-key="smtp_from_email" placeholder="noreply@store.com">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">From Name</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary setting-input" data-key="smtp_from_name" placeholder="My Store">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button class="btn btn-outline-info btn-sm" onclick="testEmail()">
+                            <i class="bi bi-send me-1"></i>Send Test Email
+                        </button>
+                    </div>
+                    <div class="mt-4 pt-3 border-top border-secondary">
+                        <button class="btn btn-primary-custom" onclick="saveGroup('email')">
+                            <i class="bi bi-check-lg me-1"></i>Save Email Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Social Settings -->
+                <div class="settings-panel" id="panel-social" style="display:none;">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;background:rgba(13,110,253,0.1);">
+                            <i class="bi bi-share text-primary fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Social Media</h5>
+                            <small class="text-muted">Connect your social media profiles.</small>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold"><i class="bi bi-facebook me-1"></i> Facebook URL</label>
+                            <input type="url" class="form-control bg-dark text-light border-secondary setting-input" data-key="social_facebook" placeholder="https://facebook.com/yourpage">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold"><i class="bi bi-instagram me-1"></i> Instagram URL</label>
+                            <input type="url" class="form-control bg-dark text-light border-secondary setting-input" data-key="social_instagram" placeholder="https://instagram.com/yourpage">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold"><i class="bi bi-twitter-x me-1"></i> Twitter / X URL</label>
+                            <input type="url" class="form-control bg-dark text-light border-secondary setting-input" data-key="social_twitter" placeholder="https://x.com/yourpage">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold"><i class="bi bi-whatsapp me-1"></i> WhatsApp Number</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-plus"></i></span>
+                                <input type="tel" class="form-control bg-dark text-light border-secondary setting-input" data-key="social_whatsapp" placeholder="233551234567">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold"><i class="bi bi-tiktok me-1"></i> TikTok URL</label>
+                            <input type="url" class="form-control bg-dark text-light border-secondary setting-input" data-key="social_tiktok" placeholder="https://tiktok.com/@yourhandle">
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top border-secondary">
+                        <button class="btn btn-primary-custom" onclick="saveGroup('social')">
+                            <i class="bi bi-check-lg me-1"></i>Save Social Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SEO Settings -->
+                <div class="settings-panel" id="panel-seo" style="display:none;">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;background:rgba(255,193,7,0.1);">
+                            <i class="bi bi-search-heart text-warning fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">SEO</h5>
+                            <small class="text-muted">Search engine optimization settings.</small>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-bold">Meta Title</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary setting-input" data-key="seo_meta_title" placeholder="My Store - Best Online Shop" maxlength="70">
+                            <small class="text-muted">Recommended: 50-60 characters. <span id="seoTitleCount" class="text-muted">0/70</span></small>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-bold">Meta Description</label>
+                            <textarea class="form-control bg-dark text-light border-secondary setting-input" data-key="seo_meta_description" rows="3" placeholder="A short description for search engines..." maxlength="160"></textarea>
+                            <small class="text-muted">Recommended: 150-160 characters. <span id="seoDescCount" class="text-muted">0/160</span></small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Google Analytics ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-google"></i></span>
+                                <input type="text" class="form-control bg-dark text-light border-secondary setting-input" data-key="seo_ga_id" placeholder="G-XXXXXXXXXX">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top border-secondary">
+                        <button class="btn btn-primary-custom" onclick="saveGroup('seo')">
+                            <i class="bi bi-check-lg me-1"></i>Save SEO Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Maintenance Settings -->
+                <div class="settings-panel" id="panel-maintenance" style="display:none;">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;background:rgba(220,53,69,0.1);">
+                            <i class="bi bi-tools text-danger fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Maintenance</h5>
+                            <small class="text-muted">Control store availability and downtime messaging.</small>
+                        </div>
+                    </div>
+                    <div class="card bg-dark border-secondary mb-4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <h6 class="fw-bold text-light mb-1">Maintenance Mode</h6>
+                                    <p class="text-muted small mb-0">When enabled, visitors will see the maintenance page instead of the store.</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input setting-input" type="checkbox" data-key="maintenance_mode" role="switch" id="maintenanceMode">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-bold">Maintenance Message</label>
+                            <textarea class="form-control bg-dark text-light border-secondary setting-input" data-key="maintenance_message" rows="4" placeholder="We're currently performing scheduled maintenance. We'll be back shortly!"></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top border-secondary">
+                        <button class="btn btn-danger" onclick="saveGroup('maintenance')">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Save Maintenance Settings
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 1090;"></div>
+
+<style>
+    .settings-nav-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        color: var(--text-muted);
+        text-decoration: none;
+        border-radius: 8px;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+        margin-bottom: 2px;
+        cursor: pointer;
+    }
+    .settings-nav-link:hover {
+        background: rgba(255,255,255,0.03);
+        color: var(--text-light);
+    }
+    .settings-nav-link.active {
+        background: rgba(242,102,15,0.1);
+        color: var(--primary-orange);
+        font-weight: 600;
+    }
+    .settings-nav-link i {
+        font-size: 1.1rem;
+        width: 22px;
+        text-align: center;
+    }
+    .settings-panel {
+        animation: fadeInUp 0.25s ease;
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 991.98px) {
+        .settings-nav {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 4px !important;
+            max-height: none !important;
+            overflow-y: visible !important;
+            padding: 8px 12px !important;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .settings-nav-link {
+            padding: 6px 12px !important;
+            font-size: 0.78rem !important;
+            white-space: nowrap;
+        }
+        .settings-nav-link span { display: inline !important; }
+        .settings-nav-link i { font-size: 0.9rem !important; width: auto !important; }
+        .card-custom .row.g-0 { flex-direction: column !important; }
+        .card-custom .col-lg-3,
+        .card-custom .col-md-4 {
+            flex: 0 0 auto !important;
+            max-width: 100% !important;
+            border-end: none !important;
+            border-bottom: 1px solid var(--border-color) !important;
+        }
+    }
+    .shipping-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(242,102,15,0.1);
+        color: var(--primary-orange);
+        border: 1px solid rgba(242,102,15,0.25);
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 0.82rem;
+    }
+    .shipping-tag .remove-tag {
+        cursor: pointer;
+        opacity: 0.6;
+        transition: opacity 0.2s;
+    }
+    .shipping-tag .remove-tag:hover { opacity: 1; }
+    .form-check-input:checked {
+        background-color: var(--primary-orange);
+        border-color: var(--primary-orange);
+    }
+    .card-custom {
+        background-color: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+    }
+    .text-purple { color: #6f42c1 !important; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API = '/api/admin/settings';
+let settingsData = {};
+let originalData = {};
+let hasUnsaved = false;
+let shippingMethods = [];
+
+/* ────────── Load Settings ────────── */
+async function loadSettings() {
+    try {
+        const serverData = {{ settings | tojson }};
+        if (Array.isArray(serverData) && serverData.length > 0) {
+            settingsData = {};
+            serverData.forEach(s => { settingsData[s.key] = { id: s.id, value: s.value || '' }; });
+            originalData = JSON.parse(JSON.stringify(settingsData));
+            populateInputs();
+            document.getElementById('settingsLoading').style.display = 'none';
+            document.querySelector('.settings-panel').style.display = '';
+            switchGroup('general');
+            return;
+        }
+        const token = localStorage.getItem('admin_token');
+        const headers = {};
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        const res = await fetch(API, { headers });
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        const settings = Array.isArray(data) ? data : (data.settings || data.data || []);
+        settingsData = {};
+        settings.forEach(s => { settingsData[s.key] = { id: s.id, value: s.value || '' }; });
+        originalData = JSON.parse(JSON.stringify(settingsData));
+        populateInputs();
+        document.getElementById('settingsLoading').style.display = 'none';
+        document.querySelector('.settings-panel').style.display = '';
+        switchGroup('general');
+    } catch (err) {
+        document.getElementById('settingsLoading').innerHTML =
+            '<div class="text-center py-5"><i class="bi bi-exclamation-triangle text-warning fs-1 d-block mb-3"></i><p class="text-muted">Failed to load settings.</p><button class="btn btn-outline-secondary btn-sm mt-2" onclick="loadSettings()">Retry</button></div>';
+    }
+}
+
+function populateInputs() {
+    document.querySelectorAll('.setting-input').forEach(input => {
+        const key = input.dataset.key;
+        if (!key || !settingsData[key]) return;
+        const val = settingsData[key].value;
+        if (input.type === 'checkbox') {
+            input.checked = (val === 'true' || val === '1' || val === 'True' || val === true);
+        } else {
+            input.value = val;
+        }
+    });
+    const methodsRaw = settingsData['shipping_methods']?.value || '[]';
+    try { shippingMethods = JSON.parse(methodsRaw); } catch { shippingMethods = []; }
+    renderShippingMethods();
+    if (settingsData['seo_meta_title']?.value) {
+        document.getElementById('seoTitleCount').textContent = settingsData['seo_meta_title'].value.length + '/70';
+    }
+    if (settingsData['seo_meta_description']?.value) {
+        document.getElementById('seoDescCount').textContent = settingsData['seo_meta_description'].value.length + '/160';
+    }
+}
+
+/* ────────── Navigation ────────── */
+function switchGroup(group) {
+    document.querySelectorAll('.settings-panel').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.settings-nav-link').forEach(l => l.classList.remove('active'));
+    const panel = document.getElementById('panel-' + group);
+    const link = document.querySelector(`[data-group="${group}"]`);
+    if (panel) panel.style.display = 'block';
+    if (link) link.classList.add('active');
+}
+
+function filterSettings(query) {
+    const q = query.toLowerCase().trim();
+    document.querySelectorAll('.settings-nav-link').forEach(link => {
+        const group = link.dataset.group;
+        const panel = document.getElementById('panel-' + group);
+        if (!panel) return;
+        if (!q) { link.style.display = ''; return; }
+        const inputs = panel.querySelectorAll('.setting-input');
+        let match = false;
+        inputs.forEach(i => {
+            const label = (i.dataset.key || '').replace(/_/g, ' ');
+            if (label.includes(q)) match = true;
+        });
+        const heading = (panel.querySelector('h5')?.textContent || '').toLowerCase();
+        if (heading.includes(q)) match = true;
+        link.style.display = match ? '' : 'none';
+    });
+}
+
+/* ────────── Save ────────── */
+async function saveGroup(group) {
+    const panel = document.getElementById('panel-' + group);
+    if (!panel) return;
+    const inputs = panel.querySelectorAll('.setting-input');
+    const btn = panel.querySelector('.btn-primary-custom, .btn-danger');
+    const origHTML = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...'; }
+    let savedCount = 0;
+    let errorCount = 0;
+    for (const input of inputs) {
+        const key = input.dataset.key;
+        if (!key) continue;
+        let value;
+        if (input.type === 'checkbox') {
+            value = input.checked ? 'true' : 'false';
+        } else if (key === 'shipping_methods') {
+            value = JSON.stringify(shippingMethods);
+        } else {
+            value = input.value;
+        }
+        const current = settingsData[key]?.value || '';
+        if (String(value) === String(current)) continue;
+        try {
+            const id = settingsData[key]?.id;
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `${API}/${id}` : API;
+            const payload = { key, value, description: '' };
+            const token = localStorage.getItem('admin_token');
+            const fetchHeaders = { 'Content-Type': 'application/json' };
+            if (token) fetchHeaders['Authorization'] = 'Bearer ' + token;
+            const res = await fetch(url, {
+                method,
+                headers: fetchHeaders,
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                const result = await res.json();
+                if (!id && result.id) { settingsData[key] = { id: result.id, value }; }
+                else if (id) { settingsData[key].value = value; }
+                savedCount++;
+            } else {
+                errorCount++;
+            }
+        } catch (e) {
+            errorCount++;
+        }
+    }
+    if (btn) { btn.disabled = false; btn.innerHTML = origHTML; }
+    if (savedCount > 0 && errorCount === 0) {
+        showToast('success', 'Settings saved successfully.');
+    } else if (savedCount > 0 && errorCount > 0) {
+        showToast('warning', `${savedCount} saved, ${errorCount} failed.`);
+    } else if (errorCount > 0) {
+        showToast('danger', 'Failed to save some settings.');
+    } else {
+        showToast('info', 'No changes detected.');
+    }
+    originalData = JSON.parse(JSON.stringify(settingsData));
+    checkUnsaved();
+}
+
+/* ────────── Unsaved Tracking ────────── */
+document.addEventListener('input', (e) => {
+    if (e.target.classList.contains('setting-input')) checkUnsaved();
+});
+document.addEventListener('change', (e) => {
+    if (e.target.classList.contains('setting-input')) checkUnsaved();
+});
+function checkUnsaved() {
+    let changed = false;
+    document.querySelectorAll('.setting-input').forEach(input => {
+        const key = input.dataset.key;
+        if (!key) return;
+        let current;
+        if (input.type === 'checkbox') current = input.checked ? 'true' : 'false';
+        else if (key === 'shipping_methods') current = JSON.stringify(shippingMethods);
+        else current = input.value;
+        const original = originalData[key]?.value || '';
+        if (String(current) !== String(original)) changed = true;
+    });
+    hasUnsaved = changed;
+    document.getElementById('unsavedBadge').style.display = changed ? '' : 'none';
+}
+function markUnsaved() {
+    hasUnsaved = true;
+    const badge = document.getElementById('unsavedBadge');
+    if (badge) badge.style.display = '';
+}
+window.addEventListener('beforeunload', (e) => {
+    if (hasUnsaved) { e.preventDefault(); e.returnValue = ''; }
+});
+
+/* ────────── Shipping Methods ────────── */
+function renderShippingMethods() {
+    const container = document.getElementById('shippingMethodsList');
+    container.innerHTML = shippingMethods.map((m, i) =>
+        `<span class="shipping-tag">${m}<span class="remove-tag" onclick="removeShippingMethod(${i})"><i class="bi bi-x"></i></span></span>`
+    ).join('');
+}
+function addShippingMethod() {
+    const input = document.getElementById('newShippingMethod');
+    const val = input.value.trim();
+    if (!val) return;
+    if (shippingMethods.includes(val)) { showToast('warning', 'Method already exists.'); return; }
+    shippingMethods.push(val);
+    input.value = '';
+    renderShippingMethods();
+    checkUnsaved();
+}
+function removeShippingMethod(idx) {
+    shippingMethods.splice(idx, 1);
+    renderShippingMethods();
+    checkUnsaved();
+}
+document.getElementById('newShippingMethod')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); addShippingMethod(); }
+});
+
+/* ────────── Password Toggle ────────── */
+function togglePasswordVisibility(btn) {
+    const input = btn.parentElement.querySelector('input');
+    if (!input) return;
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+    btn.innerHTML = isPassword ? '<i class="bi bi-eye-slash"></i>' : '<i class="bi bi-eye"></i>';
+}
+
+/* ────────── Test Email ────────── */
+async function testEmail() {
+    showToast('info', 'Sending test email...');
+    try {
+        const res = await fetch('/api/admin/settings/test-email', { method: 'POST' });
+        if (res.ok) showToast('success', 'Test email sent!');
+        else showToast('danger', 'Failed to send test email.');
+    } catch { showToast('danger', 'Failed to send test email.'); }
+}
+
+/* ────────── SEO Character Counters ────────── */
+document.addEventListener('input', (e) => {
+    if (e.target.dataset.key === 'seo_meta_title') {
+        document.getElementById('seoTitleCount').textContent = e.target.value.length + '/70';
+    }
+    if (e.target.dataset.key === 'seo_meta_description') {
+        document.getElementById('seoDescCount').textContent = e.target.value.length + '/160';
+    }
+});
+
+/* ────────── Toast ────────── */
+function showToast(type, message) {
+    const icons = { success: 'check-circle-fill', danger: 'exclamation-circle-fill', warning: 'exclamation-triangle-fill', info: 'info-circle-fill' };
+    const container = document.getElementById('toastContainer');
+    const id = 'toast-' + Date.now();
+    container.insertAdjacentHTML('beforeend', `
+        <div id="${id}" class="toast align-items-center text-bg-${type} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body"><i class="bi bi-${icons[type] || 'info-circle'} me-2"></i>${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `);
+    const el = document.getElementById(id);
+    const toast = new bootstrap.Toast(el, { delay: 4000 });
+    toast.show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
+}
+
+/* ────────── Init ────────── */
+loadSettings();
+
+/* ────────── Image Uploaders for Settings ────────── */
+function createSettingUploader(containerId, inputKey, folder) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const uid = 'set_' + Math.random().toString(36).substr(2, 8);
+    container.innerHTML = `
+        <div class="asaah-upload-zone" id="${uid}_zone" style="border:2px dashed var(--border-color);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg-card);">
+            <div id="${uid}_preview" style="display:none;position:relative;">
+                <img id="${uid}_previewImg" style="max-width:100%;max-height:100px;border-radius:6px;object-fit:contain;" src="" alt="">
+                <button type="button" class="btn btn-sm" style="position:absolute;top:4px;right:4px;background:rgba(220,53,69,0.9);color:#fff;border:none;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;" onclick="event.stopPropagation();document.getElementById('${uid}_preview').style.display='none';document.getElementById('${uid}_ph').style.display='';document.querySelector('[data-key=${inputKey}]').value='';">&times;</button>
+            </div>
+            <div id="${uid}_ph">
+                <i class="bi bi-cloud-arrow-up" style="font-size:1.5rem;color:var(--primary);display:block;margin-bottom:4px;"></i>
+                <p style="color:var(--text-secondary);font-size:0.78rem;margin:0;"><strong>Upload</strong> or drag & drop</p>
+            </div>
+            <input type="file" id="${uid}_input" accept="image/*" style="display:none;">
+        </div>
+        <div id="${uid}_progress" style="display:none;margin-top:6px;">
+            <div class="progress" style="height:3px;background:var(--bg-input);border-radius:2px;">
+                <div class="progress-bar" style="background:var(--primary);width:0%;transition:width 0.3s;border-radius:2px;"></div>
+            </div>
+        </div>`;
+    const zone = document.getElementById(uid + '_zone');
+    const input = document.getElementById(uid + '_input');
+    zone.addEventListener('click', () => input.click());
+    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.style.borderColor = 'var(--primary)'; });
+    zone.addEventListener('dragleave', () => { zone.style.borderColor = 'var(--border-color)'; });
+    zone.addEventListener('drop', (e) => {
+        e.preventDefault(); zone.style.borderColor = 'var(--border-color)';
+        if (e.dataTransfer.files.length > 0) uploadSettingFile(uid, inputKey, folder, e.dataTransfer.files[0]);
+    });
+    input.addEventListener('change', () => { if (input.files.length > 0) uploadSettingFile(uid, inputKey, folder, input.files[0]); });
+}
+
+async function uploadSettingFile(uid, inputKey, folder, file) {
+    const progressEl = document.getElementById(uid + '_progress');
+    const bar = progressEl.querySelector('.progress-bar');
+    progressEl.style.display = ''; bar.style.width = '30%';
+    const fd = new FormData(); fd.append('file', file); fd.append('folder', folder); fd.append('media_type', 'site');
+    try {
+        const resp = await fetch('/api/media/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') }, body: fd });
+        bar.style.width = '80%';
+        if (resp.ok) {
+            const data = await resp.json(); bar.style.width = '100%';
+            document.getElementById(uid + '_previewImg').src = data.url;
+            document.getElementById(uid + '_preview').style.display = '';
+            document.getElementById(uid + '_ph').style.display = 'none';
+            document.querySelector('[data-key="' + inputKey + '"]').value = data.url;
+            markUnsaved();
+            setTimeout(() => { progressEl.style.display = 'none'; bar.style.width = '0%'; }, 800);
+        } else { const err = await resp.json(); alert(err.detail || 'Upload failed'); progressEl.style.display = 'none'; }
+    } catch(e) { alert('Upload failed'); progressEl.style.display = 'none'; }
+}
+
+createSettingUploader('siteLogoUpload', 'store_logo', 'site');
+createSettingUploader('siteFaviconUpload', 'favicon_url', 'site');
+</script>
+{% endblock %}

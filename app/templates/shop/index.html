@@ -1,0 +1,558 @@
+{% extends "base.html" %}
+{% block title %}Shop - ASAH'S PRIMENEST{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav class="breadcrumb-custom" aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Shop</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="container pb-5">
+    <div class="row g-4">
+        <!-- Sidebar Filters -->
+        <div class="col-lg-3">
+            <div class="shop-sidebar position-sticky" style="top:90px" id="filterSidebar">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="text-white fw-bold mb-0">Filters</h5>
+                    <button class="btn-close btn-close-white d-lg-none" onclick="closeMobileFilters()"></button>
+                </div>
+
+                <!-- Category Filter -->
+                <div class="mb-4">
+                    <h6 class="filter-title">Categories</h6>
+                    <div class="filter-option active" data-filter="category" data-value="" onclick="setFilter('category','',this)">
+                        <span>All Categories</span>
+                        <span class="filter-count" id="catCountAll"></span>
+                    </div>
+                    {% for c in categories %}
+                    <div class="filter-option" data-filter="category" data-value="{{ c.id }}" onclick="setFilter('category','{{ c.id }}',this)">
+                        <span>{{ c.name }}</span>
+                        <span class="filter-count" data-cat-count="{{ c.id }}"></span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Price Filter -->
+                <div class="mb-4">
+                    <h6 class="filter-title">Price Range</h6>
+                    <div class="price-brackets mb-3" id="priceBrackets"></div>
+                    <input type="range" class="form-range" id="priceRange" min="0" max="10000" step="50" value="10000" oninput="updatePriceLabel(this.value)" style="accent-color:var(--primary-orange)">
+                    <div class="d-flex justify-content-between mt-2 text-warm-gray small">
+                        <span>GHS 0</span>
+                        <span id="priceLabel">GHS 10,000+</span>
+                    </div>
+                </div>
+
+                <!-- Brand Filter -->
+                <div class="mb-4">
+                    <h6 class="filter-title">Brands</h6>
+                    <div class="filter-option active" data-filter="brand" data-value="" onclick="setFilter('brand','',this)">
+                        <span>All Brands</span>
+                        <span class="filter-count" id="brandCountAll"></span>
+                    </div>
+                    {% for b in brands %}
+                    <div class="filter-option" data-filter="brand" data-value="{{ b.id }}" onclick="setFilter('brand','{{ b.id }}',this)">
+                        <span>{{ b.name }}</span>
+                        <span class="filter-count" data-brand-count="{{ b.id }}"></span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Availability -->
+                <div class="mb-4">
+                    <h6 class="filter-title">Availability</h6>
+                    <div class="filter-option active" data-filter="stock" data-value="" onclick="setFilter('stock','',this)">
+                        <span>All</span>
+                    </div>
+                    <div class="filter-option" data-filter="stock" data-value="in_stock" onclick="setFilter('stock','in_stock',this)">
+                        <span>In Stock</span>
+                    </div>
+                    <div class="filter-option" data-filter="stock" data-value="out_of_stock" onclick="setFilter('stock','out_of_stock',this)">
+                        <span>Out of Stock</span>
+                    </div>
+                </div>
+
+                <button class="btn btn-outline-primary w-100" onclick="clearAllFilters()">
+                    <i class="bi bi-x-lg me-1"></i> Clear All
+                </button>
+            </div>
+        </div>
+
+        <!-- Product Grid -->
+        <div class="col-lg-9">
+            <!-- Toolbar -->
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-outline-secondary d-lg-none" onclick="openMobileFilters()">
+                        <i class="bi bi-funnel me-1"></i> Filters
+                    </button>
+                    <p class="text-warm-gray mb-0" id="resultCount">Loading...</p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <!-- View toggle -->
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary active" id="gridViewBtn" onclick="setView('grid')" title="Grid View"><i class="bi bi-grid-3x3-gap"></i></button>
+                        <button type="button" class="btn btn-outline-secondary" id="listViewBtn" onclick="setView('list')" title="List View"><i class="bi bi-list"></i></button>
+                    </div>
+                    <label class="text-warm-gray small d-none d-sm-inline">Sort:</label>
+                    <select class="form-select form-select-sm" style="width:auto;min-width:160px;font-size:.85rem" id="sortSelect" onchange="applyFilters()">
+                        <option value="newest">Newest First</option>
+                        <option value="price_asc">Price: Low to High</option>
+                        <option value="price_desc">Price: High to Low</option>
+                        <option value="name_asc">Name: A-Z</option>
+                        <option value="name_desc">Name: Z-A</option>
+                        <option value="popular">Most Popular</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Active Filters -->
+            <div id="activeFilters" class="d-flex flex-wrap gap-2 mb-3"></div>
+
+            <!-- Products Grid -->
+            <div id="productsGrid" class="row g-3 g-md-4"></div>
+
+            <!-- Products List (hidden by default) -->
+            <div id="productsList" class="d-none"></div>
+
+            <!-- Empty State -->
+            <div id="emptyState" style="display:none" class="text-center py-5">
+                <div style="font-size:3rem;color:rgba(255,255,255,.1);margin-bottom:16px"><i class="bi bi-search"></i></div>
+                <h5 class="text-white mb-2">No products found</h5>
+                <p class="text-warm-gray mb-3" style="max-width:360px;margin:0 auto">Try adjusting your filters or search terms to find what you're looking for.</p>
+                <button class="btn btn-primary" onclick="clearAllFilters()">Clear All Filters</button>
+            </div>
+
+            <!-- Load More -->
+            <div class="text-center mt-4" id="loadMoreWrap" style="display:none">
+                <button class="btn btn-outline-primary px-4" id="loadMoreBtn" onclick="loadMore()">
+                    <i class="bi bi-arrow-down me-1"></i> Load More
+                </button>
+                <p class="text-warm-gray small mt-2" id="loadMoreInfo"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<button class="mobile-filter-btn d-lg-none" onclick="openMobileFilters()" id="mobileFilterFab" title="Filters">
+    <i class="bi bi-funnel"></i>
+</button>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+    const ALL_PRODUCTS = {{ products|tojson }};
+    let filtered = [...ALL_PRODUCTS];
+    let perPage = 12;
+    let currentShow = 12;
+    let currentView = 'grid';
+    let filters = { category: '', brand: '', stock: '', search: '' };
+
+    // --- Functions (defined first so they can be called during init) ---
+
+    function renderProducts() {
+        const grid = document.getElementById('productsGrid');
+        const list = document.getElementById('productsList');
+        const empty = document.getElementById('emptyState');
+        const items = filtered.slice(0, currentShow);
+
+        document.getElementById('resultCount').textContent = 'Showing ' + items.length + ' of ' + filtered.length + ' results';
+
+        if (items.length === 0) {
+            grid.innerHTML = '';
+            list.innerHTML = '';
+            empty.style.display = 'block';
+            document.getElementById('loadMoreWrap').style.display = 'none';
+            return;
+        }
+        empty.style.display = 'none';
+
+        const html = items.map(p => productCardHTML(p)).join('');
+
+        if (currentView === 'grid') {
+            grid.innerHTML = html;
+            grid.classList.remove('d-none');
+            list.classList.add('d-none');
+        } else {
+            list.innerHTML = '<div class="d-flex flex-column gap-3">' + html + '</div>';
+            list.classList.remove('d-none');
+            grid.classList.add('d-none');
+        }
+
+        const remaining = filtered.length - currentShow;
+        document.getElementById('loadMoreWrap').style.display = remaining > 0 ? 'block' : 'none';
+        document.getElementById('loadMoreInfo').textContent = remaining > 0 ? remaining + ' more product' + (remaining > 1 ? 's' : '') + ' available' : '';
+    }
+
+    function productCardHTML(p) {
+        const hasDiscount = p.discount_price && p.discount_price < p.price;
+        const discount = hasDiscount ? Math.round((1 - p.discount_price / p.price) * 100) : 0;
+        const displayPrice = hasDiscount ? p.discount_price : p.price;
+        const stockClass = p.stock > 10 ? 'badge-in-stock' : p.stock > 0 ? 'badge-low-stock' : 'badge-out-stock';
+        const stockText = p.stock > 10 ? 'In Stock' : p.stock > 0 ? 'Only ' + p.stock + ' left' : 'Out of Stock';
+        const img = p.image || '';
+        const esc = function(s) { var d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; };
+
+        if (currentView === 'list') {
+            return '<div class="d-flex gap-3 p-3" style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;transition:border-color .2s" onmouseenter="this.style.borderColor=\'rgba(242,102,15,.3)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">' +
+                '<div style="width:140px;min-height:120px;flex-shrink:0;border-radius:8px;overflow:hidden;background:rgba(255,255,255,.02);position:relative">' +
+                    (hasDiscount ? '<span class="product-badge">-' + discount + '%</span>' : '') +
+                    (img ? '<img src="' + esc(img) + '" alt="' + esc(p.name) + '" style="width:100%;height:100%;object-fit:cover">' : '<div class="d-flex align-items-center justify-content-center h-100" style="color:rgba(255,255,255,.1);font-size:1.5rem"><i class="bi bi-box-seam"></i></div>') +
+                '</div>' +
+                '<div class="flex-grow-1 d-flex flex-column justify-content-between">' +
+                    '<div>' +
+                        '<div class="product-card-category">' + esc(p.category || 'General') + '</div>' +
+                        '<a href="/product/' + esc(p.slug) + '" class="text-decoration-none">' +
+                            '<h6 class="product-card-name mb-1">' + esc(p.name) + '</h6>' +
+                        '</a>' +
+                        '<div class="product-card-rating mb-1">' +
+                            '<i class="bi bi-star-fill" style="color:#ffc107;font-size:.7rem"></i>' +
+                            '<span style="font-size:.75rem;color:var(--warm-gray)">4.5</span>' +
+                            '<span class="badge-stock ' + stockClass + ' ms-2">' + stockText + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="d-flex justify-content-between align-items-center">' +
+                        '<div class="product-card-price">' +
+                            '<span class="price-current">GHS ' + parseFloat(displayPrice).toFixed(2) + '</span>' +
+                            (hasDiscount ? '<span class="price-original">GHS ' + parseFloat(p.price).toFixed(2) + '</span>' : '') +
+                        '</div>' +
+                        '<div class="d-flex gap-2">' +
+                            '<button class="product-action-btn" onclick="addToWishlist(' + p.id + ')" title="Wishlist" style="width:36px;height:36px"><i class="bi bi-heart"></i></button>' +
+                            '<button class="btn btn-sm btn-primary" onclick="addToCart(' + p.id + ')"' + (p.stock <= 0 ? ' disabled style="opacity:.55"' : '') + '>' +
+                                '<i class="bi bi-cart-plus me-1"></i> Add' +
+                            '</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }
+
+        return '<div class="col-6 col-md-4">' +
+            '<div class="product-card h-100">' +
+                '<div class="product-card-img-wrap">' +
+                    (hasDiscount ? '<span class="product-badge">-' + discount + '%</span>' : '') +
+                    '<div class="product-actions">' +
+                        '<button class="product-action-btn" onclick="addToWishlist(' + p.id + ')" title="Wishlist"><i class="bi bi-heart"></i></button>' +
+                        '<a href="/product/' + esc(p.slug) + '" class="product-action-btn" title="View"><i class="bi bi-eye"></i></a>' +
+                    '</div>' +
+                    (img ? '<img src="' + esc(img) + '" class="product-card-img" alt="' + esc(p.name) + '">'
+                        : '<div class="product-card-img d-flex align-items-center justify-content-center" style="background:rgba(255,255,255,.02);color:rgba(255,255,255,.1);font-size:2rem"><i class="bi bi-box-seam"></i></div>') +
+                '</div>' +
+                '<div class="product-card-body">' +
+                    '<div class="product-card-category">' + esc(p.category || 'General') + '</div>' +
+                    '<a href="/product/' + esc(p.slug) + '" class="text-decoration-none">' +
+                        '<h6 class="product-card-name">' + esc(p.name) + '</h6>' +
+                    '</a>' +
+                    '<div class="product-card-rating">' +
+                        '<i class="bi bi-star-fill" style="color:#ffc107;font-size:.75rem"></i>' +
+                        '<span style="font-size:.75rem;color:var(--warm-gray)">4.5</span>' +
+                        '<span class="badge-stock ' + stockClass + ' ms-2">' + stockText + '</span>' +
+                    '</div>' +
+                    '<div class="d-flex justify-content-between align-items-center">' +
+                        '<div class="product-card-price">' +
+                            '<span class="price-current">GHS ' + parseFloat(displayPrice).toFixed(2) + '</span>' +
+                            (hasDiscount ? '<span class="price-original">GHS ' + parseFloat(p.price).toFixed(2) + '</span>' : '') +
+                        '</div>' +
+                        '<button class="product-add-btn" onclick="addToCart(' + p.id + ')" title="Add to Cart"' + (p.stock <= 0 ? ' disabled style="opacity:.55;cursor:not-allowed"' : '') + '>' +
+                            '<i class="bi bi-cart-plus"></i>' +
+                        '</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    }
+
+    function updateURL() {
+        var p = new URLSearchParams();
+        if (filters.category) p.set('category', filters.category);
+        if (filters.brand) p.set('brand', filters.brand);
+        if (filters.stock) p.set('stock', filters.stock);
+        if (filters.search) p.set('q', filters.search);
+        var sort = document.getElementById('sortSelect').value;
+        if (sort !== 'newest') p.set('sort', sort);
+        var mp = parseInt(document.getElementById('priceRange').value);
+        if (mp < priceData.max) p.set('max_price', mp);
+        if (currentView !== 'grid') p.set('view', currentView);
+        var qs = p.toString();
+        var url = qs ? '/shop?' + qs : '/shop';
+        history.replaceState(null, '', url);
+    }
+
+    function updateActiveFilters() {
+        var container = document.getElementById('activeFilters');
+        var html = '';
+        if (filters.category) {
+            var cat = document.querySelector('.filter-option[data-filter="category"][data-value="' + filters.category + '"] span:first-child');
+            html += tagHTML('category', cat ? cat.textContent : 'Category');
+        }
+        if (filters.brand) {
+            var br = document.querySelector('.filter-option[data-filter="brand"][data-value="' + filters.brand + '"] span:first-child');
+            html += tagHTML('brand', br ? br.textContent : 'Brand');
+        }
+        if (filters.stock) {
+            var label = filters.stock === 'in_stock' ? 'In Stock' : 'Out of Stock';
+            html += tagHTML('stock', label);
+        }
+        if (filters.search) {
+            html += tagHTML('search', '"' + filters.search + '"');
+        }
+        container.innerHTML = html;
+    }
+
+    function tagHTML(type, label) {
+        return '<span class="badge d-inline-flex align-items-center gap-1" style="background:rgba(242,102,15,.15);color:var(--primary-orange);border:1px solid rgba(242,102,15,.3);padding:6px 12px;font-size:.78rem;font-weight:500;cursor:pointer;border-radius:20px" onclick="removeFilter(\'' + type + '\')">' + label + ' <i class="bi bi-x" style="font-size:.9rem"></i></span>';
+    }
+
+    function updateCounts() {
+        var catCounts = {};
+        ALL_PRODUCTS.forEach(function(p) {
+            if (p.category_id) catCounts[p.category_id] = (catCounts[p.category_id] || 0) + 1;
+        });
+        var catAll = 0;
+        document.querySelectorAll('[data-cat-count]').forEach(function(el) {
+            var id = parseInt(el.dataset.catCount);
+            var cnt = catCounts[id] || 0;
+            el.textContent = cnt;
+            catAll += cnt;
+        });
+        var catAllEl = document.getElementById('catCountAll');
+        if (catAllEl) catAllEl.textContent = catAll;
+
+        var brandCounts = {};
+        ALL_PRODUCTS.forEach(function(p) {
+            if (p.brand_id) brandCounts[p.brand_id] = (brandCounts[p.brand_id] || 0) + 1;
+        });
+        var brandAll = 0;
+        document.querySelectorAll('[data-brand-count]').forEach(function(el) {
+            var id = parseInt(el.dataset.brandCount);
+            var cnt = brandCounts[id] || 0;
+            el.textContent = cnt;
+            brandAll += cnt;
+        });
+        var brandAllEl = document.getElementById('brandCountAll');
+        if (brandAllEl) brandAllEl.textContent = brandAll;
+    }
+
+    function showToast(msg, type) {
+        var t = document.createElement('div');
+        t.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;padding:12px 20px;border-radius:10px;color:#fff;font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.3);animation:fadeIn .3s ease;max-width:380px';
+        t.style.background = type === 'success' ? 'linear-gradient(135deg,#198754,#157347)' : 'linear-gradient(135deg,#dc3545,#bb2d3b)';
+        t.innerHTML = '<i class="bi bi-' + (type === 'success' ? 'check-circle-fill' : 'exclamation-circle-fill') + '"></i><span>' + msg + '</span>';
+        document.body.appendChild(t);
+        setTimeout(function() { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(function() { t.remove(); }, 300); }, 4000);
+    }
+
+    var priceData = (function() {
+        var prices = ALL_PRODUCTS.map(function(p) { return p.discount_price || p.price; }).filter(function(p) { return p > 0; });
+        var max = Math.ceil(Math.max.apply(null, prices) / 100) * 100;
+        var min = Math.floor(Math.min.apply(null, prices) / 100) * 100;
+        var step = max <= 5000 ? 50 : max <= 20000 ? 100 : 500;
+        var brackets = [];
+        var range = max - min;
+        var count = Math.min(5, Math.max(3, Math.ceil(range / (step * 6))));
+        var stepSize = Math.ceil(range / count / step) * step;
+        if (stepSize < step) stepSize = step;
+        var bStart = 0;
+        while (bStart < max) {
+            var bEnd = Math.min(bStart + stepSize, max);
+            brackets.push({ min: bStart, max: bEnd, label: 'GHS ' + bStart.toLocaleString() + ' - ' + bEnd.toLocaleString() });
+            bStart = bEnd;
+        }
+        return { min: 0, max: max, step: step, brackets: brackets };
+    })();
+
+    function setPriceSlider(val) {
+        var slider = document.getElementById('priceRange');
+        slider.max = priceData.max;
+        slider.min = priceData.min;
+        slider.step = priceData.step;
+        slider.value = val || priceData.max;
+        document.getElementById('priceLabel').textContent = val && val < priceData.max ? 'GHS ' + parseInt(val).toLocaleString() : 'GHS ' + priceData.max.toLocaleString() + '+';
+    }
+
+    function buildPriceBrackets() {
+        var wrap = document.getElementById('priceBrackets');
+        if (!wrap || !priceData.brackets.length) return;
+        var html = '<div class="d-flex flex-wrap gap-1">';
+        priceData.brackets.forEach(function(b, i) {
+            html += '<button class="btn btn-sm price-bracket-btn" data-min="' + b.min + '" data-max="' + b.max + '" onclick="setPriceBracket(' + b.min + ',' + b.max + ',this)">' + b.label + '</button>';
+        });
+        html += '</div>';
+        wrap.innerHTML = html;
+    }
+
+    window.setPriceBracket = function(min, max, el) {
+        document.querySelectorAll('.price-bracket-btn').forEach(function(b) { b.classList.remove('active'); });
+        if (el) el.classList.add('active');
+        setPriceSlider(max);
+        applyFilters();
+    };
+
+    window.applyFilters = function(skipURL) {
+        var list = ALL_PRODUCTS.slice();
+
+        if (filters.search) {
+            var q = filters.search.toLowerCase();
+            list = list.filter(function(p) { return (p.name||'').toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q) || (p.brand||'').toLowerCase().includes(q); });
+        }
+        if (filters.category) list = list.filter(function(p) { return String(p.category_id) === String(filters.category); });
+        if (filters.brand) list = list.filter(function(p) { return String(p.brand_id) === String(filters.brand); });
+        if (filters.stock === 'in_stock') list = list.filter(function(p) { return p.stock > 0; });
+        else if (filters.stock === 'out_of_stock') list = list.filter(function(p) { return p.stock <= 0; });
+
+        var maxPrice = parseInt(document.getElementById('priceRange').value);
+        if (maxPrice < priceData.max) list = list.filter(function(p) { return (p.discount_price || p.price) <= maxPrice; });
+
+        var sort = document.getElementById('sortSelect').value;
+        if (sort === 'price_asc') list.sort(function(a,b) { return (a.discount_price||a.price) - (b.discount_price||b.price); });
+        else if (sort === 'price_desc') list.sort(function(a,b) { return (b.discount_price||b.price) - (a.discount_price||a.price); });
+        else if (sort === 'name_asc') list.sort(function(a,b) { return (a.name||'').localeCompare(b.name||''); });
+        else if (sort === 'name_desc') list.sort(function(a,b) { return (b.name||'').localeCompare(a.name||''); });
+
+        filtered = list;
+        currentShow = perPage;
+        renderProducts();
+        updateActiveFilters();
+        if (!skipURL) updateURL();
+    };
+
+    window.updatePriceLabel = function(val) {
+        document.getElementById('priceLabel').textContent = val >= priceData.max ? 'GHS ' + priceData.max.toLocaleString() + '+' : 'GHS ' + parseInt(val).toLocaleString();
+        document.querySelectorAll('.price-bracket-btn').forEach(function(b) { b.classList.remove('active'); });
+        applyFilters();
+    };
+
+    window.setFilter = function(type, value, el) {
+        filters[type] = value;
+        el.closest('.mb-4').querySelectorAll('.filter-option').forEach(function(o) { o.classList.remove('active'); });
+        el.classList.add('active');
+        applyFilters();
+    };
+
+    window.clearAllFilters = function() {
+        filters = { category: '', brand: '', stock: '', search: '' };
+        document.querySelectorAll('.filter-option').forEach(function(o) { o.classList.remove('active'); });
+        document.querySelectorAll('.filter-option[data-value=""]').forEach(function(o) { o.classList.add('active'); });
+        setPriceSlider(priceData.max);
+        document.querySelectorAll('.price-bracket-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.getElementById('sortSelect').value = 'newest';
+        applyFilters();
+        updateURL();
+    };
+
+    window.setView = function(view, skipURL) {
+        currentView = view;
+        document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
+        document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
+        renderProducts();
+        if (!skipURL) updateURL();
+    };
+
+    window.removeFilter = function(type) {
+        filters[type] = '';
+        var sidebar = document.querySelector('.filter-option[data-filter="' + type + '"][data-value=""]');
+        if (sidebar) {
+            sidebar.closest('.mb-4').querySelectorAll('.filter-option').forEach(function(o) { o.classList.remove('active'); });
+            sidebar.classList.add('active');
+        }
+        applyFilters();
+    };
+
+    window.loadMore = function() {
+        currentShow += perPage;
+        renderProducts();
+    };
+
+    window.openMobileFilters = function() {
+        document.getElementById('filterSidebar').classList.add('show');
+        document.getElementById('mobileFilterFab').style.display = 'none';
+    };
+    window.closeMobileFilters = function() {
+        document.getElementById('filterSidebar').classList.remove('show');
+        document.getElementById('mobileFilterFab').style.display = '';
+    };
+
+    window.addToCart = async function(productId) {
+        var token = localStorage.getItem('token');
+        if (!token) { window.location.href = '/login'; return; }
+        try {
+            var resp = await fetch('/api/cart/items', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+                body: JSON.stringify({product_id: productId, quantity: 1})
+            });
+            if (resp.ok) {
+                if (typeof updateCartCount === 'function') updateCartCount();
+                showToast('Added to cart! <a href="/cart" style="color:#fff;text-decoration:underline;margin-left:6px">View Cart</a>', 'success');
+            } else showToast('Failed to add to cart', 'error');
+        } catch(e) { showToast('Network error', 'error'); }
+    };
+
+    window.addToWishlist = async function(productId) {
+        var token = localStorage.getItem('token');
+        if (!token) { window.location.href = '/login'; return; }
+        try {
+            var resp = await fetch('/api/wishlists', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+                body: JSON.stringify({product_id: productId})
+            });
+            if (resp.ok) {
+                showToast('Added to wishlist!', 'success');
+                var btn = document.querySelector('button[onclick="addToWishlist(' + productId + ')"] i');
+                if (btn) { btn.classList.remove('bi-heart'); btn.classList.add('bi-heart-fill'); }
+            } else {
+                var err = await resp.json().catch(function(){ return {}; });
+                if (resp.status === 400) showToast(err.detail || 'Already in wishlist', 'warning');
+                else if (resp.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; }
+                else showToast(err.detail || 'Failed to add to wishlist', 'error');
+            }
+        } catch(e) { showToast('Network error', 'error'); }
+    };
+
+    // --- Initialization (runs after all functions are defined) ---
+
+    // Read URL params
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('category')) filters.category = params.get('category');
+    if (params.get('brand')) filters.brand = params.get('brand');
+    if (params.get('stock')) filters.stock = params.get('stock');
+    if (params.get('sort')) document.getElementById('sortSelect').value = params.get('sort');
+    if (params.get('q')) filters.search = params.get('q');
+    if (params.get('view')) currentView = params.get('view');
+
+    // Init price slider
+    buildPriceBrackets();
+    setPriceSlider(priceData.max);
+
+    if (params.get('max_price')) {
+        var mp = parseInt(params.get('max_price'));
+        setPriceSlider(mp);
+    }
+
+    // Apply view
+    setView(currentView, true);
+
+    // Activate filter highlights from URL
+    document.querySelectorAll('.filter-option').forEach(function(el) {
+        var type = el.dataset.filter;
+        var val = el.dataset.value;
+        if (filters[type] == val) {
+            el.closest('.mb-4').querySelectorAll('.filter-option').forEach(function(o) { o.classList.remove('active'); });
+            el.classList.add('active');
+        }
+    });
+
+    // Update counts
+    updateCounts();
+
+    // Render products
+    applyFilters(true);
+})();
+</script>
+{% endblock %}

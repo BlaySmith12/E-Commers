@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+{% block title %}Shopping Cart — ASAH'S PRIMENEST{% endblock %}
+
+{% block content %}
+<style>
+/* ═══════════ MOBILE-FIRST CART ═══════════ */
+.cart-page{padding-bottom:120px}
+@media(min-width:992px){.cart-page{padding-bottom:2rem}}
+
+/* Loading */
+.cart-loading{position:fixed;inset:0;background:rgba(14,12,12,.92);z-index:1060;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.cart-loading .spinner-grow{width:2.5rem;height:2.5rem;background:var(--primary-orange)}
+
+/* Page header */
+.cart-header{text-align:center;padding:1.25rem 0 .75rem}
+.cart-header h1{font-size:1.4rem;font-weight:700;color:#fff;margin-bottom:.25rem}
+.cart-header p{font-size:.85rem;color:var(--text-secondary,#C8BEB7);margin:0}
+@media(min-width:768px){.cart-header h1{font-size:1.8rem}.cart-header{padding:2rem 0 1rem}}
+
+/* Empty */
+.empty-state{text-align:center;padding:3rem 1rem}
+.empty-state i{font-size:4rem;color:#333;display:block;margin-bottom:1rem}
+.empty-state h3{color:#fff;font-size:1.2rem;font-weight:700;margin-bottom:.5rem}
+.empty-state p{color:var(--text-secondary,#C8BEB7);font-size:.9rem;margin-bottom:1.5rem}
+.empty-state .btn-start{display:inline-flex;align-items:center;gap:8px;padding:.75rem 2rem;background:var(--primary-orange);color:#fff;border:none;border-radius:10px;font-weight:600;font-size:.95rem;text-decoration:none}
+
+/* Cart items */
+.cart-items-wrap{padding:0}
+.cart-item{background:#1a1717;border:1px solid var(--border-color,#2a2727);border-radius:12px;padding:.875rem;margin-bottom:.75rem;display:flex;gap:.75rem;position:relative;transition:all .3s}
+.cart-item.removing{opacity:0;transform:translateX(-30px);max-height:0;padding:0;margin:0;border:none;overflow:hidden}
+.cart-item-img{width:80px;height:80px;border-radius:8px;object-fit:cover;background:#242020;flex-shrink:0;border:1px solid var(--border-color,#2a2727)}
+.cart-item-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.cart-item-name{font-size:.9rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;display:block}
+.cart-item-name:hover{color:var(--primary-orange)}
+.cart-item-meta{font-size:.75rem;color:var(--text-secondary,#C8BEB7)}
+.cart-item-badge{display:inline-block;background:var(--primary-orange);color:#fff;font-size:.65rem;padding:1px 7px;border-radius:8px;font-weight:700;margin-top:2px}
+.cart-item-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:6px}
+
+/* Price */
+.cart-price-col{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.cart-price-original{font-size:.72rem;color:#9a9590;text-decoration:line-through}
+.cart-price-current{font-size:.9rem;font-weight:700;color:var(--primary-orange)}
+.cart-line-total{font-size:.8rem;color:var(--text-secondary,#C8BEB7)}
+@media(min-width:768px){.cart-price-current{font-size:1rem}}
+
+/* Qty controls */
+.qty-controls{display:inline-flex;align-items:center;border:1px solid var(--border-color,#333);border-radius:8px;overflow:hidden;height:38px}
+.qty-btn{width:38px;height:100%;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:#fff;font-size:1.1rem;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.qty-btn:active:not(:disabled){background:var(--primary-orange)}
+.qty-btn:disabled{opacity:.3;cursor:not-allowed}
+.qty-val{width:40px;text-align:center;background:transparent;border:none;border-left:1px solid var(--border-color,#333);border-right:1px solid var(--border-color,#333);color:#fff;font-weight:600;font-size:.9rem;padding:0}
+.qty-val:focus{outline:none}
+@media(min-width:768px){.qty-controls{height:40px}.qty-btn{width:40px;font-size:1.15rem}.qty-val{width:44px}}
+
+/* Stock */
+.stock-warn{color:#ffc107;font-size:.7rem}
+.stock-out{color:#dc3545;font-size:.7rem}
+
+/* Remove */
+.cart-remove-btn{background:none;border:none;color:#dc3545;cursor:pointer;padding:4px 6px;border-radius:6px;display:flex;align-items:center;gap:4px;font-size:.78rem;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.cart-remove-btn:active{background:rgba(220,53,69,.15)}
+.remove-confirm{display:none;align-items:center;gap:6px;margin-top:4px}
+.remove-confirm.show{display:flex}
+.remove-confirm .btn{padding:2px 10px;font-size:.75rem;border-radius:5px}
+
+/* Bottom actions (mobile) */
+.cart-actions-mobile{position:fixed;bottom:0;left:0;right:0;z-index:1050;background:#121010;border-top:1px solid var(--border-color,#2a2727);padding:.75rem 1rem;display:flex;gap:.5rem}
+@media(min-width:992px){.cart-actions-mobile{display:none}}
+.cart-actions-mobile .btn-checkout{flex:1;padding:.85rem;background:var(--primary-orange);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.cart-actions-mobile .btn-checkout:active{transform:scale(.98)}
+.cart-actions-mobile .btn-shop{padding:.85rem 1rem;background:transparent;color:var(--warm-gray);border:1px solid var(--border-color,#333);border-radius:10px;font-size:.85rem;text-decoration:none;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+
+/* Order Summary (desktop sidebar) */
+.summary-card{background:#1a1717;border:1px solid var(--border-color,#2a2727);border-radius:12px;padding:1.25rem}
+.summary-card h5{color:#fff;font-size:1rem;font-weight:700;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border-color,#2a2727);display:flex;align-items:center;gap:8px}
+.summary-card h5 i{color:var(--primary-orange)}
+.summary-row{display:flex;justify-content:space-between;padding:6px 0;font-size:.9rem}
+.summary-row .label{color:var(--text-secondary,#C8BEB7)}
+.summary-row .value{color:#fff;font-weight:500}
+.summary-total{display:flex;justify-content:space-between;padding-top:10px;margin-top:8px;border-top:2px solid var(--primary-orange);font-size:1.1rem;font-weight:700}
+.summary-total .total-val{color:var(--primary-orange)}
+
+/* Coupon */
+.coupon-section{padding:10px 0;border-top:1px solid var(--border-color,#2a2727);margin-top:6px}
+.coupon-label{font-size:.82rem;color:var(--text-secondary,#C8BEB7);font-weight:500;margin-bottom:6px}
+.coupon-row{display:flex;gap:6px}
+.coupon-row input{flex:1;padding:8px 12px;background:#242020;border:1px solid var(--border-color,#333);border-radius:8px;color:#fff;font-size:.85rem}
+.coupon-row input:focus{outline:none;border-color:var(--primary-orange)}
+.coupon-row input::placeholder{color:#8a8580}
+.coupon-row button{padding:8px 14px;background:var(--primary-orange);color:#fff;border:none;border-radius:8px;font-weight:600;font-size:.85rem;cursor:pointer;white-space:nowrap}
+.coupon-active{display:flex;align-items:center;gap:6px;background:rgba(242,102,15,.1);border:1px solid var(--primary-orange);border-radius:20px;padding:5px 12px;font-size:.82rem;color:var(--primary-orange);font-weight:600;margin-bottom:6px}
+.coupon-active button{background:none;border:none;color:inherit;cursor:pointer;padding:0;font-size:1rem;line-height:1}
+.coupon-savings{font-size:.78rem;color:#28a745;margin-top:4px}
+.coupon-error{font-size:.78rem;color:#dc3545;margin-top:4px}
+.coupon-dismiss{font-size:.78rem;color:var(--primary-orange);background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline}
+
+/* Checkout button (desktop) */
+.btn-checkout-desktop{display:none;width:100%;padding:14px;background:var(--primary-orange);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;transition:all .2s;text-align:center;text-decoration:none;margin-top:1rem}
+.btn-checkout-desktop:hover{background:#d45a0d;color:#fff;transform:translateY(-1px);box-shadow:0 6px 20px rgba(242,102,15,.3)}
+@media(min-width:992px){.btn-checkout-desktop{display:block}}
+.secure-badge{text-align:center;font-size:.72rem;color:var(--text-muted,#9a9590);margin-top:10px}
+
+/* Cart bottom actions (desktop) */
+.cart-bottom-actions{display:none;justify-content:space-between;align-items:center;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border-color,#2a2727)}
+@media(min-width:992px){.cart-bottom-actions{display:flex}}
+.cart-bottom-actions .btn-link-custom{color:var(--text-secondary,#C8BEB7);font-size:.85rem;text-decoration:none;display:flex;align-items:center;gap:4px;border:1px solid var(--border-color,#333);padding:6px 14px;border-radius:8px;transition:all .2s}
+.cart-bottom-actions .btn-link-custom:hover{border-color:var(--primary-orange);color:var(--primary-orange);opacity:1}
+
+/* Toast */
+.cart-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:1080;background:#1a1717;border:1px solid var(--border-color,#333);color:#fff;padding:10px 20px;border-radius:10px;font-size:.85rem;box-shadow:0 8px 30px rgba(0,0,0,.5);white-space:nowrap;animation:cartToastIn .3s ease}
+.cart-toast.ok{border-left:4px solid #28a745}
+.cart-toast.err{border-left:4px solid #dc3545}
+@media(min-width:992px){.cart-toast{bottom:24px}}
+@keyframes cartToastIn{from{opacity:0;transform:translate(-50%,20px)}to{opacity:1;transform:translate(-50%,0)}}
+@media(max-width:576px){
+    .cart-item-img{width:68px;height:68px}
+    .cart-item-name{font-size:.85rem}
+    .cart-item-meta{font-size:.7rem}
+}
+</style>
+
+<!-- Loading -->
+<div id="cartLoading" class="cart-loading">
+    <div class="spinner-grow"></div>
+    <span style="color:var(--warm-gray);font-size:.9rem">Loading your cart…</span>
+</div>
+
+<!-- Toast -->
+<div id="cartToast"></div>
+
+<div class="container cart-page" id="cartPage" style="display:none">
+    <!-- Header -->
+    <div class="cart-header">
+        <h1>Shopping Cart</h1>
+        <p id="cartCountLabel"></p>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="d-none">
+        <div class="empty-state">
+            <i class="bi bi-cart-x"></i>
+            <h3>Your Cart is Empty</h3>
+            <p>Looks like you haven't added any items yet.</p>
+            <a href="/shop" class="btn-start"><i class="bi bi-bag"></i> Start Shopping</a>
+        </div>
+    </div>
+
+    <!-- Cart Content -->
+    <div id="cartContent" class="d-none">
+        <div class="row g-3 g-lg-4">
+            <!-- Items Column -->
+            <div class="col-12 col-lg-8">
+                <div id="cartItems"></div>
+                <!-- Desktop bottom actions -->
+                <div class="cart-bottom-actions">
+                    <a href="/shop" class="btn-link-custom"><i class="bi bi-arrow-left"></i> Continue Shopping</a>
+                    <button class="btn-link-custom" onclick="clearCart()"><i class="bi bi-trash3"></i> Clear Cart</button>
+                </div>
+            </div>
+
+            <!-- Summary Column -->
+            <div class="col-12 col-lg-4">
+                <div class="summary-card" style="position:sticky;top:90px">
+                    <h5><i class="bi bi-receipt"></i> Order Summary</h5>
+                    <div class="summary-row"><span class="label">Subtotal</span><span class="value" id="sumSub">GHS 0.00</span></div>
+                    <div class="summary-row" id="discRow" style="display:none;color:#28a745"><span class="label">Discount</span><span class="value" id="sumDisc">- GHS 0.00</span></div>
+
+                    <!-- Coupon -->
+                    <div class="coupon-section">
+                        <div class="coupon-label"><i class="bi bi-tag me-1"></i>Have a coupon?</div>
+                        <div id="couponInputWrap">
+                            <div class="coupon-row">
+                                <input type="text" id="couponInput" placeholder="Enter code" maxlength="30">
+                                <button id="couponApplyBtn" onclick="applyCoupon()">Apply</button>
+                            </div>
+                            <div id="couponError" class="coupon-error" style="display:none"></div>
+                        </div>
+                        <div id="couponActiveWrap" style="display:none">
+                            <div class="coupon-active">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span id="couponActiveCode"></span>
+                                <button onclick="removeCoupon()" title="Remove">&times;</button>
+                            </div>
+                            <div id="couponSavings" class="coupon-savings"></div>
+                        </div>
+                    </div>
+
+                    <div class="summary-row"><span class="label">Shipping</span><span class="value" id="sumShip">GHS 0.00</span></div>
+                    <div class="summary-row"><span class="label">Tax</span><span class="value" id="sumTax">GHS 0.00</span></div>
+                    <div class="summary-total"><span>Total</span><span class="total-val" id="sumTotal">GHS 0.00</span></div>
+
+                    <a href="/checkout" class="btn-checkout-desktop" id="checkoutBtn"><i class="bi bi-lock-fill me-1"></i>Proceed to Checkout</a>
+                    <p class="secure-badge"><i class="bi bi-shield-check me-1"></i>Secure checkout — SSL encrypted</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Sticky Checkout Bar -->
+    <div class="cart-actions-mobile" id="mobileBar" style="display:none">
+        <a href="/shop" class="btn-shop"><i class="bi bi-arrow-left"></i></a>
+        <a href="/checkout" class="btn-checkout" id="mobileCheckoutBtn"><i class="bi bi-lock-fill"></i> Checkout — <span id="mobileTotal">GHS 0.00</span></a>
+    </div>
+</div>
+
+<script>
+(function(){
+    var API='/api/cart', LOGIN='/login';
+    var cart=null;
+
+    function tok(){return localStorage.getItem('token')}
+    function hdr(){var t=tok();return t?{'Authorization':'Bearer '+t,'Content-Type':'application/json'}:{'Content-Type':'application/json'}}
+    function fmt(n){return'GHS '+Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')}
+    function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+    function toast(msg,type){
+        var el=document.createElement('div');
+        el.className='cart-toast '+(type==='error'?'err':'ok');
+        el.textContent=msg;
+        document.getElementById('cartToast').appendChild(el);
+        setTimeout(function(){el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(function(){el.remove()},300)},3000);
+    }
+
+    function showLoading(){document.getElementById('cartLoading').style.display='flex'}
+    function hideLoading(){document.getElementById('cartLoading').style.display='none'}
+
+    function authGuard(){if(!tok()){window.location.href=LOGIN;return true}return false}
+
+    async function fetchCart(){
+        if(authGuard())return;
+        try{
+            var r=await fetch(API,{headers:hdr()});
+            if(r.status===401||r.status===403){window.location.href=LOGIN;return}
+            if(!r.ok)throw new Error();
+            cart=await r.json();
+            render();
+        }catch(e){toast('Could not load cart','error')}
+        finally{hideLoading();document.getElementById('cartPage').style.display=''}
+    }
+
+    function render(){
+        if(!cart||!cart.items||!cart.items.length){
+            document.getElementById('emptyState').classList.remove('d-none');
+            document.getElementById('cartContent').classList.add('d-none');
+            document.getElementById('mobileBar').style.display='none';
+            document.getElementById('cartCountLabel').textContent='0 items in your cart';
+            return;
+        }
+        document.getElementById('emptyState').classList.add('d-none');
+        document.getElementById('cartContent').classList.remove('d-none');
+        document.getElementById('mobileBar').style.display='flex';
+
+        var count=cart.items.reduce(function(a,i){return a+i.quantity},0);
+        document.getElementById('cartCountLabel').textContent=count+(count===1?' item':' items')+' in your cart';
+
+        renderItems();
+        renderSummary();
+    }
+
+    function renderItems(){
+        var c=document.getElementById('cartItems');
+        c.innerHTML='';
+        cart.items.forEach(function(item){
+            var hasDisc=item.discount_price&&item.discount_price<item.original_price;
+            var price=hasDisc?item.discount_price:item.unit_price;
+            var pct=hasDisc?Math.round((1-item.discount_price/item.original_price)*100):0;
+            var stockCls=item.stock<=0?'stock-out':item.stock<=5?'stock-warn':'';
+            var stockTxt=item.stock<=0?'Out of stock':item.stock<=5?'Only '+item.stock+' left':'';
+            var atMax=item.quantity>=item.stock;
+            var atMin=item.quantity<=1;
+
+            var d=document.createElement('div');
+            d.className='cart-item';
+            d.id='ci-'+item.product_id;
+            d.innerHTML=
+                '<img src="'+esc(item.image_url||'')+'" class="cart-item-img" alt="'+esc(item.name)+'" onerror="this.style.display=\'none\'">'+
+                '<div class="cart-item-info">'+
+                    '<a href="/product/'+esc(item.slug||'')+'" class="cart-item-name">'+esc(item.name)+'</a>'+
+                    (item.brand?'<div class="cart-item-meta">Brand: '+esc(item.brand)+'</div>':'')+
+                    (item.sku?'<div class="cart-item-meta">SKU: '+esc(item.sku)+'</div>':'')+
+                    (hasDisc?'<span class="cart-item-badge">-'+pct+'%</span>':'')+
+                    '<div class="cart-item-bottom">'+
+                        '<div class="qty-controls">'+
+                            '<button class="qty-btn" onclick="updQty('+item.product_id+','+(item.quantity-1)+','+item.stock+')" '+(atMin?'disabled':'')+'><i class="bi bi-dash"></i></button>'+
+                            '<input class="qty-val" id="qv-'+item.product_id+'" value="'+item.quantity+'" readonly>'+
+                            '<button class="qty-btn" onclick="updQty('+item.product_id+','+(item.quantity+1)+','+item.stock+')" '+(atMax?'disabled':'')+'><i class="bi bi-plus"></i></button>'+
+                        '</div>'+
+                        '<div class="cart-price-col">'+
+                            (hasDisc?'<span class="cart-price-original">'+fmt(item.original_price)+'</span>':'')+
+                            '<span class="cart-price-current">'+fmt(price)+'</span>'+
+                            '<span class="cart-line-total">Subtotal: '+fmt(item.line_total)+'</span>'+
+                            (stockTxt?'<span class="'+stockCls+'">'+stockTxt+'</span>':'')+
+                        '</div>'+
+                    '</div>'+
+                    '<button class="cart-remove-btn" onclick="rmItem('+item.product_id+')"><i class="bi bi-trash3"></i> Remove</button>'+
+                '</div>';
+            c.appendChild(d);
+        });
+    }
+
+    function renderSummary(){
+        document.getElementById('sumSub').textContent=fmt(cart.subtotal);
+        document.getElementById('sumShip').textContent=fmt(cart.shipping_fee);
+        document.getElementById('sumTax').textContent=fmt(cart.tax);
+        document.getElementById('sumTotal').textContent=fmt(cart.total);
+        document.getElementById('mobileTotal').textContent=fmt(cart.total);
+
+        var dr=document.getElementById('discRow');
+        if(cart.discount>0){dr.style.display='';document.getElementById('sumDisc').textContent='- '+fmt(cart.discount)}
+        else{dr.style.display='none'}
+
+        if(cart.coupon_code){
+            document.getElementById('couponInputWrap').style.display='none';
+            document.getElementById('couponActiveWrap').style.display='';
+            document.getElementById('couponActiveCode').textContent=cart.coupon_code;
+            document.getElementById('couponSavings').textContent=cart.discount>0?'Savings: -'+fmt(cart.discount):'';
+        }else{
+            document.getElementById('couponInputWrap').style.display='';
+            document.getElementById('couponActiveWrap').style.display='none';
+            document.getElementById('couponInput').value='';
+            document.getElementById('couponError').style.display='none';
+        }
+
+        var allOut=cart.items.every(function(i){return i.stock<=0});
+        var cb=document.getElementById('checkoutBtn');
+        var mb=document.getElementById('mobileCheckoutBtn');
+        if(allOut){cb.style.display='none';mb.style.opacity='.5';mb.style.pointerEvents='none'}
+        else{cb.style.display='';mb.style.opacity='';mb.style.pointerEvents=''}
+    }
+
+    window.updQty=async function(pid,qty,stock){
+        if(qty<1||qty>stock){toast(qty>stock?'Max stock reached':'','error');return}
+        document.getElementById('qv-'+pid).value=qty;
+        try{
+            var r=await fetch(API+'/items/'+pid+'?qty='+qty,{method:'PUT',headers:hdr()});
+            if(!r.ok)throw new Error();
+            cart=await r.json();
+            render();
+        }catch(e){toast('Failed to update','error');fetchCart()}
+    };
+
+    window.rmItem=async function(pid){
+        if(!confirm('Remove this item?'))return;
+        var el=document.getElementById('ci-'+pid);
+        try{
+            var r=await fetch(API+'/items/'+pid,{method:'DELETE',headers:hdr()});
+            if(!r.ok)throw new Error();
+            if(el){el.classList.add('removing');await new Promise(function(r){setTimeout(r,300)})}
+            cart=await r.json();
+            render();
+            toast('Item removed');
+        }catch(e){toast('Failed to remove','error');fetchCart()}
+    };
+
+    window.clearCart=async function(){
+        if(!confirm('Remove all items?'))return;
+        try{
+            for(var i of(cart.items||[])){
+                await fetch(API+'/items/'+i.product_id,{method:'DELETE',headers:hdr()});
+            }
+            cart={items:[],subtotal:0,item_count:0,discount:0,coupon_code:null,shipping_fee:0,tax:0,total:0};
+            render();
+            toast('Cart cleared');
+        }catch(e){toast('Failed','error');fetchCart()}
+    };
+
+    window.applyCoupon=async function(){
+        var code=document.getElementById('couponInput').value.trim();
+        var errEl=document.getElementById('couponError');
+        var btn=document.getElementById('couponApplyBtn');
+        if(!code){errEl.textContent='Enter a coupon code';errEl.style.display='';return}
+        btn.disabled=true;btn.textContent='…';errEl.style.display='none';
+        try{
+            var r=await fetch(API+'/coupon',{method:'POST',headers:hdr(),body:JSON.stringify({coupon_code:code})});
+            var d=await r.json();
+            if(!r.ok){errEl.textContent=d.detail||'Invalid code';errEl.style.display='';return}
+            cart=d;render();toast('Coupon applied!');
+        }catch(e){errEl.textContent='Try again';errEl.style.display=''}
+        finally{btn.disabled=false;btn.textContent='Apply'}
+    };
+
+    window.removeCoupon=async function(){
+        try{
+            var r=await fetch(API+'/coupon/remove',{method:'POST',headers:hdr()});
+            if(!r.ok)throw new Error();
+            cart=await r.json();render();toast('Coupon removed');
+        }catch(e){toast('Failed','error')}
+    };
+
+    document.addEventListener('DOMContentLoaded',function(){
+        var ci=document.getElementById('couponInput');
+        if(ci)ci.addEventListener('keydown',function(e){if(e.key==='Enter')applyCoupon()});
+    });
+
+    fetchCart();
+})();
+</script>
+{% endblock %}

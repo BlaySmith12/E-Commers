@@ -1,0 +1,146 @@
+{% extends "admin_base.html" %}
+{% block head %}
+<style>
+    .msg-item { padding: 14px 16px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background .15s; }
+    .msg-item:hover { background: rgba(255,255,255,.02); }
+    .msg-item.unread { background: rgba(242,102,15,.03); border-left: 3px solid var(--primary-orange); }
+    .msg-header { display: flex; align-items: center; gap: 12px; }
+    .msg-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.05); font-size: .95rem; color: #9a9590; flex-shrink: 0; }
+    .msg-info { flex: 1; min-width: 0; }
+    .msg-subject { font-size: .88rem; font-weight: 600; color: #F6F9F9; }
+    .msg-sender { font-size: .78rem; color: #C8BEB7; }
+    .msg-preview { font-size: .8rem; color: #9a9590; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .msg-time { font-size: .72rem; color: #6e6a66; }
+    .msg-body { display: none; padding: 12px 16px 12px 64px; background: rgba(255,255,255,.02); font-size: .85rem; color: #C8BEB7; line-height: 1.6; border-bottom: 1px solid var(--border-color); }
+    .msg-body.open { display: block; }
+    .msg-actions { display: flex; gap: 6px; opacity: 0; transition: .2s; }
+    .msg-item:hover .msg-actions { opacity: 1; }
+    .msg-btn { background: none; border: none; color: #6e6a66; cursor: pointer; padding: 4px 6px; border-radius: 4px; font-size: .8rem; }
+    .msg-btn:hover { color: #F6F9F9; background: rgba(255,255,255,.05); }
+    .filter-tab { padding: 6px 16px; border-radius: 20px; font-size: .82rem; cursor: pointer; border: 1px solid var(--border-color); background: transparent; color: #9a9590; transition: .2s; }
+    .filter-tab.active { background: var(--primary-orange); color: #fff; border-color: var(--primary-orange); }
+    .empty-state { text-align: center; padding: 50px 20px; color: #9a9590; }
+    .empty-state i { font-size: 3rem; opacity: .2; display: block; margin-bottom: 12px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1">Messages</h3>
+            <p style="color:#9a9590;margin:0;">Your admin inbox</p>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="markAllRead()"><i class="bi bi-check-all me-1"></i> Mark All Read</button>
+    </div>
+
+    <div class="d-flex gap-2 mb-3 flex-wrap">
+        <button class="filter-tab active" onclick="filterMsgs('all', '', this)">All</button>
+        <button class="filter-tab" onclick="filterMsgs('unread', '', this)">Unread</button>
+        <button class="filter-tab" onclick="filterMsgs('cat', 'support', this)">Support</button>
+        <button class="filter-tab" onclick="filterMsgs('cat', 'order', this)">Orders</button>
+        <button class="filter-tab" onclick="filterMsgs('cat', 'system', this)">System</button>
+    </div>
+
+    <div class="card card-custom overflow-hidden">
+        <div id="msg-list"></div>
+        <div id="empty-state" class="empty-state" style="display:none;">
+            <i class="bi bi-envelope-open"></i>
+            <p>No messages yet</p>
+        </div>
+        <div id="loading" class="text-center py-4"><div class="spinner-border spinner-border-sm text-orange"></div></div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const token = localStorage.getItem('admin_token');
+if (!token) { window.location.href = '/admin/login'; }
+const H = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+let currentType = 'all'; let currentCat = '';
+
+const catIcons = { general: 'bi-chat-dots', support: 'bi-headset', order: 'bi-receipt', system: 'bi-gear' };
+
+function timeAgo(d) {
+    if (!d) return '';
+    const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+    if (s < 60) return 'Just now';
+    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    if (s < 86400) return Math.floor(s/3600) + 'h ago';
+    if (s < 604800) return Math.floor(s/86400) + 'd ago';
+    return new Date(d).toLocaleDateString();
+}
+function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+
+async function loadMsgs() {
+    let url = '/api/messages?limit=50';
+    if (currentType === 'unread') url += '&unread_only=true';
+    else if (currentType === 'cat' && currentCat) url += `&category=${currentCat}`;
+    const r = await fetch(url, { headers: H });
+    if (r.status === 401) { window.location.href = '/admin/login'; return; }
+    const data = await r.json();
+    document.getElementById('loading').style.display = 'none';
+    const list = document.getElementById('msg-list');
+    const empty = document.getElementById('empty-state');
+    list.innerHTML = '';
+    if (!data || data.length === 0) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    list.innerHTML = data.map(m => `
+        <div class="msg-item ${m.is_read ? '' : 'unread'}" id="msg-${m.id}">
+            <div class="msg-header">
+                <div class="msg-icon"><i class="bi ${catIcons[m.category]||catIcons.general}"></i></div>
+                <div class="msg-info">
+                    <div class="msg-subject">${esc(m.subject)}</div>
+                    <div class="msg-sender">${esc(m.sender_name)} ${m.sender_email ? '&lt;'+esc(m.sender_email)+'&gt;' : ''}</div>
+                    <div class="msg-preview">${esc((m.body||'').substring(0, 100))}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div class="msg-time">${timeAgo(m.created_at)}</div>
+                    <div class="msg-actions mt-1">
+                        ${!m.is_read ? `<button class="msg-btn" onclick="event.stopPropagation();markRead(${m.id})" title="Mark read"><i class="bi bi-check2"></i></button>` : ''}
+                        <button class="msg-btn" onclick="event.stopPropagation();deleteMsg(${m.id})" title="Delete"><i class="bi bi-trash3"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="msg-body" id="msgbody-${m.id}">${esc(m.body||'').replace(/\n/g, '<br>')}</div>
+    `).join('');
+
+    document.querySelectorAll('.msg-item').forEach(el => {
+        el.addEventListener('click', function() {
+            const id = this.id.replace('msg-', '');
+            const body = document.getElementById('msgbody-' + id);
+            if (body) body.classList.toggle('open');
+        });
+    });
+}
+
+function filterMsgs(type, cat, btn) {
+    currentType = type; currentCat = cat;
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('loading').style.display = 'block';
+    loadMsgs();
+}
+
+async function markRead(id) {
+    await fetch(`/api/messages/${id}/read`, { method: 'PATCH', headers: H });
+    const el = document.getElementById(`msg-${id}`);
+    if (el) el.classList.remove('unread');
+}
+
+async function deleteMsg(id) {
+    await fetch(`/api/messages/${id}`, { method: 'DELETE', headers: H });
+    const el = document.getElementById(`msg-${id}`);
+    const body = document.getElementById(`msgbody-${id}`);
+    if (el) el.remove();
+    if (body) body.remove();
+}
+
+async function markAllRead() {
+    await fetch('/api/messages/read-all', { method: 'PATCH', headers: H });
+    document.querySelectorAll('.msg-item.unread').forEach(el => el.classList.remove('unread'));
+}
+
+loadMsgs();
+</script>
+{% endblock %}

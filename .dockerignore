@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+
+# Database files
+*.db
+
+# Migrations bytecode
+migrations/versions/*.pyc
+
+# Uploads (will be volume-mounted in production)
+app/static/images/uploads/*
+!app/static/images/uploads/.gitkeep
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docs / non-essential
+docs/
+README.md
+implementation_plan.md
+*.md
+
+# Dev/test scripts
+test_*.py
+seed*.py
+create_admin.py
+migrate_admin_header.py
+start
+stop

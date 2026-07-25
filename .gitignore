@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+.env
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+
+# Database
+*.db
+
+# Migrations compiled
+migrations/versions/*.pyc
+
+# Uploads
+app/static/images/uploads/*
+!app/static/images/uploads/.gitkeep
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Deployment scripts (run on VPS only)
+vps-setup.sh

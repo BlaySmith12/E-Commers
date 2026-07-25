@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}Invoice — ASAH'S PRIMENEST{% endblock %}
+
+{% block head %}
+<style>
+@media(max-width:991.98px){
+    .top-bar,#mainNav,.site-footer{display:none!important}
+}
+@media print {
+    body{background:#fff!important;color:#000!important}
+    .inv-page{max-width:100%!important;padding:0!important}
+    .inv-header,.inv-no-print{display:none!important}
+    .inv-card{border:1px solid #ddd!important;background:#fff!important;box-shadow:none!important}
+    .inv-card *{color:#000!important;background:transparent!important}
+    .inv-logo{filter:none!important}
+    .inv-item-img{border:1px solid #ddd!important}
+    .inv-thank{border-top:2px solid #000!important}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<style>
+.inv-page{max-width:800px;margin:0 auto;padding:1.5rem 1rem 3rem}
+@media(min-width:768px){.inv-page{padding:2rem 0}}
+
+/* No print */
+.inv-no-print{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:10px}
+.inv-back{display:inline-flex;align-items:center;gap:6px;color:var(--warm-gray);font-size:.85rem;text-decoration:none;padding:8px 16px;border:1px solid var(--border-color,#333);border-radius:8px;transition:all .2s}
+.inv-back:hover{border-color:var(--primary-orange);color:var(--primary-orange)}
+.inv-print-btn{display:inline-flex;align-items:center;gap:6px;color:#fff;background:var(--primary-orange);font-size:.85rem;font-weight:600;text-decoration:none;padding:8px 16px;border:none;border-radius:8px;cursor:pointer;transition:all .2s}
+.inv-print-btn:hover{background:#d45a0d}
+
+/* Card */
+.inv-card{background:#1a1717;border:1px solid var(--border-color,#2a2727);border-radius:12px;padding:1.5rem;margin-bottom:1rem}
+@media(min-width:768px){.inv-card{padding:2rem}}
+
+/* Header */
+.inv-header-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:1.5rem}
+.inv-brand h2{font-size:1.3rem;font-weight:700;color:#fff;margin-bottom:2px}
+.inv-brand p{font-size:.8rem;color:var(--warm-gray);opacity:.6}
+.inv-logo{height:40px;width:auto;object-fit:contain}
+@media(min-width:768px){.inv-brand h2{font-size:1.6rem}.inv-logo{height:50px}}
+
+/* Meta */
+.inv-meta{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:1.5rem}
+@media(min-width:576px){.inv-meta{grid-template-columns:1fr 1fr}}
+.inv-meta-box h6{font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;color:var(--warm-gray);opacity:.5;margin-bottom:6px}
+.inv-meta-box p{font-size:.88rem;color:#fff;line-height:1.6;margin:0}
+.inv-meta-box .inv-label{font-size:.75rem;color:var(--warm-gray);opacity:.5}
+.inv-meta-box .inv-value{font-size:.88rem;color:#fff;font-weight:500}
+.inv-meta-box .inv-row{display:flex;justify-content:space-between;padding:3px 0;font-size:.85rem}
+
+/* Table */
+.inv-table-wrap{overflow-x:auto;margin-bottom:1rem}
+.inv-table{width:100%;border-collapse:collapse}
+.inv-table th{font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;color:var(--warm-gray);opacity:.5;padding:8px 12px;text-align:left;border-bottom:1px solid var(--border-color,#2a2727);font-weight:600}
+.inv-table td{padding:10px 12px;font-size:.85rem;border-bottom:1px solid var(--border-color,#2a2727);color:#fff;vertical-align:middle}
+.inv-table tbody tr:hover{background:rgba(255,255,255,.02)}
+
+/* Product cell */
+.inv-prod{display:flex;align-items:center;gap:10px}
+.inv-item-img{width:48px;height:48px;border-radius:8px;object-fit:cover;background:#242020;border:1px solid var(--border-color,#2a2727);flex-shrink:0}
+.inv-item-icon{width:48px;height:48px;border-radius:8px;background:#242020;border:1px solid var(--border-color,#2a2727);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.inv-item-icon i{color:#555}
+.inv-prod-info{min-width:0}
+.inv-prod-name{font-size:.85rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv-prod-meta{font-size:.7rem;color:var(--warm-gray);opacity:.5}
+
+/* Right columns */
+.inv-right{text-align:right}
+
+/* Totals */
+.inv-totals{margin-left:auto;max-width:300px}
+.inv-totals .inv-row{display:flex;justify-content:space-between;padding:5px 0;font-size:.88rem}
+.inv-totals .inv-row .label{color:var(--warm-gray);opacity:.6}
+.inv-totals .inv-row .value{color:#fff;font-weight:500}
+.inv-totals .inv-grand{display:flex;justify-content:space-between;padding-top:8px;margin-top:6px;border-top:2px solid var(--primary-orange);font-size:1.1rem;font-weight:700;color:#fff}
+.inv-totals .inv-grand .val{color:var(--primary-orange)}
+
+/* Thank you */
+.inv-thank{text-align:center;padding-top:1.25rem;margin-top:.5rem;border-top:1px solid var(--border-color,#2a2727)}
+.inv-thank p{font-size:.85rem;color:var(--warm-gray);opacity:.6;margin:0}
+
+/* Mobile item layout */
+@media(max-width:576px){
+    .inv-item-img,.inv-item-icon{width:40px;height:40px}
+    .inv-prod-name{font-size:.8rem}
+    .inv-prod-meta{font-size:.65rem}
+    .inv-table th,.inv-table td{padding:8px 6px;font-size:.78rem}
+    .inv-card{padding:1rem}
+}
+</style>
+
+<div class="container inv-page">
+    <!-- No-print controls -->
+    <div class="inv-no-print">
+        <a href="javascript:history.back()" class="inv-back"><i class="bi bi-arrow-left"></i> Back</a>
+        <button class="inv-print-btn" onclick="window.print()"><i class="bi bi-printer"></i> Print Invoice</button>
+    </div>
+
+    <!-- Loading -->
+    <div id="invLoading" class="text-center py-5">
+        <div class="inv-card text-center" style="padding:3rem">
+            <div style="color:var(--warm-gray);opacity:.5;font-size:.9rem">Loading invoice…</div>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div id="invContent" style="display:none">
+        <div class="inv-card">
+            <!-- Header -->
+            <div class="inv-header-row">
+                <div class="inv-brand">
+                    <h2>ASAH'S PRIMENEST</h2>
+                    <p>Premium Home & Living</p>
+                </div>
+                <div style="text-align:right">
+                    <div style="font-size:1.4rem;font-weight:700;color:var(--primary-orange)">INVOICE</div>
+                    <div id="invOrderNum" style="font-size:.9rem;color:#fff;font-weight:600;margin-top:4px"></div>
+                </div>
+            </div>
+
+            <!-- Meta -->
+            <div class="inv-meta">
+                <div class="inv-meta-box">
+                    <h6>Invoice To</h6>
+                    <div id="invAddr"></div>
+                </div>
+                <div class="inv-meta-box">
+                    <h6>Order Details</h6>
+                    <div class="inv-row"><span class="inv-label">Order Date</span><span class="inv-value" id="invDate">—</span></div>
+                    <div class="inv-row"><span class="inv-label">Status</span><span class="inv-value" id="invStatus">—</span></div>
+                    <div class="inv-row"><span class="inv-label">Payment</span><span class="inv-value" id="invPayMethod">—</span></div>
+                </div>
+            </div>
+
+            <!-- Items Table -->
+            <div class="inv-table-wrap">
+                <table class="inv-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th class="inv-right">Price</th>
+                            <th class="inv-right">Qty</th>
+                            <th class="inv-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invItems"></tbody>
+                </table>
+            </div>
+
+            <!-- Totals -->
+            <div class="inv-totals" id="invTotals"></div>
+
+            <!-- Thank you -->
+            <div class="inv-thank">
+                <p>Thank you for shopping with ASAH'S PRIMENEST!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error -->
+    <div id="invError" style="display:none">
+        <div class="inv-card text-center" style="padding:3rem">
+            <i class="bi bi-exclamation-triangle" style="font-size:2rem;color:#dc3545;display:block;margin-bottom:1rem"></i>
+            <h4 style="color:#fff;margin-bottom:.5rem">Invoice Not Found</h4>
+            <p style="color:var(--warm-gray);opacity:.6;font-size:.88rem">We couldn't find this invoice. Please check your order details.</p>
+            <a href="/shop" class="inv-back" style="margin-top:1rem;display:inline-flex"><i class="bi bi-bag"></i> Continue Shopping</a>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    var p=new URLSearchParams(window.location.search);
+    var oid=p.get('order_id');
+    if(!oid){document.getElementById('invLoading').style.display='none';document.getElementById('invError').style.display='block';return}
+
+    function fmt(v){return'GHS '+parseFloat(v||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')}
+    function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+    function fmtDate(d){if(!d)return'—';var dt=new Date(d);return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+
+    var token=localStorage.getItem('token');
+    var headers={'Content-Type':'application/json'};
+    if(token)headers['Authorization']='Bearer '+token;
+
+    fetch('/api/orders/'+oid,{headers:headers})
+    .then(function(r){if(!r.ok)throw new Error();return r.json()})
+    .then(function(o){
+        document.getElementById('invOrderNum').textContent='#'+(o.order_number||o.id);
+        document.getElementById('invDate').textContent=fmtDate(o.created_at);
+        document.getElementById('invStatus').textContent=o.status||'Pending';
+        if(o.payment)document.getElementById('invPayMethod').textContent=o.payment.payment_method||'—';
+
+        // Address
+        var a=o.shipping_address;
+        var addrEl=document.getElementById('invAddr');
+        if(a&&typeof a==='object'){
+            var parts=[];
+            parts.push('<p style="color:#fff;margin:0">'+esc(a.street)+'</p>');
+            parts.push('<p style="color:#fff;margin:0">'+esc([a.city,a.state].filter(Boolean).join(', '))+'</p>');
+            parts.push('<p style="color:#fff;margin:0">'+esc(a.country||'Ghana')+(a.zip_code?' '+esc(a.zip_code):'')+'</p>');
+            addrEl.innerHTML=parts.join('');
+        }else{addrEl.innerHTML='<p style="color:var(--warm-gray);opacity:.5">No address</p>'}
+
+        // Items
+        var ih='';
+        (o.items||[]).forEach(function(item){
+            var img=item.product_image||item.snapshot_image||'';
+            var name=item.product_name||item.snapshot_name||'Product #'+item.product_id;
+            var sku=item.product_sku||item.snapshot_sku||'';
+            var brand=item.product_brand||item.snapshot_brand||'';
+            var variant=item.product_variant||item.snapshot_variant||'';
+            var meta=([brand,sku,variant]).filter(Boolean).join(' · ');
+            var lineTotal=item.line_total||(item.price*item.quantity);
+            ih+='<tr>'+
+                '<td><div class="inv-prod">'+
+                    (img?'<img src="'+esc(img)+'" class="inv-item-img" alt="'+esc(name)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="inv-item-icon" style="display:none"><i class="bi bi-box"></i></div>':'<div class="inv-item-icon"><i class="bi bi-box"></i></div>')+
+                    '<div class="inv-prod-info"><div class="inv-prod-name">'+esc(name)+'</div>'+
+                    (meta?'<div class="inv-prod-meta">'+esc(meta)+'</div>':'')+
+                    '</div></div></td>'+
+                '<td class="inv-right">'+fmt(item.price)+'</td>'+
+                '<td class="inv-right">'+item.quantity+'</td>'+
+                '<td class="inv-right" style="font-weight:600">'+fmt(lineTotal)+'</td></tr>';
+        });
+        document.getElementById('invItems').innerHTML=ih;
+
+        // Totals
+        var th='';
+        if(o.subtotal!=null)th+='<div class="inv-row"><span class="label">Subtotal</span><span class="value">'+fmt(o.subtotal)+'</span></div>';
+        if(o.shipping_fee!=null&&o.shipping_fee>0)th+='<div class="inv-row"><span class="label">Shipping</span><span class="value">'+fmt(o.shipping_fee)+'</span></div>';
+        if(o.tax!=null&&o.tax>0)th+='<div class="inv-row"><span class="label">Tax</span><span class="value">'+fmt(o.tax)+'</span></div>';
+        if(o.total_amount!=null)th+='<div class="inv-grand"><span>Total</span><span class="val">'+fmt(o.total_amount)+'</span></div>';
+        document.getElementById('invTotals').innerHTML=th;
+
+        document.getElementById('invLoading').style.display='none';
+        document.getElementById('invContent').style.display='block';
+    })
+    .catch(function(){
+        document.getElementById('invLoading').style.display='none';
+        document.getElementById('invError').style.display='block';
+    });
+})();
+</script>
+{% endblock %}

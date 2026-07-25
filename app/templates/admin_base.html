@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASAH'S PRIMENEST | Enterprise Admin</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <style>
+        /* ═══════════════════════════════════════════════════════════════
+           THEME VARIABLES — Dark (default) + Light
+           All colors resolve through these tokens so the toggle works.
+           ═══════════════════════════════════════════════════════════════ */
+        :root,
+        [data-theme="dark"] {
+            --bg-body: #121010;
+            --bg-sidebar: #0a0909;
+            --bg-card: rgba(255, 255, 255, 0.025);
+            --bg-card-hover: rgba(255, 255, 255, 0.045);
+            --bg-input: rgba(18, 16, 16, 0.8);
+            --bg-topbar: rgba(18, 16, 16, 0.8);
+            --bg-panel: #1a1717;
+            --bg-dropdown: #1a1717;
+            --bg-table-stripe: rgba(255,255,255,0.02);
+
+            --text-primary: #F6F9F9;
+            --text-secondary: #C8BEB7;
+            --text-muted: #9a9590;
+            --text-placeholder: #8a8580;
+            --text-dim: #6e6a66;
+
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-strong: rgba(255, 255, 255, 0.12);
+
+            --primary: #F2660F;
+            --primary-hover: #d15609;
+            --primary-ghost: rgba(242, 102, 15, 0.1);
+
+            --scrollbar-track: #121010;
+            --scrollbar-thumb: rgba(255,255,255,0.1);
+            --scrollbar-thumb-hover: rgba(255,255,255,0.2);
+
+            --hover-bg: rgba(255,255,255,0.04);
+            --badge-bg: rgba(255,255,255,0.08);
+
+            --sidebar-width: 260px;
+            --sidebar-collapsed-width: 70px;
+            --topbar-height: 70px;
+
+            --bs-body-bg: var(--bg-body);
+            --bs-body-color: var(--text-primary);
+        }
+
+        [data-theme="light"] {
+            --bg-body: #F5F1EC;
+            --bg-sidebar: #FFFFFF;
+            --bg-card: #FFFFFF;
+            --bg-card-hover: #F9F7F5;
+            --bg-input: #FFFFFF;
+            --bg-topbar: rgba(255, 255, 255, 0.85);
+            --bg-panel: #FFFFFF;
+            --bg-dropdown: #FFFFFF;
+            --bg-table-stripe: rgba(0,0,0,0.02);
+
+            --text-primary: #1a1717;
+            --text-secondary: #4a4542;
+            --text-muted: #7a7570;
+            --text-placeholder: #a09a95;
+            --text-dim: #b0aaa5;
+
+            --border-color: rgba(0, 0, 0, 0.08);
+            --border-strong: rgba(0, 0, 0, 0.12);
+
+            --primary: #F2660F;
+            --primary-hover: #d15609;
+            --primary-ghost: rgba(242, 102, 15, 0.08);
+
+            --scrollbar-track: #F5F1EC;
+            --scrollbar-thumb: rgba(0,0,0,0.12);
+            --scrollbar-thumb-hover: rgba(0,0,0,0.2);
+
+            --hover-bg: rgba(0,0,0,0.03);
+            --badge-bg: rgba(0,0,0,0.06);
+
+            --bs-body-bg: var(--bg-body);
+            --bs-body-color: var(--text-primary);
+        }
+
+        /* ─── Bootstrap overrides ─── */
+        .text-muted { color: var(--text-muted) !important; }
+        .text-secondary { color: var(--text-secondary) !important; }
+        .form-text { color: var(--text-muted) !important; }
+        .form-control::placeholder { color: var(--text-placeholder) !important; }
+        .form-select option { background-color: var(--bg-body); color: var(--text-primary); }
+        [data-theme="light"] .dropdown-menu-dark { background: var(--bg-dropdown) !important; }
+
+        /* ─── Global contrast fixes ─── */
+        .sort-icon { opacity: 0.7 !important; }
+        .page-link-custom:disabled { opacity: 0.6 !important; }
+        .empty-state i { opacity: 0.5 !important; }
+        .orders-table thead th { color: var(--text-muted) !important; }
+
+        /* ─── Body ─── */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            transition: background-color .3s, color .3s;
+        }
+
+        /* ─── Scrollbar ─── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+        ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+
+        /* ─── Sidebar ─── */
+        .admin-sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1040;
+            display: flex;
+            flex-direction: column;
+        }
+        .admin-sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+
+        .sidebar-header {
+            height: var(--topbar-height);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sidebar-brand {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            text-decoration: none;
+            white-space: nowrap;
+            overflow: hidden;
+            transition: opacity 0.3s;
+        }
+        .admin-sidebar.collapsed .sidebar-brand-text { display: none; }
+        .admin-sidebar.collapsed .sidebar-brand-icon {
+            display: block !important;
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-left: 5px;
+        }
+
+        .sidebar-menu {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px 0;
+        }
+        .menu-category {
+            padding: 10px 20px 5px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .admin-sidebar.collapsed .menu-category { display: none; }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s;
+            position: relative;
+            white-space: nowrap;
+            font-size: 0.9rem;
+            margin: 2px 10px;
+            border-radius: 8px;
+        }
+        .sidebar-link:hover, .sidebar-link.active {
+            background-color: var(--primary-ghost);
+            color: var(--primary);
+        }
+        .sidebar-link i {
+            font-size: 1.1rem;
+            min-width: 30px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .admin-sidebar.collapsed .sidebar-link { padding: 10px 0; justify-content: center; margin: 2px 5px; }
+        .admin-sidebar.collapsed .sidebar-link span { display: none; }
+        .admin-sidebar.collapsed .sidebar-link i { margin: 0; font-size: 1.3rem; }
+
+        /* ─── Topbar ─── */
+        .admin-topbar {
+            height: var(--topbar-height);
+            background-color: var(--bg-topbar);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            position: fixed;
+            top: 0; right: 0;
+            left: var(--sidebar-width);
+            z-index: 1030;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .admin-sidebar.collapsed ~ .admin-topbar { left: var(--sidebar-collapsed-width); }
+
+        .topbar-search {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            color: var(--text-primary);
+            padding: 8px 16px 8px 40px;
+            font-size: 0.9rem;
+            width: 300px;
+            transition: all 0.3s;
+        }
+        .topbar-search:focus {
+            outline: none;
+            border-color: var(--primary);
+            background-color: var(--bg-card-hover);
+            width: 350px;
+        }
+        .search-icon {
+            position: absolute; left: 15px; top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .topbar-action-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .topbar-action-btn:hover { background-color: var(--hover-bg); color: var(--text-primary); }
+
+        .notification-badge {
+            position: absolute; top: 8px; right: 8px;
+            width: 8px; height: 8px;
+            background-color: var(--primary);
+            border-radius: 50%;
+            border: 2px solid var(--bg-body);
+        }
+
+        /* ─── Content Area ─── */
+        .admin-content-wrapper {
+            margin-top: var(--topbar-height);
+            margin-left: var(--sidebar-width);
+            padding: 24px;
+            min-height: calc(100vh - var(--topbar-height));
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .admin-sidebar.collapsed ~ .admin-content-wrapper { margin-left: var(--sidebar-collapsed-width); }
+
+        /* ─── Cards & Buttons ─── */
+        .card-custom {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            transition: background-color .3s, border-color .3s;
+        }
+        [data-theme="dark"] .card-custom { box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+
+        .btn-primary-custom {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .btn-primary-custom:hover {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        /* ─── Tables ─── */
+        .table-dark { --bs-table-bg: transparent !important; }
+        [data-theme="light"] .table-dark { color: var(--text-primary) !important; }
+        [data-theme="light"] .table-dark th { color: var(--text-muted) !important; border-color: var(--border-color) !important; }
+        [data-theme="light"] .table-dark td { border-color: var(--border-color) !important; }
+        [data-theme="light"] .table-dark tbody tr:hover { background-color: var(--hover-bg); }
+
+        /* ─── Header Panels (Notifications / Messages) ─── */
+        .header-panel {
+            position: absolute;
+            top: 60px; right: 0;
+            width: 380px; max-height: 500px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,.25);
+            z-index: 1050;
+            display: none;
+            overflow: hidden;
+            transition: background .3s, border-color .3s;
+        }
+        .header-panel.open { display: block; animation: panelSlide .2s ease; }
+        @keyframes panelSlide { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+
+        .panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; border-bottom: 1px solid var(--border-color);
+        }
+        .panel-header h6 { margin: 0; font-weight: 700; color: var(--text-primary); font-size: .9rem; }
+        .panel-header-actions { display: flex; gap: 6px; }
+        .panel-header-actions button {
+            background: none; border: none; color: var(--text-muted); font-size: .75rem; cursor: pointer;
+            padding: 4px 8px; border-radius: 6px; transition: all .2s;
+        }
+        .panel-header-actions button:hover { background: var(--hover-bg); color: var(--text-primary); }
+
+        #notif-panel-list, #msg-panel-list { max-height: 400px; overflow-y: auto; padding: 6px 0; }
+
+        .panel-item {
+            display: flex; align-items: flex-start; gap: 10px; padding: 10px 16px;
+            cursor: pointer; transition: background .15s; border-left: 3px solid transparent;
+        }
+        .panel-item:hover { background: var(--hover-bg); }
+        .panel-item.unread { background: var(--primary-ghost); border-left-color: var(--primary); }
+
+        .panel-item-icon {
+            width: 32px; height: 32px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--badge-bg);
+            font-size: .85rem; color: var(--text-muted);
+            flex-shrink: 0; margin-top: 2px;
+        }
+        .panel-item-content { flex: 1; min-width: 0; }
+        .panel-item-title { font-size: .82rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .panel-item-text { font-size: .75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+        .panel-item-time { font-size: .68rem; color: var(--text-dim); margin-top: 2px; }
+        .panel-item-action { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 4px; border-radius: 4px; transition: all .2s; opacity: 0; flex-shrink: 0; }
+        .panel-item:hover .panel-item-action { opacity: 1; }
+        .panel-item-action:hover { color: #198754; }
+
+        .panel-loading, .panel-empty { padding: 40px 20px; text-align: center; color: var(--text-muted); }
+        .panel-empty i { font-size: 2rem; opacity: .3; display: block; margin-bottom: 8px; }
+        .panel-empty p { margin: 0; font-size: .85rem; }
+        .panel-footer { padding: 10px 16px; border-top: 1px solid var(--border-color); text-align: center; }
+        .panel-footer a { color: var(--primary); font-size: .82rem; text-decoration: none; font-weight: 500; }
+        .panel-footer a:hover { text-decoration: underline; }
+
+        .panel-viewall-link { color: var(--primary); text-decoration: none; font-size: .75rem; font-weight: 500; }
+        .panel-viewall-link:hover { text-decoration: underline; }
+
+        /* ─── Search Results ─── */
+        .search-dropdown {
+            position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
+            background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,.25); z-index: 1060; max-height: 420px; overflow-y: auto;
+        }
+        .search-group { padding: 8px 0; }
+        .search-group-title { padding: 4px 16px; font-size: .7rem; text-transform: uppercase; letter-spacing: .5px; color: var(--text-dim); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .search-count { background: var(--badge-bg); padding: 1px 6px; border-radius: 10px; font-size: .65rem; }
+        .search-result-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; text-decoration: none; color: var(--text-primary); transition: background .15s; }
+        .search-result-item:hover { background: var(--hover-bg); }
+        .search-thumb { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+        .search-thumb-placeholder { width: 36px; height: 36px; border-radius: 6px; background: var(--badge-bg); display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: .85rem; flex-shrink: 0; }
+        .search-result-info { min-width: 0; flex: 1; }
+        .search-result-title { font-size: .82rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .search-result-subtitle { font-size: .72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .search-loading, .search-empty { padding: 30px 20px; text-align: center; color: var(--text-muted); }
+        .search-empty p { margin: 8px 0 0; font-size: .85rem; }
+
+        /* ─── Quick Add ─── */
+        .quickadd-wrapper { position: relative; }
+        .quickadd-menu {
+            position: absolute; top: 100%; right: 0; margin-top: 4px;
+            background: var(--bg-dropdown); border: 1px solid var(--border-color); border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,.25); z-index: 1060; min-width: 220px; padding: 6px 0;
+            display: none;
+        }
+        .quickadd-menu.open { display: block; animation: panelSlide .2s ease; }
+        .quickadd-menu a {
+            display: flex; align-items: center; gap: 10px; padding: 9px 16px;
+            color: var(--text-secondary); text-decoration: none; font-size: .85rem; transition: all .15s;
+        }
+        .quickadd-menu a:hover { background: var(--hover-bg); color: var(--text-primary); }
+        .quickadd-menu a i { width: 20px; text-align: center; color: var(--primary); font-size: .9rem; }
+
+        /* ─── Notification Badge ─── */
+        .notif-badge {
+            position: absolute; top: 2px; right: 2px; min-width: 16px; height: 16px;
+            background: #dc3545; color: #fff; font-size: .6rem; font-weight: 700;
+            border-radius: 50%; display: none; align-items: center; justify-content: center;
+            padding: 0 4px; line-height: 1;
+        }
+
+        /* ─── Dropdown menus (light theme) ─── */
+        [data-theme="light"] .dropdown-menu {
+            background: var(--bg-dropdown) !important;
+            border: 1px solid var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+        [data-theme="light"] .dropdown-menu .dropdown-item {
+            color: var(--text-secondary) !important;
+        }
+        [data-theme="light"] .dropdown-menu .dropdown-item:hover {
+            background: var(--hover-bg) !important;
+            color: var(--text-primary) !important;
+        }
+        [data-theme="light"] .dropdown-divider { border-color: var(--border-color) !important; }
+
+        /* ─── Form controls (light theme) ─── */
+        [data-theme="light"] .form-control,
+        [data-theme="light"] .form-select {
+            background-color: var(--bg-input) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+        [data-theme="light"] .form-control:focus,
+        [data-theme="light"] .form-select:focus {
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 0 3px rgba(242,102,15,0.12) !important;
+        }
+
+        /* ─── Badge overrides (light theme) ─── */
+        [data-theme="light"] .badge.bg-secondary { background-color: var(--badge-bg) !important; color: var(--text-muted) !important; }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 992px) {
+            .admin-sidebar {
+                transform: translateX(-100%);
+                width: var(--sidebar-width) !important;
+            }
+            .admin-sidebar.mobile-open { transform: translateX(0); }
+            #sidebar-overlay.active { display: block !important; }
+            .admin-topbar, .admin-content-wrapper { left: 0; margin-left: 0 !important; }
+            .topbar-search { width: 200px; }
+            .topbar-search:focus { width: 200px; }
+        }
+
+        /* ─── Mobile Panels ─── */
+        @media (max-width: 767.98px) {
+            .header-panel { width: calc(100vw - 20px); right: -10px; }
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="admin-sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="{{ url_for('admin.dashboard') }}" class="sidebar-brand">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Asah's Primenest" class="sidebar-brand-text" style="height: 40px; width: auto;">
+                <i class="bi bi-box-fill sidebar-brand-icon" style="display: none;"></i>
+            </a>
+        </div>
+        
+        <div class="sidebar-menu">
+            <!-- Overview -->
+            <div class="menu-category">Overview</div>
+            <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link active" title="Dashboard">
+                <i class="bi bi-grid-1x2"></i> <span>Dashboard</span>
+            </a>
+            
+            <!-- E-Commerce -->
+            <div class="menu-category">E-Commerce</div>
+            <a href="{{ url_for('admin.product_list') }}" class="sidebar-link" title="Products">
+                <i class="bi bi-box-seam"></i> <span>Products</span>
+            </a>
+            
+            <div class="menu-category">Catalog</div>
+            <a href="/admin/categories" class="sidebar-link" title="Categories">
+                <i class="bi bi-tags"></i> <span>Categories</span>
+            </a>
+            <a href="/admin/brands" class="sidebar-link" title="Brands">
+                <i class="bi bi-award"></i> <span>Brands</span>
+            </a>
+            <a href="/admin/inventory" class="sidebar-link" title="Inventory">
+                <i class="bi bi-stack"></i> <span>Inventory</span>
+            </a>
+            <a href="/admin/orders" class="sidebar-link" title="Orders">
+                <i class="bi bi-bag-check"></i> <span>Orders</span>
+            </a>
+            <a href="/admin/customers" class="sidebar-link" title="Customers">
+                <i class="bi bi-people"></i> <span>Customers</span>
+            </a>
+            <a href="/admin/payments" class="sidebar-link" title="Payments">
+                <i class="bi bi-credit-card"></i> <span>Payments</span>
+            </a>
+            
+            <div class="menu-category">Marketing</div>
+            <a href="/admin/coupons" class="sidebar-link" title="Coupons">
+                <i class="bi bi-ticket-perforated"></i> <span>Coupons</span>
+            </a>
+            <a href="/admin/promotions" class="sidebar-link" title="Promotions">
+                <i class="bi bi-megaphone"></i> <span>Promotions</span>
+            </a>
+            <a href="/admin/reviews" class="sidebar-link" title="Reviews">
+                <i class="bi bi-star"></i> <span>Reviews</span>
+            </a>
+            
+            <div class="menu-category">Storefront</div>
+            <a href="/admin/banners" class="sidebar-link" title="Hero Banners">
+                <i class="bi bi-image"></i> <span>Hero Banners</span>
+            </a>
+            <a href="/admin/homepage" class="sidebar-link" title="Homepage Manager">
+                <i class="bi bi-layout-text-window-reverse"></i> <span>Homepage Manager</span>
+            </a>
+            
+            <div class="menu-category">System</div>
+            <a href="/admin/analytics" class="sidebar-link" title="Analytics">
+                <i class="bi bi-graph-up-arrow"></i> <span>Analytics</span>
+            </a>
+            <a href="/admin/reports" class="sidebar-link" title="Reports">
+                <i class="bi bi-file-earmark-bar-graph"></i> <span>Reports</span>
+            </a>
+            <a href="/admin/users" class="sidebar-link" title="Users & Roles">
+                <i class="bi bi-person-badge"></i> <span>Users & Roles</span>
+            </a>
+            <a href="/admin/settings" class="sidebar-link" title="Website Settings">
+                <i class="bi bi-gear"></i> <span>Website Settings</span>
+            </a>
+        </div>
+        
+        <div class="p-3 border-top" style="border-color: var(--border-color) !important;">
+            <a href="{{ url_for('auth.logout') }}" class="sidebar-link text-danger m-0" title="Logout">
+                <i class="bi bi-box-arrow-right"></i> <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Sidebar Overlay (Mobile) -->
+    <div id="sidebar-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1035;display:none;" onclick="this.classList.remove('active');document.getElementById('sidebar').classList.remove('mobile-open');document.body.style.overflow='';"></div>
+
+    <!-- Topbar -->
+    <header class="admin-topbar">
+        <div class="d-flex align-items-center" style="flex:1;min-width:0;">
+            <button class="topbar-action-btn me-3 d-lg-none" id="mobileMenuToggle">
+                <i class="bi bi-list"></i>
+            </button>
+            <button class="topbar-action-btn me-3 d-none d-lg-flex" id="desktopMenuToggle">
+                <i class="bi bi-list"></i>
+            </button>
+
+            <!-- Mobile Search Toggle -->
+            <button class="topbar-action-btn me-2 d-md-none" id="mobileSearchToggle">
+                <i class="bi bi-search"></i>
+            </button>
+
+            <!-- Desktop Search -->
+            <div id="search-container" class="d-none d-md-block" style="position:relative;flex:1;max-width:420px;">
+                <div class="position-relative">
+                    <i class="bi bi-search search-icon"></i>
+                    <input type="text" id="admin-search-input" class="topbar-search" placeholder="Search orders, products, customers..." style="width:100%;">
+                    <div class="position-absolute end-0 top-50 translate-middle-y pe-3">
+                        <span class="badge bg-secondary opacity-50" style="font-size:.6rem;">Ctrl K</span>
+                    </div>
+                </div>
+                <div id="search-results" class="search-dropdown d-none"></div>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center" style="gap:2px;">
+            <!-- Quick Add -->
+            <div class="quickadd-wrapper d-none d-md-block me-2">
+                <button class="btn btn-primary-custom btn-sm" onclick="document.getElementById('quickadd-menu').classList.toggle('open')">
+                    <i class="bi bi-plus-lg me-1"></i> Quick Add
+                </button>
+                <div id="quickadd-menu" class="quickadd-menu">
+                    <a href="/admin/products/add"><i class="bi bi-box-seam"></i> Add Product</a>
+                    <a href="/admin/categories"><i class="bi bi-folder-plus"></i> Add Category</a>
+                    <a href="/admin/brands"><i class="bi bi-tag"></i> Add Brand</a>
+                    <a href="/admin/orders"><i class="bi bi-receipt"></i> View Orders</a>
+                    <a href="/admin/customers"><i class="bi bi-person-plus"></i> Customers</a>
+                    <a href="/admin/coupons"><i class="bi bi-ticket"></i> Create Coupon</a>
+                    <a href="/admin/promotions"><i class="bi bi-megaphone"></i> Create Promotion</a>
+                </div>
+            </div>
+
+            <!-- Theme Toggle -->
+            <button class="topbar-action-btn me-1" id="themeToggle" title="Toggle theme">
+                <i class="bi bi-sun-fill"></i>
+            </button>
+
+            <!-- Messages -->
+            <div style="position:relative;">
+                <button class="topbar-action-btn me-1" data-panel="msg-panel" title="Messages">
+                    <i class="bi bi-envelope"></i>
+                    <span class="notif-badge" id="msg-badge">0</span>
+                </button>
+                <div id="msg-panel" class="header-panel" style="right:0;">
+                    <div class="panel-header">
+                        <h6><i class="bi bi-envelope me-2"></i>Messages</h6>
+                        <div class="panel-header-actions">
+                            <button onclick="ADMIN.markAllMsgsRead()">Mark all read</button>
+                            <a href="/admin/messages" class="panel-viewall-link">View all</a>
+                        </div>
+                    </div>
+                    <div id="msg-panel-list"></div>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div style="position:relative;">
+                <button class="topbar-action-btn me-2" data-panel="notif-panel" title="Notifications">
+                    <i class="bi bi-bell"></i>
+                    <span class="notif-badge" id="notif-badge">0</span>
+                </button>
+                <div id="notif-panel" class="header-panel" style="right:0;">
+                    <div class="panel-header">
+                        <h6><i class="bi bi-bell me-2"></i>Notifications</h6>
+                        <div class="panel-header-actions">
+                            <button onclick="ADMIN.markAllNotifsRead()">Mark all read</button>
+                            <a href="/admin/notifications" class="panel-viewall-link">View all</a>
+                        </div>
+                    </div>
+                    <div id="notif-panel-list"></div>
+                </div>
+            </div>
+
+            <!-- Profile Dropdown -->
+            <div class="dropdown" style="margin-left:6px;padding-left:10px;border-left:1px solid var(--border-color);">
+                <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                    <img src="https://ui-avatars.com/api/?name=Admin&background=F2660F&color=fff&size=80" alt="" width="35" height="35" class="rounded-circle me-2 admin-avatar">
+                    <div class="d-none d-md-block text-start">
+                        <div class="fw-bold admin-user-name" style="font-size:.85rem;">Administrator</div>
+                        <div style="font-size:.72rem;" class="admin-user-role">Admin</div>
+                    </div>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <li class="px-3 py-2 d-md-none">
+                        <div class="fw-bold admin-user-name" style="font-size:.85rem;">Administrator</div>
+                        <div style="font-size:.72rem;" class="admin-user-role">Admin</div>
+                    </li>
+                    <li class="d-md-none"><hr class="dropdown-divider border-secondary"></li>
+                    <li><a class="dropdown-item py-2" href="/admin/profile"><i class="bi bi-person me-2"></i> My Profile</a></li>
+                    <li><a class="dropdown-item py-2" href="/admin/preferences"><i class="bi bi-gear me-2"></i> Preferences</a></li>
+                    <li><a class="dropdown-item py-2" href="/admin/security"><i class="bi bi-shield-lock me-2"></i> Security</a></li>
+                    <li><a class="dropdown-item py-2" href="/admin/activity"><i class="bi bi-clock-history me-2"></i> Activity Log</a></li>
+                    <li><hr class="dropdown-divider border-secondary"></li>
+                    <li><a class="dropdown-item py-2 text-danger" href="#" onclick="ADMIN.signOut();return false;"><i class="bi bi-box-arrow-right me-2"></i> Sign Out</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="admin-content-wrapper">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/admin.js"></script>
+    <script>
+        // Close quickadd when clicking outside
+        document.addEventListener('click', function(e) {
+            const qa = document.getElementById('quickadd-menu');
+            if (qa && qa.classList.contains('open') && !e.target.closest('.quickadd-wrapper')) {
+                qa.classList.remove('open');
+            }
+            // Close mobile sidebar overlay
+            if (e.target.id === 'sidebar-overlay') {
+                e.target.classList.remove('active');
+                document.getElementById('sidebar').classList.remove('mobile-open');
+                document.body.style.overflow = '';
+            }
+        });
+
+        // Mobile sidebar link click closes sidebar
+        document.querySelectorAll('.sidebar-link').forEach(function(link) {
+            link.addEventListener('click', function() {
+                if (window.innerWidth < 992) {
+                    var sidebar = document.getElementById('sidebar');
+                    var overlay = document.getElementById('sidebar-overlay');
+                    if (sidebar) sidebar.classList.remove('mobile-open');
+                    if (overlay) { overlay.classList.remove('active'); overlay.style.display = 'none'; }
+                    document.body.style.overflow = '';
+                }
+            });
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

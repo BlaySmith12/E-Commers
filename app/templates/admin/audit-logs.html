@@ -1,0 +1,199 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h3 class="fw-bold mb-1">Audit Logs</h3>
+    <p class="text-muted mb-0">Track all system activities and user actions.</p>
+</div>
+
+<div class="card card-custom p-0 overflow-hidden">
+    <div class="p-3 border-bottom border-secondary bg-dark bg-opacity-50">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label text-muted small">Action</label>
+                <select class="form-select form-select-sm bg-dark text-light border-secondary" id="actionFilter">
+                    <option value="">All Actions</option>
+                    <option value="CREATE">Create</option>
+                    <option value="READ">Read</option>
+                    <option value="UPDATE">Update</option>
+                    <option value="DELETE">Delete</option>
+                    <option value="LOGIN">Login</option>
+                    <option value="LOGOUT">Logout</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small">Entity Type</label>
+                <select class="form-select form-select-sm bg-dark text-light border-secondary" id="entityFilter">
+                    <option value="">All Entities</option>
+                    <option value="product">Product</option>
+                    <option value="order">Order</option>
+                    <option value="customer">Customer</option>
+                    <option value="category">Category</option>
+                    <option value="user">User</option>
+                    <option value="coupon">Coupon</option>
+                    <option value="testimonial">Testimonial</option>
+                    <option value="blog">Blog</option>
+                    <option value="banner">Banner</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small">Date From</label>
+                <input type="date" class="form-control form-control-sm bg-dark text-light border-secondary" id="dateFrom">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small">Date To</label>
+                <input type="date" class="form-control form-control-sm bg-dark text-light border-secondary" id="dateTo">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small">Search</label>
+                <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Search..." id="searchInput">
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button class="btn btn-sm btn-primary-custom flex-fill" onclick="fetchLogs(1)">
+                    <i class="bi bi-search me-1"></i> Filter
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="resetFilters()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0 align-middle" style="--bs-table-bg: transparent;">
+            <thead>
+                <tr>
+                    <th class="text-muted fw-normal border-secondary px-3 py-3">Timestamp</th>
+                    <th class="text-muted fw-normal border-secondary">User</th>
+                    <th class="text-muted fw-normal border-secondary">Action</th>
+                    <th class="text-muted fw-normal border-secondary">Entity Type</th>
+                    <th class="text-muted fw-normal border-secondary">Entity ID</th>
+                    <th class="text-muted fw-normal border-secondary">Details</th>
+                    <th class="text-muted fw-normal border-secondary">IP Address</th>
+                </tr>
+            </thead>
+            <tbody id="logsTable">
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted border-secondary">
+                        <div class="spinner-border text-primary mb-3" role="status" style="color: var(--primary-orange) !important;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mb-0">Loading audit logs...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="p-3 border-top border-secondary d-flex justify-content-between align-items-center">
+        <span class="text-muted small" id="logCount">Loading...</span>
+        <nav>
+            <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API = '/api/audit';
+let currentPage = 1;
+const perPage = 25;
+
+const actionColors = {
+    'CREATE': 'bg-success',
+    'READ': 'bg-info text-dark',
+    'UPDATE': 'bg-warning text-dark',
+    'DELETE': 'bg-danger',
+    'LOGIN': 'bg-primary',
+    'LOGOUT': 'bg-secondary',
+};
+
+async function fetchLogs(page) {
+    currentPage = page || 1;
+    const tbody = document.getElementById('logsTable');
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 border-secondary"><div class="spinner-border text-primary" role="status" style="color: var(--primary-orange) !important;"></div></td></tr>';
+
+    const params = new URLSearchParams();
+    params.set('page', currentPage);
+    params.set('per_page', perPage);
+    const action = document.getElementById('actionFilter').value;
+    const entity = document.getElementById('entityFilter').value;
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+    if (action) params.set('action', action);
+    if (entity) params.set('entity_type', entity);
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
+
+    try {
+        const res = await fetch(`${API}?${params.toString()}`);
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        const logs = data.logs || data.items || data || [];
+        const total = data.total || logs.length;
+        const totalPages = Math.ceil(total / perPage) || 1;
+
+        if (logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted border-secondary"><i class="bi bi-clock-history fs-1 d-block mb-3 opacity-50"></i>No audit logs found.</td></tr>';
+        } else {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            tbody.innerHTML = logs.filter(l => {
+                if (!search) return true;
+                return JSON.stringify(l).toLowerCase().includes(search);
+            }).map(l => `
+                <tr>
+                    <td class="border-secondary px-3 text-muted small">${formatTime(l.timestamp || l.created_at)}</td>
+                    <td class="border-secondary text-light">${l.user_id || l.username || '-'}</td>
+                    <td class="border-secondary"><span class="badge ${actionColors[l.action] || 'bg-secondary'} rounded-pill px-3 py-2">${l.action || '-'}</span></td>
+                    <td class="border-secondary text-light">${l.entity_type || '-'}</td>
+                    <td class="border-secondary text-muted">${l.entity_id || '-'}</td>
+                    <td class="border-secondary text-muted small" style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(JSON.stringify(l.details || ''))}">${typeof l.details === 'object' ? JSON.stringify(l.details) : (l.details || '-')}</td>
+                    <td class="border-secondary text-muted small">${l.ip_address || l.ip || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('logCount').textContent = `${logs.length} logs (page ${currentPage} of ${totalPages})`;
+        renderPagination(totalPages);
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-danger border-secondary"><i class="bi bi-exclamation-triangle d-block mb-2"></i>Error loading audit logs.</td></tr>';
+    }
+}
+
+function renderPagination(total) {
+    const el = document.getElementById('pagination');
+    if (total <= 1) { el.innerHTML = ''; return; }
+    let html = '';
+    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link bg-dark border-secondary text-muted" href="#" onclick="fetchLogs(${currentPage - 1}); return false;">&laquo;</a></li>`;
+    for (let i = 1; i <= total; i++) {
+        if (i === 1 || i === total || Math.abs(i - currentPage) <= 2) {
+            html += `<li class="page-item ${i === currentPage ? 'active' : ''}"><a class="page-link ${i === currentPage ? '' : 'bg-dark border-secondary text-muted'}" href="#" style="${i === currentPage ? 'background-color: var(--primary-orange); border-color: var(--primary-orange);' : ''}" onclick="fetchLogs(${i}); return false;">${i}</a></li>`;
+        } else if (Math.abs(i - currentPage) === 3) {
+            html += '<li class="page-item disabled"><a class="page-link bg-dark border-secondary text-muted" href="#">...</a></li>';
+        }
+    }
+    html += `<li class="page-item ${currentPage === total ? 'disabled' : ''}"><a class="page-link bg-dark border-secondary text-muted" href="#" onclick="fetchLogs(${currentPage + 1}); return false;">&raquo;</a></li>`;
+    el.innerHTML = html;
+}
+
+function formatTime(ts) {
+    if (!ts) return '-';
+    const d = new Date(ts);
+    return d.toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function resetFilters() {
+    document.getElementById('actionFilter').value = '';
+    document.getElementById('entityFilter').value = '';
+    document.getElementById('dateFrom').value = '';
+    document.getElementById('dateTo').value = '';
+    document.getElementById('searchInput').value = '';
+    fetchLogs(1);
+}
+
+fetchLogs(1);
+</script>
+{% endblock %}

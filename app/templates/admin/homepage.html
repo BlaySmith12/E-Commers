@@ -1,0 +1,1373 @@
+{% extends "admin_base.html" %}
+
+{% block head %}
+<style>
+    .section-card {
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        background: var(--bg-card);
+        margin-bottom: 16px;
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    .section-card:hover {
+        border-color: rgba(242, 102, 15, 0.3);
+    }
+    .section-card.dragging {
+        opacity: 0.5;
+        border-color: var(--primary-orange);
+    }
+    .section-header {
+        display: flex;
+        align-items: center;
+        padding: 16px 20px;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.2s;
+    }
+    .section-header:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+    .drag-handle {
+        cursor: grab;
+        color: var(--text-muted);
+        font-size: 1.1rem;
+        margin-right: 12px;
+        padding: 4px;
+        border-radius: 4px;
+        transition: color 0.2s;
+    }
+    .drag-handle:hover {
+        color: var(--primary-orange);
+    }
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+    .section-title {
+        font-weight: 600;
+        font-size: 1rem;
+        margin: 0;
+        flex: 1;
+    }
+    .section-badge {
+        font-size: 0.7rem;
+        padding: 3px 10px;
+        border-radius: 20px;
+        margin-right: 12px;
+    }
+    .collapse-icon {
+        transition: transform 0.3s ease;
+        color: var(--text-muted);
+    }
+    .collapse-icon.rotated {
+        transform: rotate(180deg);
+    }
+    .section-body {
+        display: none;
+        padding: 0 20px 20px;
+        border-top: 1px solid var(--border-color);
+    }
+    .section-body.show {
+        display: block;
+    }
+    .banner-preview-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.01);
+        margin-bottom: 10px;
+        transition: all 0.2s;
+    }
+    .banner-preview-card:hover {
+        border-color: rgba(242, 102, 15, 0.3);
+        background: rgba(255, 255, 255, 0.03);
+    }
+    .banner-thumb {
+        width: 120px;
+        height: 60px;
+        border-radius: 8px;
+        object-fit: cover;
+        border: 1px solid var(--border-color);
+        flex-shrink: 0;
+    }
+    .banner-thumb-placeholder {
+        width: 120px;
+        height: 60px;
+        border-radius: 8px;
+        border: 1px dashed var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+    .item-reorder-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        background: transparent;
+        color: var(--text-muted);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.75rem;
+    }
+    .item-reorder-btn:hover {
+        background: var(--primary-orange);
+        border-color: var(--primary-orange);
+        color: #fff;
+    }
+    .testimonial-preview-card {
+        padding: 14px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.01);
+        margin-bottom: 10px;
+        transition: all 0.2s;
+    }
+    .testimonial-preview-card:hover {
+        border-color: rgba(242, 102, 15, 0.3);
+        background: rgba(255, 255, 255, 0.03);
+    }
+    .featured-select-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        background: rgba(255, 255, 255, 0.01);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .featured-select-item:hover {
+        border-color: rgba(242, 102, 15, 0.3);
+    }
+    .featured-select-item.selected {
+        border-color: var(--primary-orange);
+        background: rgba(242, 102, 15, 0.05);
+    }
+    .featured-select-item .form-check-input:checked {
+        background-color: var(--primary-orange);
+        border-color: var(--primary-orange);
+    }
+    .promo-banner-preview {
+        width: 100%;
+        height: 120px;
+        border-radius: 10px;
+        border: 1px dashed var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+        overflow: hidden;
+    }
+    .promo-banner-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 6px;
+    }
+    .status-dot.active { background: #198754; }
+    .status-dot.inactive { background: #9a9a9a; }
+    .toast-container {
+        position: fixed;
+        top: 80px;
+        right: 24px;
+        z-index: 9999;
+    }
+    .preview-link {
+        border: 1px solid var(--primary-orange);
+        color: var(--primary-orange);
+        border-radius: 8px;
+        padding: 6px 16px;
+        text-decoration: none;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+    .preview-link:hover {
+        background: var(--primary-orange);
+        color: #fff;
+    }
+    .newsletter-toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 0;
+    }
+    .section-count {
+        background: rgba(242, 102, 15, 0.15);
+        color: var(--primary-orange);
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(18, 16, 16, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9998;
+    }
+    .loading-overlay .spinner-border {
+        width: 3rem;
+        height: 3rem;
+        color: var(--primary-orange);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">Homepage Manager</h3>
+        <p class="text-muted mb-0">Drag, reorder, and configure every section on your storefront homepage.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/" target="_blank" class="preview-link"><i class="bi bi-eye me-1"></i> Preview Homepage</a>
+        <button class="btn btn-primary-custom" onclick="saveAllChanges()" id="saveAllBtn">
+            <i class="bi bi-check-lg me-1"></i> Save All Changes
+        </button>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay" style="display:none;">
+    <div class="text-center">
+        <div class="spinner-border mb-3" role="status"></div>
+        <p class="text-light">Saving changes...</p>
+    </div>
+</div>
+
+<!-- Section Order Container -->
+<div id="sectionsContainer">
+
+    <!-- 1. Hero Banner Section -->
+    <div class="section-card" data-section="hero-banners" draggable="true">
+        <div class="section-header" onclick="toggleSection(this)">
+            <span class="drag-handle" title="Drag to reorder"><i class="bi bi-grip-vertical"></i></span>
+            <i class="bi bi-image me-3 text-primary-orange" style="font-size:1.2rem;"></i>
+            <h6 class="section-title mb-0">Hero Banners</h6>
+            <span class="section-count" id="bannerCount">0</span>
+            <div class="form-check form-switch ms-3 me-3" onclick="event.stopPropagation()">
+                <input class="form-check-input" type="checkbox" id="heroVisible" checked>
+                <label class="form-check-label text-muted small" for="heroVisible">Visible</label>
+            </div>
+            <i class="bi bi-chevron-down collapse-icon" style="font-size:0.9rem;"></i>
+        </div>
+        <div class="section-body" id="heroBannersBody">
+            <div class="d-flex justify-content-between align-items-center mb-3 mt-3">
+                <p class="text-muted small mb-0">Manage rotating hero banners displayed on the homepage.</p>
+                <button class="btn btn-sm btn-primary-custom" onclick="openBannerModal()">
+                    <i class="bi bi-plus-lg me-1"></i> Add Banner
+                </button>
+            </div>
+            <div id="bannersList">
+                <div class="text-center py-4 text-muted">
+                    <div class="spinner-border spinner-border-sm mb-2" role="status"></div>
+                    <p class="small mb-0">Loading banners...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Featured Categories Section -->
+    <div class="section-card" data-section="featured-categories" draggable="true">
+        <div class="section-header" onclick="toggleSection(this)">
+            <span class="drag-handle" title="Drag to reorder"><i class="bi bi-grip-vertical"></i></span>
+            <i class="bi bi-tags me-3 text-primary-orange" style="font-size:1.2rem;"></i>
+            <h6 class="section-title mb-0">Featured Categories</h6>
+            <span class="section-count" id="categoryCount">0</span>
+            <div class="form-check form-switch ms-3 me-3" onclick="event.stopPropagation()">
+                <input class="form-check-input" type="checkbox" id="categoriesVisible" checked>
+                <label class="form-check-label text-muted small" for="categoriesVisible">Visible</label>
+            </div>
+            <i class="bi bi-chevron-down collapse-icon" style="font-size:0.9rem;"></i>
+        </div>
+        <div class="section-body" id="featuredCategoriesBody">
+            <div class="d-flex justify-content-between align-items-center mb-3 mt-3">
+                <p class="text-muted small mb-0">Select which categories to feature on the homepage.</p>
+            </div>
+            <div id="categoriesList">
+                <div class="text-center py-4 text-muted">
+                    <div class="spinner-border spinner-border-sm mb-2" role="status"></div>
+                    <p class="small mb-0">Loading categories...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Featured Products Section -->
+    <div class="section-card" data-section="featured-products" draggable="true">
+        <div class="section-header" onclick="toggleSection(this)">
+            <span class="drag-handle" title="Drag to reorder"><i class="bi bi-grip-vertical"></i></span>
+            <i class="bi bi-box-seam me-3 text-primary-orange" style="font-size:1.2rem;"></i>
+            <h6 class="section-title mb-0">Featured Products</h6>
+            <span class="section-count" id="productCount">0</span>
+            <div class="form-check form-switch ms-3 me-3" onclick="event.stopPropagation()">
+                <input class="form-check-input" type="checkbox" id="productsVisible" checked>
+                <label class="form-check-label text-muted small" for="productsVisible">Visible</label>
+            </div>
+            <i class="bi bi-chevron-down collapse-icon" style="font-size:0.9rem;"></i>
+        </div>
+        <div class="section-body" id="featuredProductsBody">
+            <div class="d-flex justify-content-between align-items-center mb-3 mt-3">
+                <p class="text-muted small mb-0">Select which products to feature on the homepage.</p>
+            </div>
+            <div id="productsList">
+                <div class="text-center py-4 text-muted">
+                    <div class="spinner-border spinner-border-sm mb-2" role="status"></div>
+                    <p class="small mb-0">Loading products...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Promotional Banner Section -->
+    <div class="section-card" data-section="promo-banner" draggable="true">
+        <div class="section-header" onclick="toggleSection(this)">
+            <span class="drag-handle" title="Drag to reorder"><i class="bi bi-grip-vertical"></i></span>
+            <i class="bi bi-megaphone me-3 text-primary-orange" style="font-size:1.2rem;"></i>
+            <h6 class="section-title mb-0">Promotional Banner</h6>
+            <span class="section-count" id="promoCount">1</span>
+            <div class="form-check form-switch ms-3 me-3" onclick="event.stopPropagation()">
+                <input class="form-check-input" type="checkbox" id="promoVisible" checked>
+                <label class="form-check-label text-muted small" for="promoVisible">Visible</label>
+            </div>
+            <i class="bi bi-chevron-down collapse-icon" style="font-size:0.9rem;"></i>
+        </div>
+        <div class="section-body" id="promoBannerBody">
+            <div class="mt-3">
+                <div class="promo-banner-preview" id="promoPreview">
+                    <i class="bi bi-image fs-2"></i>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-light small">Banner Image URL</label>
+                        <input type="url" class="form-control form-control-sm bg-dark text-light border-secondary" id="promoImageUrl" placeholder="https://example.com/banner.jpg" oninput="updatePromoPreview()">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light small">Banner Link</label>
+                        <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" id="promoLink" placeholder="/shop?sale=true">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light small">Headline Text</label>
+                        <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" id="promoHeadline" placeholder="Summer Sale - Up to 50% Off">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light small">Subtext</label>
+                        <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" id="promoSubtext" placeholder="Limited time offer">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light small">Button Text</label>
+                        <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" id="promoBtnText" placeholder="Shop Now">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light small">Background Color</label>
+                        <input type="color" class="form-control form-control-sm form-control-color bg-dark border-secondary" id="promoBgColor" value="#F2660F">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Testimonials Section -->
+    <div class="section-card" data-section="testimonials" draggable="true">
+        <div class="section-header" onclick="toggleSection(this)">
+            <span class="drag-handle" title="Drag to reorder"><i class="bi bi-grip-vertical"></i></span>
+            <i class="bi bi-chat-quote me-3 text-primary-orange" style="font-size:1.2rem;"></i>
+            <h6 class="section-title mb-0">Testimonials</h6>
+            <span class="section-count" id="testimonialCount">0</span>
+            <div class="form-check form-switch ms-3 me-3" onclick="event.stopPropagation()">
+                <input class="form-check-input" type="checkbox" id="testimonialsVisible" checked>
+                <label class="form-check-label text-muted small" for="testimonialsVisible">Visible</label>
+            </div>
+            <i class="bi bi-chevron-down collapse-icon" style="font-size:0.9rem;"></i>
+        </div>
+        <div class="section-body" id="testimonialsBody">
+            <div class="d-flex justify-content-between align-items-center mb-3 mt-3">
+                <p class="text-muted small mb-0">Manage customer testimonials shown on the homepage.</p>
+                <button class="btn btn-sm btn-primary-custom" onclick="openTestimonialModal()">
+                    <i class="bi bi-plus-lg me-1"></i> Add Testimonial
+                </button>
+            </div>
+            <div id="testimonialsList">
+                <div class="text-center py-4 text-muted">
+                    <div class="spinner-border spinner-border-sm mb-2" role="status"></div>
+                    <p class="small mb-0">Loading testimonials...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. Newsletter Section -->
+    <div class="section-card" data-section="newsletter" draggable="true">
+        <div class="section-header" onclick="toggleSection(this)">
+            <span class="drag-handle" title="Drag to reorder"><i class="bi bi-grip-vertical"></i></span>
+            <i class="bi bi-envelope-paper me-3 text-primary-orange" style="font-size:1.2rem;"></i>
+            <h6 class="section-title mb-0">Newsletter Signup</h6>
+            <span class="section-count">1</span>
+            <div class="form-check form-switch ms-3 me-3" onclick="event.stopPropagation()">
+                <input class="form-check-input" type="checkbox" id="newsletterVisible" checked>
+                <label class="form-check-label text-muted small" for="newsletterVisible">Visible</label>
+            </div>
+            <i class="bi bi-chevron-down collapse-icon" style="font-size:0.9rem;"></i>
+        </div>
+        <div class="section-body" id="newsletterBody">
+            <div class="mt-3">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label text-light small">Section Headline</label>
+                        <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" id="newsletterHeadline" placeholder="Stay Updated" value="Stay Updated">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label text-light small">Description Text</label>
+                        <textarea class="form-control form-control-sm bg-dark text-light border-secondary" id="newsletterDescription" rows="2" placeholder="Subscribe to get updates...">Subscribe to our newsletter for the latest deals, new arrivals, and exclusive offers.</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light small">Placeholder Text</label>
+                        <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" id="newsletterPlaceholder" placeholder="Enter your email" value="Enter your email address">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light small">Button Text</label>
+                        <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" id="newsletterBtnText" placeholder="Subscribe" value="Subscribe">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. Blog Posts Section -->
+    <div class="section-card" data-section="blog-posts" draggable="true">
+        <div class="section-header" onclick="toggleSection(this)">
+            <span class="drag-handle" title="Drag to reorder"><i class="bi bi-grip-vertical"></i></span>
+            <i class="bi bi-journal-text me-3 text-primary-orange" style="font-size:1.2rem;"></i>
+            <h6 class="section-title mb-0">Blog Posts</h6>
+            <span class="section-count" id="blogCount">0</span>
+            <div class="form-check form-switch ms-3 me-3" onclick="event.stopPropagation()">
+                <input class="form-check-input" type="checkbox" id="blogVisible" checked>
+                <label class="form-check-label text-muted small" for="blogVisible">Visible</label>
+            </div>
+            <i class="bi bi-chevron-down collapse-icon" style="font-size:0.9rem;"></i>
+        </div>
+        <div class="section-body" id="blogPostsBody">
+            <div class="d-flex justify-content-between align-items-center mb-3 mt-3">
+                <p class="text-muted small mb-0">Select which blog posts to display on the homepage.</p>
+            </div>
+            <div id="blogList">
+                <div class="text-center py-4 text-muted">
+                    <div class="spinner-border spinner-border-sm mb-2" role="status"></div>
+                    <p class="small mb-0">Loading blog posts...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Banner Modal -->
+<div class="modal fade" id="bannerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white" id="bannerModalTitle">Add Banner</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="bannerForm" onsubmit="saveBanner(event)">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label text-light">Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="banTitle" required placeholder="Quality Products. Built For Better Living.">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label text-light">Position <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control bg-dark text-light border-secondary" id="banPosition" min="0" value="0" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light">Subtitle</label>
+                        <input type="text" class="form-control bg-dark text-light border-secondary" id="banSubtitle" placeholder="Your one-stop shop for premium products...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light">Image URL</label>
+                        <input type="url" class="form-control bg-dark text-light border-secondary" id="banImage" placeholder="https://example.com/hero.jpg" oninput="updateBannerImagePreview()">
+                        <div class="mt-2" id="bannerImagePreviewWrap" style="display:none;">
+                            <img id="bannerImagePreview" src="" alt="" style="max-width:100%;max-height:150px;border-radius:8px;border:1px solid var(--border-color);">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-light">Button Text</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="banBtnText" placeholder="Shop Now">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-light">Button Link</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="banBtnLink" placeholder="/shop">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light">Background Color</label>
+                        <input type="text" class="form-control bg-dark text-light border-secondary" id="banBgColor" placeholder="#121010">
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="banActive" checked>
+                        <label class="form-check-label text-light">Active</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom" id="bannerSaveBtn">Save Banner</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Testimonial Modal -->
+<div class="modal fade" id="testimonialModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white" id="testimonialModalTitle">Add Testimonial</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="testimonialForm" onsubmit="saveTestimonial(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-light">Customer Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control bg-dark text-light border-secondary" id="testName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light">Customer Title</label>
+                        <input type="text" class="form-control bg-dark text-light border-secondary" id="testTitle" placeholder="e.g. CEO, Happy Customer">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light">Content <span class="text-danger">*</span></label>
+                        <textarea class="form-control bg-dark text-light border-secondary" id="testContent" rows="4" required></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-light">Rating</label>
+                            <select class="form-select bg-dark text-light border-secondary" id="testRating">
+                                <option value="5">5 Stars</option>
+                                <option value="4">4 Stars</option>
+                                <option value="3">3 Stars</option>
+                                <option value="2">2 Stars</option>
+                                <option value="1">1 Star</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-light">Image URL</label>
+                            <input type="url" class="form-control bg-dark text-light border-secondary" id="testImage" placeholder="Customer photo URL">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="testFeatured">
+                                <label class="form-check-label text-light">Featured</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="testActive" checked>
+                                <label class="form-check-label text-light">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom" id="testimonialSaveBtn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white">Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2.5rem;"></i>
+                <p class="text-light mt-3 mb-0" id="deleteMessage">Are you sure you want to delete this item?</p>
+            </div>
+            <div class="modal-footer border-secondary justify-content-center">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger btn-sm" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const BANNER_API = '/api/hero-banners';
+const TESTIMONIAL_API = '/api/testimonials';
+const CATEGORY_API = '/api/categories';
+const PRODUCT_API = '/api/products';
+const BLOG_API = '/api/blog';
+const SETTINGS_API = '/api/admin/settings';
+
+let banners = [];
+let testimonials = [];
+let categories = [];
+let products = [];
+let blogPosts = [];
+let homepageSettings = {};
+let editingBannerId = null;
+let editingTestimonialId = null;
+
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const iconMap = {
+        success: 'bi-check-circle-fill text-success',
+        error: 'bi-x-circle-fill text-danger',
+        warning: 'bi-exclamation-triangle-fill text-warning',
+        info: 'bi-info-circle-fill text-info'
+    };
+    const id = 'toast-' + Date.now();
+    const html = `
+        <div id="${id}" class="toast align-items-center border-0 mb-2" role="alert" style="background:var(--bg-darker);border:1px solid var(--border-color) !important;min-width:300px;">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center">
+                    <i class="bi ${iconMap[type] || iconMap.info} me-2"></i>
+                    <span class="text-light">${message}</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>`;
+    container.insertAdjacentHTML('beforeend', html);
+    const toastEl = document.getElementById(id);
+    const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+    toast.show();
+    toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+}
+
+function toggleSection(header) {
+    const body = header.nextElementSibling;
+    const icon = header.querySelector('.collapse-icon');
+    body.classList.toggle('show');
+    icon.classList.toggle('rotated');
+}
+
+function updateBannerImagePreview() {
+    const url = document.getElementById('banImage').value;
+    const wrap = document.getElementById('bannerImagePreviewWrap');
+    const img = document.getElementById('bannerImagePreview');
+    if (url) {
+        img.src = url;
+        wrap.style.display = 'block';
+        img.onerror = () => { wrap.style.display = 'none'; };
+    } else {
+        wrap.style.display = 'none';
+    }
+}
+
+function updatePromoPreview() {
+    const url = document.getElementById('promoImageUrl').value;
+    const preview = document.getElementById('promoPreview');
+    if (url) {
+        preview.innerHTML = `<img src="${url}" alt="Promo" onerror="this.parentElement.innerHTML='<i class=\\'bi bi-image fs-2\\'></i>'">`;
+    } else {
+        preview.innerHTML = '<i class="bi bi-image fs-2"></i>';
+    }
+}
+
+async function loadBanners() {
+    try {
+        const res = await fetch(BANNER_API);
+        if (!res.ok) throw new Error('Failed to load banners');
+        banners = await res.json();
+        renderBanners();
+    } catch (err) {
+        document.getElementById('bannersList').innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-exclamation-circle fs-3 d-block mb-2 opacity-50"></i>
+                <p class="small mb-0">Failed to load banners. <a href="#" class="text-primary-orange" onclick="loadBanners();return false;">Retry</a></p>
+            </div>`;
+    }
+}
+
+function renderBanners() {
+    const container = document.getElementById('bannersList');
+    document.getElementById('bannerCount').textContent = banners.length;
+    if (!banners.length) {
+        container.innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-image fs-1 d-block mb-3 opacity-50"></i>
+                <p class="mb-2">No hero banners yet.</p>
+                <button class="btn btn-sm btn-primary-custom" onclick="openBannerModal()">
+                    <i class="bi bi-plus-lg me-1"></i> Add Your First Banner
+                </button>
+            </div>`;
+        return;
+    }
+    const sorted = [...banners].sort((a, b) => (a.position || 0) - (b.position || 0));
+    container.innerHTML = sorted.map((b, idx) => `
+        <div class="banner-preview-card" data-id="${b.id}">
+            ${b.image_url
+                ? `<img src="${b.image_url}" alt="" class="banner-thumb" onerror="this.outerHTML='<div class=\\'banner-thumb-placeholder\\'><i class=\\'bi bi-image\\'></i></div>'">`
+                : '<div class="banner-thumb-placeholder"><i class="bi bi-image"></i></div>'}
+            <div class="flex-grow-1" style="min-width:0;">
+                <div class="d-flex align-items-center mb-1">
+                    <span class="text-light fw-bold" style="font-size:0.9rem;">${escHtml(b.title)}</span>
+                    <span class="badge bg-secondary rounded-pill ms-2" style="font-size:0.65rem;">Pos ${b.position || 0}</span>
+                </div>
+                <div class="text-muted small text-truncate" style="max-width:350px;">${escHtml(b.subtitle || 'No subtitle')}</div>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+                <button class="item-reorder-btn" title="Move up" onclick="moveBannerItem(${b.id}, ${b.position || 0}, -1)" ${idx === 0 ? 'disabled style="opacity:0.3"' : ''}>
+                    <i class="bi bi-arrow-up"></i>
+                </button>
+                <button class="item-reorder-btn" title="Move down" onclick="moveBannerItem(${b.id}, ${b.position || 0}, 1)" ${idx === sorted.length - 1 ? 'disabled style="opacity:0.3"' : ''}>
+                    <i class="bi bi-arrow-down"></i>
+                </button>
+                <div class="form-check form-switch ms-2" title="Toggle active">
+                    <input class="form-check-input" type="checkbox" ${b.is_active ? 'checked' : ''} onchange="toggleBannerActive(${b.id}, this.checked)">
+                </div>
+                <button class="btn btn-sm btn-outline-primary rounded-circle ms-1" style="width:30px;height:30px;padding:0;" title="Edit" onclick="openBannerEditModal(${b.id})">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" style="width:30px;height:30px;padding:0;" title="Delete" onclick="confirmDeleteBanner(${b.id})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function openBannerModal() {
+    editingBannerId = null;
+    document.getElementById('bannerForm').reset();
+    document.getElementById('bannerModalTitle').textContent = 'Add Banner';
+    document.getElementById('bannerSaveBtn').textContent = 'Save Banner';
+    document.getElementById('banActive').checked = true;
+    document.getElementById('bannerImagePreviewWrap').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('bannerModal')).show();
+}
+
+function openBannerEditModal(id) {
+    const b = banners.find(x => x.id === id);
+    if (!b) return;
+    editingBannerId = id;
+    document.getElementById('banTitle').value = b.title || '';
+    document.getElementById('banSubtitle').value = b.subtitle || '';
+    document.getElementById('banImage').value = b.image_url || '';
+    document.getElementById('banBtnText').value = b.button_text || '';
+    document.getElementById('banBtnLink').value = b.link_url || '';
+    document.getElementById('banPosition').value = b.position || 0;
+    document.getElementById('banBgColor').value = b.background_color || '#121010';
+    document.getElementById('banActive').checked = !!b.is_active;
+    document.getElementById('bannerModalTitle').textContent = 'Edit Banner';
+    document.getElementById('bannerSaveBtn').textContent = 'Update Banner';
+    updateBannerImagePreview();
+    new bootstrap.Modal(document.getElementById('bannerModal')).show();
+}
+
+async function saveBanner(e) {
+    e.preventDefault();
+    const payload = {
+        title: document.getElementById('banTitle').value.trim(),
+        subtitle: document.getElementById('banSubtitle').value.trim(),
+        image_url: document.getElementById('banImage').value.trim(),
+        button_text: document.getElementById('banBtnText').value.trim(),
+        link_url: document.getElementById('banBtnLink').value.trim(),
+        position: parseInt(document.getElementById('banPosition').value) || 0,
+        background_color: document.getElementById('banBgColor').value,
+        is_active: document.getElementById('banActive').checked
+    };
+    const method = editingBannerId ? 'PUT' : 'POST';
+    const url = editingBannerId ? `${BANNER_API}/${editingBannerId}` : BANNER_API;
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || err.message || 'Failed to save banner');
+        }
+        bootstrap.Modal.getInstance(document.getElementById('bannerModal')).hide();
+        showToast(editingBannerId ? 'Banner updated successfully' : 'Banner created successfully');
+        await loadBanners();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+async function toggleBannerActive(id, active) {
+    try {
+        const res = await fetch(`${BANNER_API}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: active })
+        });
+        if (!res.ok) throw new Error('Failed to update');
+        showToast(active ? 'Banner activated' : 'Banner deactivated', 'info');
+        await loadBanners();
+    } catch (err) {
+        showToast(err.message, 'error');
+        await loadBanners();
+    }
+}
+
+async function moveBannerItem(id, currentPos, direction) {
+    const newPos = currentPos + direction;
+    if (newPos < 0) return;
+    try {
+        const res = await fetch(`${BANNER_API}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ position: newPos })
+        });
+        if (!res.ok) throw new Error('Failed to reorder');
+        await loadBanners();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+function confirmDeleteBanner(id) {
+    document.getElementById('deleteMessage').textContent = 'Delete this hero banner? This action cannot be undone.';
+    const btn = document.getElementById('confirmDeleteBtn');
+    btn.onclick = async () => {
+        btn.disabled = true;
+        btn.textContent = 'Deleting...';
+        try {
+            const res = await fetch(`${BANNER_API}/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Failed to delete');
+            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+            showToast('Banner deleted');
+            await loadBanners();
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+    };
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+async function loadTestimonials() {
+    try {
+        const res = await fetch(TESTIMONIAL_API);
+        if (!res.ok) throw new Error('Failed');
+        testimonials = await res.json();
+        renderTestimonials();
+    } catch (err) {
+        document.getElementById('testimonialsList').innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-exclamation-circle fs-3 d-block mb-2 opacity-50"></i>
+                <p class="small mb-0">Failed to load testimonials. <a href="#" class="text-primary-orange" onclick="loadTestimonials();return false;">Retry</a></p>
+            </div>`;
+    }
+}
+
+function renderTestimonials() {
+    const container = document.getElementById('testimonialsList');
+    document.getElementById('testimonialCount').textContent = testimonials.length;
+    if (!testimonials.length) {
+        container.innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-chat-quote fs-1 d-block mb-3 opacity-50"></i>
+                <p class="mb-2">No testimonials yet.</p>
+                <button class="btn btn-sm btn-primary-custom" onclick="openTestimonialModal()">
+                    <i class="bi bi-plus-lg me-1"></i> Add Your First Testimonial
+                </button>
+            </div>`;
+        return;
+    }
+    container.innerHTML = testimonials.map(t => `
+        <div class="testimonial-preview-card" data-id="${t.id}">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1" style="min-width:0;">
+                    <div class="d-flex align-items-center mb-1">
+                        <span class="text-light fw-bold" style="font-size:0.9rem;">${escHtml(t.customer_name)}</span>
+                        ${t.customer_title ? `<span class="text-muted small ms-2">${escHtml(t.customer_title)}</span>` : ''}
+                        <span class="ms-2">${renderStars(t.rating || 5)}</span>
+                    </div>
+                    <p class="text-muted small mb-0" style="max-width:500px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(t.content || '')}</p>
+                </div>
+                <div class="d-flex align-items-center gap-1 ms-3">
+                    <div class="form-check form-switch" title="Featured">
+                        <input class="form-check-input" type="checkbox" ${t.is_featured ? 'checked' : ''} onchange="toggleTestimonialFeatured(${t.id}, this.checked)" title="Featured">
+                    </div>
+                    <div class="form-check form-switch" title="Active">
+                        <input class="form-check-input" type="checkbox" ${t.is_active ? 'checked' : ''} onchange="toggleTestimonialActive(${t.id}, this.checked)" title="Active">
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary rounded-circle ms-1" style="width:30px;height:30px;padding:0;" title="Edit" onclick="openTestimonialEditModal(${t.id})">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" style="width:30px;height:30px;padding:0;" title="Delete" onclick="confirmDeleteTestimonial(${t.id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderStars(count) {
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+        html += `<i class="bi bi-star-fill" style="font-size:0.7rem;color:${i <= count ? '#ffc107' : '#9a9a9a'};"></i> `;
+    }
+    return html;
+}
+
+function openTestimonialModal() {
+    editingTestimonialId = null;
+    document.getElementById('testimonialForm').reset();
+    document.getElementById('testimonialModalTitle').textContent = 'Add Testimonial';
+    document.getElementById('testimonialSaveBtn').textContent = 'Save';
+    document.getElementById('testActive').checked = true;
+    new bootstrap.Modal(document.getElementById('testimonialModal')).show();
+}
+
+function openTestimonialEditModal(id) {
+    const t = testimonials.find(x => x.id === id);
+    if (!t) return;
+    editingTestimonialId = id;
+    document.getElementById('testName').value = t.customer_name || '';
+    document.getElementById('testTitle').value = t.customer_title || '';
+    document.getElementById('testContent').value = t.content || '';
+    document.getElementById('testRating').value = t.rating || 5;
+    document.getElementById('testImage').value = t.image_url || '';
+    document.getElementById('testFeatured').checked = !!t.is_featured;
+    document.getElementById('testActive').checked = !!t.is_active;
+    document.getElementById('testimonialModalTitle').textContent = 'Edit Testimonial';
+    document.getElementById('testimonialSaveBtn').textContent = 'Update';
+    new bootstrap.Modal(document.getElementById('testimonialModal')).show();
+}
+
+async function saveTestimonial(e) {
+    e.preventDefault();
+    const payload = {
+        customer_name: document.getElementById('testName').value.trim(),
+        customer_title: document.getElementById('testTitle').value.trim(),
+        content: document.getElementById('testContent').value.trim(),
+        rating: parseInt(document.getElementById('testRating').value),
+        image_url: document.getElementById('testImage').value.trim(),
+        is_featured: document.getElementById('testFeatured').checked,
+        is_active: document.getElementById('testActive').checked
+    };
+    const method = editingTestimonialId ? 'PUT' : 'POST';
+    const url = editingTestimonialId ? `${TESTIMONIAL_API}/${editingTestimonialId}` : TESTIMONIAL_API;
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || err.message || 'Failed to save');
+        }
+        bootstrap.Modal.getInstance(document.getElementById('testimonialModal')).hide();
+        showToast(editingTestimonialId ? 'Testimonial updated' : 'Testimonial created');
+        await loadTestimonials();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+async function toggleTestimonialFeatured(id, featured) {
+    try {
+        const res = await fetch(`${TESTIMONIAL_API}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_featured: featured })
+        });
+        if (!res.ok) throw new Error('Failed');
+        showToast(featured ? 'Marked as featured' : 'Removed from featured', 'info');
+        await loadTestimonials();
+    } catch (err) {
+        showToast(err.message, 'error');
+        await loadTestimonials();
+    }
+}
+
+async function toggleTestimonialActive(id, active) {
+    try {
+        const res = await fetch(`${TESTIMONIAL_API}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: active })
+        });
+        if (!res.ok) throw new Error('Failed');
+        showToast(active ? 'Testimonial activated' : 'Testimonial deactivated', 'info');
+        await loadTestimonials();
+    } catch (err) {
+        showToast(err.message, 'error');
+        await loadTestimonials();
+    }
+}
+
+function confirmDeleteTestimonial(id) {
+    document.getElementById('deleteMessage').textContent = 'Delete this testimonial? This action cannot be undone.';
+    const btn = document.getElementById('confirmDeleteBtn');
+    btn.onclick = async () => {
+        btn.disabled = true;
+        btn.textContent = 'Deleting...';
+        try {
+            const res = await fetch(`${TESTIMONIAL_API}/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Failed');
+            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+            showToast('Testimonial deleted');
+            await loadTestimonials();
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+    };
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+async function loadCategories() {
+    try {
+        const res = await fetch(CATEGORY_API);
+        if (!res.ok) throw new Error('Failed');
+        categories = await res.json();
+        renderCategories();
+    } catch (err) {
+        document.getElementById('categoriesList').innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <p class="small mb-0">Failed to load categories. <a href="#" class="text-primary-orange" onclick="loadCategories();return false;">Retry</a></p>
+            </div>`;
+    }
+}
+
+function renderCategories() {
+    const container = document.getElementById('categoriesList');
+    const featuredIds = homepageSettings.featured_category_ids || [];
+    if (!categories.length) {
+        container.innerHTML = `<div class="text-center py-4 text-muted"><p class="small mb-0">No categories available.</p></div>`;
+        return;
+    }
+    document.getElementById('categoryCount').textContent = featuredIds.length || categories.length;
+    container.innerHTML = categories.map(c => `
+        <div class="featured-select-item ${featuredIds.includes(c.id) ? 'selected' : ''}" onclick="toggleCategoryFeatured(${c.id}, this)">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" ${featuredIds.includes(c.id) ? 'checked' : ''} onclick="event.stopPropagation()">
+            </div>
+            <div class="flex-grow-1">
+                <span class="text-light fw-bold" style="font-size:0.9rem;">${escHtml(c.name)}</span>
+                ${c.description ? `<div class="text-muted small text-truncate" style="max-width:400px;">${escHtml(c.description)}</div>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleCategoryFeatured(catId, el) {
+    if (!homepageSettings.featured_category_ids) homepageSettings.featured_category_ids = [];
+    const arr = homepageSettings.featured_category_ids;
+    const idx = arr.indexOf(catId);
+    if (idx >= 0) {
+        arr.splice(idx, 1);
+        el.classList.remove('selected');
+        el.querySelector('.form-check-input').checked = false;
+    } else {
+        arr.push(catId);
+        el.classList.add('selected');
+        el.querySelector('.form-check-input').checked = true;
+    }
+    document.getElementById('categoryCount').textContent = arr.length;
+}
+
+async function loadProducts() {
+    try {
+        const res = await fetch(PRODUCT_API);
+        if (!res.ok) throw new Error('Failed');
+        products = await res.json();
+        renderProducts();
+    } catch (err) {
+        document.getElementById('productsList').innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <p class="small mb-0">Failed to load products. <a href="#" class="text-primary-orange" onclick="loadProducts();return false;">Retry</a></p>
+            </div>`;
+    }
+}
+
+function renderProducts() {
+    const container = document.getElementById('productsList');
+    const featuredIds = homepageSettings.featured_product_ids || [];
+    if (!products.length) {
+        container.innerHTML = `<div class="text-center py-4 text-muted"><p class="small mb-0">No products available.</p></div>`;
+        return;
+    }
+    document.getElementById('productCount').textContent = featuredIds.length || products.length;
+    container.innerHTML = products.map(p => `
+        <div class="featured-select-item ${featuredIds.includes(p.id) ? 'selected' : ''}" onclick="toggleProductFeatured(${p.id}, this)">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" ${featuredIds.includes(p.id) ? 'checked' : ''} onclick="event.stopPropagation()">
+            </div>
+            <div class="flex-grow-1">
+                <span class="text-light fw-bold" style="font-size:0.9rem;">${escHtml(p.name)}</span>
+                <div class="text-muted small">GHS ${parseFloat(p.price || 0).toFixed(2)}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleProductFeatured(prodId, el) {
+    if (!homepageSettings.featured_product_ids) homepageSettings.featured_product_ids = [];
+    const arr = homepageSettings.featured_product_ids;
+    const idx = arr.indexOf(prodId);
+    if (idx >= 0) {
+        arr.splice(idx, 1);
+        el.classList.remove('selected');
+        el.querySelector('.form-check-input').checked = false;
+    } else {
+        arr.push(prodId);
+        el.classList.add('selected');
+        el.querySelector('.form-check-input').checked = true;
+    }
+    document.getElementById('productCount').textContent = arr.length;
+}
+
+async function loadBlogPosts() {
+    try {
+        const res = await fetch(BLOG_API);
+        if (!res.ok) throw new Error('Failed');
+        blogPosts = await res.json();
+        renderBlogPosts();
+    } catch (err) {
+        document.getElementById('blogList').innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <p class="small mb-0">Failed to load blog posts. <a href="#" class="text-primary-orange" onclick="loadBlogPosts();return false;">Retry</a></p>
+            </div>`;
+    }
+}
+
+function renderBlogPosts() {
+    const container = document.getElementById('blogList');
+    const featuredIds = homepageSettings.featured_blog_ids || [];
+    if (!blogPosts.length) {
+        container.innerHTML = `<div class="text-center py-4 text-muted"><p class="small mb-0">No blog posts available.</p></div>`;
+        return;
+    }
+    document.getElementById('blogCount').textContent = featuredIds.length || 0;
+    container.innerHTML = blogPosts.map(b => `
+        <div class="featured-select-item ${featuredIds.includes(b.id) ? 'selected' : ''}" onclick="toggleBlogFeatured(${b.id}, this)">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" ${featuredIds.includes(b.id) ? 'checked' : ''} onclick="event.stopPropagation()">
+            </div>
+            <div class="flex-grow-1">
+                <span class="text-light fw-bold" style="font-size:0.9rem;">${escHtml(b.title)}</span>
+                <div class="text-muted small">${escHtml(b.author || 'Unknown')} &middot; ${b.created_at || ''}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleBlogFeatured(blogId, el) {
+    if (!homepageSettings.featured_blog_ids) homepageSettings.featured_blog_ids = [];
+    const arr = homepageSettings.featured_blog_ids;
+    const idx = arr.indexOf(blogId);
+    if (idx >= 0) {
+        arr.splice(idx, 1);
+        el.classList.remove('selected');
+        el.querySelector('.form-check-input').checked = false;
+    } else {
+        arr.push(blogId);
+        el.classList.add('selected');
+        el.querySelector('.form-check-input').checked = true;
+    }
+    document.getElementById('blogCount').textContent = arr.length;
+}
+
+async function loadSettings() {
+    try {
+        const res = await fetch(SETTINGS_API);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        homepageSettings = data.homepage || data || {};
+        applySettings();
+    } catch (err) {
+        homepageSettings = {};
+    }
+}
+
+function applySettings() {
+    document.getElementById('heroVisible').checked = homepageSettings.hero_visible !== false;
+    document.getElementById('categoriesVisible').checked = homepageSettings.categories_visible !== false;
+    document.getElementById('productsVisible').checked = homepageSettings.products_visible !== false;
+    document.getElementById('promoVisible').checked = homepageSettings.promo_visible !== false;
+    document.getElementById('testimonialsVisible').checked = homepageSettings.testimonials_visible !== false;
+    document.getElementById('newsletterVisible').checked = homepageSettings.newsletter_visible !== false;
+    document.getElementById('blogVisible').checked = homepageSettings.blog_visible !== false;
+
+    if (homepageSettings.promo) {
+        const p = homepageSettings.promo;
+        document.getElementById('promoImageUrl').value = p.image_url || '';
+        document.getElementById('promoLink').value = p.link || '';
+        document.getElementById('promoHeadline').value = p.headline || '';
+        document.getElementById('promoSubtext').value = p.subtext || '';
+        document.getElementById('promoBtnText').value = p.button_text || '';
+        document.getElementById('promoBgColor').value = p.bg_color || '#F2660F';
+        updatePromoPreview();
+    }
+    if (homepageSettings.newsletter) {
+        const n = homepageSettings.newsletter;
+        document.getElementById('newsletterHeadline').value = n.headline || 'Stay Updated';
+        document.getElementById('newsletterDescription').value = n.description || '';
+        document.getElementById('newsletterPlaceholder').value = n.placeholder || 'Enter your email address';
+        document.getElementById('newsletterBtnText').value = n.button_text || 'Subscribe';
+    }
+}
+
+async function saveAllChanges() {
+    const btn = document.getElementById('saveAllBtn');
+    const overlay = document.getElementById('loadingOverlay');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+    overlay.style.display = 'flex';
+
+    const settings = {
+        hero_visible: document.getElementById('heroVisible').checked,
+        categories_visible: document.getElementById('categoriesVisible').checked,
+        products_visible: document.getElementById('productsVisible').checked,
+        promo_visible: document.getElementById('promoVisible').checked,
+        testimonials_visible: document.getElementById('testimonialsVisible').checked,
+        newsletter_visible: document.getElementById('newsletterVisible').checked,
+        blog_visible: document.getElementById('blogVisible').checked,
+        featured_category_ids: homepageSettings.featured_category_ids || [],
+        featured_product_ids: homepageSettings.featured_product_ids || [],
+        featured_blog_ids: homepageSettings.featured_blog_ids || [],
+        promo: {
+            image_url: document.getElementById('promoImageUrl').value.trim(),
+            link: document.getElementById('promoLink').value.trim(),
+            headline: document.getElementById('promoHeadline').value.trim(),
+            subtext: document.getElementById('promoSubtext').value.trim(),
+            button_text: document.getElementById('promoBtnText').value.trim(),
+            bg_color: document.getElementById('promoBgColor').value
+        },
+        newsletter: {
+            headline: document.getElementById('newsletterHeadline').value.trim(),
+            description: document.getElementById('newsletterDescription').value.trim(),
+            placeholder: document.getElementById('newsletterPlaceholder').value.trim(),
+            button_text: document.getElementById('newsletterBtnText').value.trim()
+        }
+    };
+
+    try {
+        const res = await fetch(SETTINGS_API, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ homepage: settings })
+        });
+        if (!res.ok) throw new Error('Failed to save settings');
+        showToast('All homepage settings saved successfully!');
+    } catch (err) {
+        showToast('Error saving settings: ' + err.message, 'error');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save All Changes';
+    overlay.style.display = 'none';
+}
+
+function escHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function initDragAndDrop() {
+    const container = document.getElementById('sectionsContainer');
+    let dragEl = null;
+
+    container.addEventListener('dragstart', (e) => {
+        const card = e.target.closest('.section-card');
+        if (!card) return;
+        dragEl = card;
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', '');
+    });
+
+    container.addEventListener('dragend', (e) => {
+        const card = e.target.closest('.section-card');
+        if (card) card.classList.remove('dragging');
+        dragEl = null;
+        document.querySelectorAll('.section-card').forEach(c => c.style.borderTop = '');
+    });
+
+    container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const card = e.target.closest('.section-card');
+        if (!card || card === dragEl) return;
+        const rect = card.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        document.querySelectorAll('.section-card').forEach(c => c.style.borderTop = '');
+        if (e.clientY < midY) {
+            card.style.borderTop = '2px solid var(--primary-orange)';
+        } else {
+            card.style.borderTop = '';
+        }
+    });
+
+    container.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (!dragEl) return;
+        const card = e.target.closest('.section-card');
+        if (!card || card === dragEl) return;
+        const rect = card.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        if (e.clientY < midY) {
+            container.insertBefore(dragEl, card);
+        } else {
+            container.insertBefore(dragEl, card.nextSibling);
+        }
+        document.querySelectorAll('.section-card').forEach(c => c.style.borderTop = '');
+        showToast('Section order updated. Click Save to persist.', 'info');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadSettings();
+    loadBanners();
+    loadTestimonials();
+    loadCategories();
+    loadProducts();
+    loadBlogPosts();
+    initDragAndDrop();
+});
+</script>
+{% endblock %}

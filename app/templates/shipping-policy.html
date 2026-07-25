@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block title %}Shipping Policy{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="position-relative" style="background: linear-gradient(rgba(18,16,16,0.85), rgba(18,16,16,0.95)), url('{{ url_for("static", filename="images/hero_bg.png") }}') center/cover no-repeat; padding: 120px 0 60px;">
+    <div class="container position-relative" style="z-index: 2;">
+        <div class="text-center" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">ASAH'S PRIMENEST</span>
+            <h1 class="display-4 fw-bold text-white mt-3">Shipping Policy</h1>
+            <nav aria-label="breadcrumb" class="mt-3">
+                <ol class="breadcrumb justify-content-center mb-0">
+                    <li class="breadcrumb-item"><a href="/" class="text-warm-gray text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item active text-primary-orange" aria-current="page">Shipping Policy</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+</section>
+
+<!-- Shipping Policy Content -->
+<section class="py-5" style="background-color: var(--dark-bg);">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8" data-aos="fade-up">
+                <p class="text-warm-gray mb-4" style="font-size: 1.05rem; line-height: 1.8;">
+                    At Asah's Primenest, we are committed to delivering your orders safely and promptly. Below you will find detailed information about our shipping options, delivery timeframes, and associated costs.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Delivery Timeframes -->
+<section class="py-5" style="background-color: #0a0909;">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">When Will I Get It?</span>
+            <h2 class="text-white mt-3">Delivery Timeframes</h2>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="card card-custom p-4 h-100 text-center feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-geo-alt text-primary-orange fs-1"></i>
+                        </div>
+                    </div>
+                    <h5 class="text-white fw-bold">Greater Accra</h5>
+                    <p class="text-primary-orange fw-bold mb-2">1 – 2 Business Days</p>
+                    <p class="text-warm-gray small mb-0">Fast and reliable delivery for customers within the Greater Accra Region.</p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="card card-custom p-4 h-100 text-center feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-map text-primary-orange fs-1"></i>
+                        </div>
+                    </div>
+                    <h5 class="text-white fw-bold">Other Regions</h5>
+                    <p class="text-primary-orange fw-bold mb-2">3 – 5 Business Days</p>
+                    <p class="text-warm-gray small mb-0">Delivery to Ashanti, Western, Central, Eastern, and all other regional capitals.</p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="300">
+                <div class="card card-custom p-4 h-100 text-center feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-pin-map text-primary-orange fs-1"></i>
+                        </div>
+                    </div>
+                    <h5 class="text-white fw-bold">Remote Areas</h5>
+                    <p class="text-primary-orange fw-bold mb-2">5 – 7 Business Days</p>
+                    <p class="text-warm-gray small mb-0">Delivery to rural and hard-to-reach areas across all regions in Ghana.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Shipping Fees -->
+<section class="py-5" style="background-color: var(--dark-bg);">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Transparent Pricing</span>
+            <h2 class="text-white mt-3">Shipping Fees</h2>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-5" data-aos="fade-right">
+                <div class="card card-custom p-5 h-100">
+                    <div class="d-flex align-items-start">
+                        <div class="me-3 mt-1"><i class="bi bi-truck text-primary-orange fs-1"></i></div>
+                        <div>
+                            <h5 class="text-white fw-bold">Standard Shipping</h5>
+                            <p class="text-primary-orange fw-bold fs-4 mb-2">GHS 25 – GHS 50</p>
+                            <p class="text-warm-gray mb-0">Shipping fees vary depending on your delivery location and the size of your order. The exact fee will be calculated at checkout.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-5" data-aos="fade-left">
+                <div class="card card-custom p-5 h-100" style="border: 1px solid rgba(242,102,15,0.3) !important;">
+                    <div class="d-flex align-items-start">
+                        <div class="me-3 mt-1"><i class="bi bi-gift text-primary-orange fs-1"></i></div>
+                        <div>
+                            <h5 class="text-white fw-bold">Free Shipping</h5>
+                            <p class="text-primary-orange fw-bold fs-4 mb-2">Orders Over GHS 500</p>
+                            <p class="text-warm-gray mb-0">Enjoy free delivery on all orders totaling GHS 500 or more. No promo code needed — it's automatically applied at checkout.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Order Processing -->
+<section class="py-5" style="background-color: #0a0909;">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Quick Turnaround</span>
+            <h2 class="text-white mt-3">Order Processing</h2>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-8" data-aos="fade-up">
+                <div class="card card-custom p-5">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 mt-1"><i class="bi bi-clock-history text-primary-orange fs-3"></i></div>
+                                <div>
+                                    <h6 class="text-white fw-bold">Same-Day Processing</h6>
+                                    <p class="text-warm-gray small mb-0">Orders placed before <strong class="text-primary-orange">2:00 PM</strong> on business days are processed and dispatched the same day.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 mt-1"><i class="bi bi-calendar-check text-primary-orange fs-3"></i></div>
+                                <div>
+                                    <h6 class="text-white fw-bold">Next Business Day</h6>
+                                    <p class="text-warm-gray small mb-0">Orders placed after 2:00 PM or on weekends/public holidays will be processed on the next business day.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 mt-1"><i class="bi bi-box-seam text-primary-orange fs-3"></i></div>
+                                <div>
+                                    <h6 class="text-white fw-bold">Verification</h6>
+                                    <p class="text-warm-gray small mb-0">All orders go through a brief verification process to ensure accuracy before dispatch.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 mt-1"><i class="bi bi-telephone-forward text-primary-orange fs-3"></i></div>
+                                <div>
+                                    <h6 class="text-white fw-bold">Confirmation Call</h6>
+                                    <p class="text-warm-gray small mb-0">For large orders, our team may contact you to confirm details before processing.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Payment Methods -->
+<section class="py-5" style="background-color: var(--dark-bg);">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Flexible Options</span>
+            <h2 class="text-white mt-3">Accepted Payment Methods</h2>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <i class="bi bi-phone text-primary-orange" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h6 class="text-white fw-bold">Mobile Money</h6>
+                    <p class="text-warm-gray small mb-0">MTN, Vodafone, AirtelTigo</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <i class="bi bi-bank text-primary-orange" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h6 class="text-white fw-bold">Bank Transfer</h6>
+                    <p class="text-warm-gray small mb-0">Direct bank-to-bank payments</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <i class="bi bi-credit-card text-primary-orange" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h6 class="text-white fw-bold">Card Payment</h6>
+                    <p class="text-warm-gray small mb-0">Credit & Debit Cards</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="400">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <i class="bi bi-cash-stack text-primary-orange" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h6 class="text-white fw-bold">Cash on Delivery</h6>
+                    <p class="text-warm-gray small mb-0">Pay when you receive</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Order Tracking & Damaged Packages -->
+<section class="py-5" style="background-color: #0a0909;">
+    <div class="container py-5">
+        <div class="row g-5">
+            <div class="col-lg-6" data-aos="fade-right">
+                <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Stay Informed</span>
+                <h3 class="text-white mt-2 mb-4">Order Tracking</h3>
+                <div class="card card-custom p-4">
+                    <div class="d-flex align-items-start">
+                        <div class="me-3 mt-1"><i class="bi bi-search text-primary-orange fs-3"></i></div>
+                        <div>
+                            <p class="text-warm-gray mb-3">Once your order has been dispatched, you will receive an email with your tracking number. You can track your order at any time using:</p>
+                            <ul class="text-warm-gray mb-0" style="list-style: none; padding-left: 0;">
+                                <li class="mb-2"><i class="bi bi-check2-circle text-primary-orange me-2"></i>Your order number on our <a href="/order-tracking" class="text-primary-orange text-decoration-none fw-bold">Order Tracking</a> page</li>
+                                <li class="mb-2"><i class="bi bi-check2-circle text-primary-orange me-2"></i>The tracking link in your dispatch email</li>
+                                <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>By contacting our support team directly</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6" data-aos="fade-left">
+                <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">We've Got You Covered</span>
+                <h3 class="text-white mt-2 mb-4">Damaged Packages</h3>
+                <div class="card card-custom p-4">
+                    <div class="d-flex align-items-start">
+                        <div class="me-3 mt-1"><i class="bi bi-shield-exclamation text-primary-orange fs-3"></i></div>
+                        <div>
+                            <p class="text-warm-gray mb-3">We take great care in packaging your orders. However, if your package arrives damaged, please follow these steps:</p>
+                            <ul class="text-warm-gray mb-0" style="list-style: none; padding-left: 0;">
+                                <li class="mb-2"><i class="bi bi-1-circle text-primary-orange me-2"></i>Do not discard the packaging — keep all materials</li>
+                                <li class="mb-2"><i class="bi bi-2-circle text-primary-orange me-2"></i>Take clear photos of the damage</li>
+                                <li class="mb-2"><i class="bi bi-3-circle text-primary-orange me-2"></i>Contact us within 48 hours of delivery</li>
+                                <li><i class="bi bi-4-circle text-primary-orange me-2"></i>We'll arrange a replacement or full refund</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Important Notes -->
+<section class="py-5" style="background-color: var(--dark-bg);">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Please Note</span>
+            <h2 class="text-white mt-3">Important Information</h2>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-8" data-aos="fade-up">
+                <div class="card card-custom p-5">
+                    <ul class="text-warm-gray mb-0" style="list-style: none; padding-left: 0; line-height: 2;">
+                        <li><i class="bi bi-info-circle text-primary-orange me-2"></i>Delivery times may be affected during public holidays and festive seasons.</li>
+                        <li><i class="bi bi-info-circle text-primary-orange me-2"></i>Ensure your delivery address and phone number are correct to avoid delays.</li>
+                        <li><i class="bi bi-info-circle text-primary-orange me-2"></i>Our delivery partners will contact you before delivery to confirm availability.</li>
+                        <li><i class="bi bi-info-circle text-primary-orange me-2"></i>For bulk or heavy item orders, additional delivery arrangements may apply.</li>
+                        <li><i class="bi bi-info-circle text-primary-orange me-2"></i>Orders placed on weekends or public holidays will be processed the next business day.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="py-5" style="background: linear-gradient(135deg, var(--primary-orange), #d1560c);">
+    <div class="container py-5 text-center" data-aos="fade-up">
+        <h2 class="text-white fw-bold mb-3">Have a Delivery Question?</h2>
+        <p class="text-white mb-4" style="opacity:0.9; max-width:500px; margin:0 auto;">Our support team is ready to help with any shipping or delivery concerns you may have.</p>
+        <a href="/contact" class="btn btn-light btn-lg px-5 fw-bold">CONTACT US</a>
+    </div>
+</section>
+
+<style>
+    .feature-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+</style>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}{{ category.name }} - Asah's Primenest{% endblock %}
+
+{% block content %}
+<section class="py-5" style="background:var(--darker-bg)">
+    <div class="container py-4">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb" style="background:none;padding:0;margin:0">
+                <li class="breadcrumb-item"><a href="/" class="text-warm-gray text-decoration-none">Home</a></li>
+                <li class="breadcrumb-item"><a href="/categories" class="text-warm-gray text-decoration-none">Categories</a></li>
+                <li class="breadcrumb-item active" style="color:var(--primary-orange)">{{ category.name }}</li>
+            </ol>
+        </nav>
+
+        <div class="category-hero mb-5" style="border-radius:16px;overflow:hidden;position:relative;min-height:260px">
+            <img src="{{ category.image }}" style="width:100%;height:260px;object-fit:cover;display:block;filter:brightness(.45)">
+            <div style="position:absolute;bottom:0;left:0;right:0;padding:2rem">
+                <h1 style="font-size:2rem;font-weight:800;margin-bottom:.3rem">{{ category.name }}</h1>
+                <p style="color:var(--warm-gray);margin:0;font-size:1rem;max-width:500px">{{ category.description }}</p>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <h5 class="mb-3" style="font-size:.95rem;color:var(--warm-gray)">Subcategories</h5>
+            <div class="d-flex flex-wrap gap-2">
+                {% for sub in category.subcategories %}
+                <span class="category-tag">{{ sub }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0" style="font-size:1.15rem">Products in {{ category.name }}</h3>
+            <span class="text-warm-gray" style="font-size:.85rem">{{ products|length }} items</span>
+        </div>
+
+        {% if products %}
+        <div class="row g-3 g-md-4">
+            {% for p in products %}
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="product-card h-100">
+                    <div class="product-card-img-wrap">
+                        {% if p.discount_price and p.discount_price < p.price %}
+                            <span class="product-badge">-{{ ((1 - p.discount_price / p.price) * 100)|int }}%</span>
+                        {% endif %}
+                        <div class="product-actions">
+                            <button class="product-action-btn" onclick="addToWishlist({{ p.id }})" title="Add to Wishlist">
+                                <i class="bi bi-heart"></i>
+                            </button>
+                            <a href="/product/{{ p.slug }}" class="product-action-btn" title="Quick View">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </div>
+                        {% if p.image %}
+                            <img src="{{ p.image }}" class="product-card-img" alt="{{ p.name }}">
+                        {% else %}
+                            <div class="product-card-img d-flex align-items-center justify-content-center" style="background:rgba(255,255,255,.02);color:rgba(255,255,255,.15);font-size:2rem">
+                                <i class="bi bi-box-seam"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="product-card-body">
+                        <div class="product-card-category">{{ p.category }}</div>
+                        <a href="/product/{{ p.slug }}" class="text-decoration-none">
+                            <h6 class="product-card-name">{{ p.name }}</h6>
+                        </a>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="product-card-price">
+                                {% if p.discount_price and p.discount_price < p.price %}
+                                    <span class="price-current">GHS {{ "%.2f"|format(p.discount_price) }}</span>
+                                    <span class="price-original">GHS {{ "%.2f"|format(p.price) }}</span>
+                                {% else %}
+                                    <span class="price-current">GHS {{ "%.2f"|format(p.price) }}</span>
+                                {% endif %}
+                            </div>
+                            <button class="product-add-btn" onclick="addToCart({{ p.id }})" title="Add to Cart">
+                                <i class="bi bi-cart-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="bi bi-box-seam"></i></div>
+            <h5 class="text-white">No products yet</h5>
+            <p class="text-warm-gray">Products in this category will appear here once added.</p>
+            <a href="/shop" class="btn btn-primary mt-2">Browse All Products</a>
+        </div>
+        {% endif %}
+
+        <div class="mt-5 pt-4" style="border-top:1px solid var(--border-color)">
+            <h4 class="mb-3">Other Categories</h4>
+            <div class="row g-3">
+                {% for c in all_categories if c.slug != category.slug %}
+                {% if loop.index <= 4 %}
+                <div class="col-6 col-md-3">
+                    <a href="/categories/{{ c.slug }}" class="text-decoration-none">
+                        <div class="category-card" style="min-height:160px">
+                            <img src="{{ c.image }}" class="category-card-img" alt="{{ c.name }}">
+                            <div class="category-card-overlay" style="justify-content:flex-end;padding:1rem">
+                                <div class="category-card-title text-white" style="font-size:.9rem">{{ c.name }}</div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function addToCart(productId) {
+    const token = localStorage.getItem('token');
+    if (!token) { window.location.href = '/login'; return; }
+    try {
+        const resp = await fetch('/api/cart/items', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+            body: JSON.stringify({product_id: productId, quantity: 1})
+        });
+        if (resp.ok) {
+            if (typeof updateCartCount === 'function') updateCartCount();
+            showToast('Added to cart! <a href="/cart" style="color:#fff;text-decoration:underline;margin-left:6px">View Cart</a>', 'success');
+        }
+        else { const err = await resp.json().catch(() => ({})); showToast(err.detail || 'Failed', 'error'); }
+    } catch(e) { showToast('Network error', 'error'); }
+}
+async function addToWishlist(productId) {
+    const token = localStorage.getItem('token');
+    if (!token) { window.location.href = '/login'; return; }
+    try {
+        const resp = await fetch('/api/wishlists', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+            body: JSON.stringify({product_id: productId})
+        });
+        if (resp.ok) {
+            showToast('Added to wishlist!', 'success');
+            const btn = document.querySelector('button[onclick="addToWishlist(' + productId + ')"] i');
+            if (btn) { btn.classList.remove('bi-heart'); btn.classList.add('bi-heart-fill'); }
+        } else {
+            const err = await resp.json().catch(() => ({}));
+            if (resp.status === 400) showToast(err.detail || 'Already in wishlist', 'warning');
+            else if (resp.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; }
+            else showToast(err.detail || 'Failed to add to wishlist', 'error');
+        }
+    } catch(e) { showToast('Network error', 'error'); }
+}
+function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;padding:12px 20px;border-radius:10px;color:#fff;font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.3);animation:fadeIn .3s ease;max-width:380px';
+    t.style.background = type === 'success' ? 'linear-gradient(135deg,#198754,#157347)' : 'linear-gradient(135deg,#dc3545,#bb2d3b)';
+    t.innerHTML = '<i class="bi bi-' + (type === 'success' ? 'check-circle-fill' : 'exclamation-circle-fill') + '"></i><span>' + msg + '</span>';
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 4000);
+}
+</script>
+{% endblock %}

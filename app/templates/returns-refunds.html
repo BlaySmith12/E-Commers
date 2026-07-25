@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}Returns & Refunds{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="position-relative" style="background: linear-gradient(rgba(18,16,16,0.85), rgba(18,16,16,0.95)), url('{{ url_for("static", filename="images/hero_bg.png") }}') center/cover no-repeat; padding: 120px 0 60px;">
+    <div class="container position-relative" style="z-index: 2;">
+        <div class="text-center" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">ASAH'S PRIMENEST</span>
+            <h1 class="display-4 fw-bold text-white mt-3">Returns & Refunds</h1>
+            <nav aria-label="breadcrumb" class="mt-3">
+                <ol class="breadcrumb justify-content-center mb-0">
+                    <li class="breadcrumb-item"><a href="/" class="text-warm-gray text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item active text-primary-orange" aria-current="page">Returns & Refunds</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+</section>
+
+<!-- Overview -->
+<section class="py-5" style="background-color: var(--dark-bg);">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center" data-aos="fade-up">
+                <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Hassle-Free Returns</span>
+                <h2 class="text-white mt-3 mb-4">Our Return Promise</h2>
+                <p class="text-warm-gray" style="font-size: 1.05rem; line-height: 1.8;">
+                    We want you to be completely satisfied with your purchase. If for any reason you're not happy with your order, we offer a straightforward <strong class="text-primary-orange">14-day return policy</strong> to make things right.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Return Policy -->
+<section class="py-5" style="background-color: #0a0909;">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">What You Need to Know</span>
+            <h2 class="text-white mt-3">Return Policy Details</h2>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-6" data-aos="fade-up" data-aos-delay="100">
+                <div class="card card-custom p-5 h-100">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="me-3 mt-1"><i class="bi bi-check-circle text-primary-orange fs-1"></i></div>
+                        <div>
+                            <h5 class="text-white fw-bold">Eligible Products</h5>
+                        </div>
+                    </div>
+                    <p class="text-warm-gray mb-3">To be eligible for a return, your item must meet all of the following conditions:</p>
+                    <ul class="text-warm-gray mb-0" style="list-style: none; padding-left: 0; line-height: 2.2;">
+                        <li><i class="bi bi-check2 text-primary-orange me-2"></i>Returned within 14 days of delivery</li>
+                        <li><i class="bi bi-check2 text-primary-orange me-2"></i>Unused and in original condition</li>
+                        <li><i class="bi bi-check2 text-primary-orange me-2"></i>In original, undamaged packaging</li>
+                        <li><i class="bi bi-check2 text-primary-orange me-2"></i>With proof of purchase (receipt or order confirmation)</li>
+                        <li><i class="bi bi-check2 text-primary-orange me-2"></i>All tags and labels still attached</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-6" data-aos="fade-up" data-aos-delay="200">
+                <div class="card card-custom p-5 h-100">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="me-3 mt-1"><i class="bi bi-x-circle text-primary-orange fs-1"></i></div>
+                        <div>
+                            <h5 class="text-white fw-bold">Non-Returnable Products</h5>
+                        </div>
+                    </div>
+                    <p class="text-warm-gray mb-3">The following items cannot be returned or refunded:</p>
+                    <ul class="text-warm-gray mb-0" style="list-style: none; padding-left: 0; line-height: 2.2;">
+                        <li><i class="bi bi-x-lg text-danger me-2"></i>Custom-made or personalized orders</li>
+                        <li><i class="bi bi-x-lg text-danger me-2"></i>Clearance or final sale items</li>
+                        <li><i class="bi bi-x-lg text-danger me-2"></i>Opened hygiene products (toiletries, sanitizers)</li>
+                        <li><i class="bi bi-x-lg text-danger me-2"></i>Perishable goods</li>
+                        <li><i class="bi bi-x-lg text-danger me-2"></i>Items damaged by customer misuse</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Return Process -->
+<section class="py-5" style="background-color: var(--dark-bg);">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Easy Steps</span>
+            <h2 class="text-white mt-3">How to Request a Return</h2>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <span class="text-primary-orange fw-bold fs-2">1</span>
+                        </div>
+                    </div>
+                    <h6 class="text-white fw-bold">Contact Us</h6>
+                    <p class="text-warm-gray small mb-0">Email <strong class="text-primary-orange">support@asahsprimenest.com</strong> or call us to initiate your return request.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <span class="text-primary-orange fw-bold fs-2">2</span>
+                        </div>
+                    </div>
+                    <h6 class="text-white fw-bold">Get Authorization</h6>
+                    <p class="text-warm-gray small mb-0">Our team will review your request and provide you with a Return Merchandise Authorization (RMA) number.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <span class="text-primary-orange fw-bold fs-2">3</span>
+                        </div>
+                    </div>
+                    <h6 class="text-white fw-bold">Pack & Ship</h6>
+                    <p class="text-warm-gray small mb-0">Pack the item securely in its original packaging and drop it off at the designated collection point or schedule a pickup.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="400">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <span class="text-primary-orange fw-bold fs-2">4</span>
+                        </div>
+                    </div>
+                    <h6 class="text-white fw-bold">Receive Refund</h6>
+                    <p class="text-warm-gray small mb-0">Once we receive and inspect your return, your refund will be processed within 5–10 business days.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Refund & Exchange -->
+<section class="py-5" style="background-color: #0a0909;">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Getting Your Money Back</span>
+            <h2 class="text-white mt-3">Refunds & Exchanges</h2>
+        </div>
+        <div class="row g-4">
+            <div class="col-lg-6" data-aos="fade-right">
+                <div class="card card-custom p-5 h-100">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="me-3 mt-1"><i class="bi bi-arrow-return-left text-primary-orange fs-1"></i></div>
+                        <div>
+                            <h5 class="text-white fw-bold">Refund Policy</h5>
+                        </div>
+                    </div>
+                    <ul class="text-warm-gray mb-0" style="list-style: none; padding-left: 0; line-height: 2.2;">
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>Refunds are processed within <strong class="text-primary-orange">5–10 business days</strong> after we receive the returned item</li>
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>Refunds are issued to the original payment method used at checkout</li>
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>Mobile Money refunds are sent directly to your registered number</li>
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>Bank transfer refunds may take an additional 2–3 business days to appear</li>
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>You will receive an email confirmation when your refund has been processed</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-lg-6" data-aos="fade-left">
+                <div class="card card-custom p-5 h-100">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="me-3 mt-1"><i class="bi bi-arrow-left-right text-primary-orange fs-1"></i></div>
+                        <div>
+                            <h5 class="text-white fw-bold">Exchange Policy</h5>
+                        </div>
+                    </div>
+                    <ul class="text-warm-gray mb-0" style="list-style: none; padding-left: 0; line-height: 2.2;">
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>Exchanges are available for items of equal or lesser value</li>
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>If the replacement item costs more, you'll be charged the difference</li>
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>If it costs less, the difference will be refunded to your account</li>
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>Exchanges are subject to product availability</li>
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>Contact us within 14 days of delivery to initiate an exchange</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Damaged Products & Cancellation -->
+<section class="py-5" style="background-color: var(--dark-bg);">
+    <div class="container py-5">
+        <div class="row g-5">
+            <div class="col-lg-6" data-aos="fade-right">
+                <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Quality Guarantee</span>
+                <h3 class="text-white mt-2 mb-4">Damaged or Defective Products</h3>
+                <div class="card card-custom p-4">
+                    <div class="d-flex align-items-start">
+                        <div class="me-3 mt-1"><i class="bi bi-shield-exclamation text-primary-orange fs-3"></i></div>
+                        <div>
+                            <p class="text-warm-gray mb-3">If you receive a damaged or defective product, we will make it right. Follow these steps:</p>
+                            <ul class="text-warm-gray mb-0" style="list-style: none; padding-left: 0;">
+                                <li class="mb-2"><i class="bi bi-1-circle text-primary-orange me-2"></i>Document the damage with clear photos immediately</li>
+                                <li class="mb-2"><i class="bi bi-2-circle text-primary-orange me-2"></i>Contact us within 48 hours with your order number</li>
+                                <li class="mb-2"><i class="bi bi-3-circle text-primary-orange me-2"></i>We'll arrange a free return pickup or send a replacement</li>
+                                <li><i class="bi bi-4-circle text-primary-orange me-2"></i>No return shipping cost for defective items</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6" data-aos="fade-left">
+                <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Changed Your Mind?</span>
+                <h3 class="text-white mt-2 mb-4">Order Cancellation Policy</h3>
+                <div class="card card-custom p-4">
+                    <div class="d-flex align-items-start">
+                        <div class="me-3 mt-1"><i class="bi bi-x-octagon text-primary-orange fs-3"></i></div>
+                        <div>
+                            <p class="text-warm-gray mb-3">You may cancel your order under the following conditions:</p>
+                            <ul class="text-warm-gray mb-0" style="list-style: none; padding-left: 0;">
+                                <li class="mb-2"><i class="bi bi-check2-circle text-primary-orange me-2"></i><strong class="text-white">Before processing:</strong> Full refund, no questions asked</li>
+                                <li class="mb-2"><i class="bi bi-check2-circle text-primary-orange me-2"></i><strong class="text-white">During processing:</strong> Contact us immediately; cancellation may still be possible</li>
+                                <li class="mb-2"><i class="bi bi-x-circle text-danger me-2"></i><strong class="text-white">After dispatch:</strong> Order cannot be cancelled; use our return process instead</li>
+                                <li><i class="bi bi-info-circle text-primary-orange me-2"></i>To cancel, email us or call during business hours</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="py-5" style="background: linear-gradient(135deg, var(--primary-orange), #d1560c);">
+    <div class="container py-5 text-center" data-aos="fade-up">
+        <h2 class="text-white fw-bold mb-3">Need to Return an Item?</h2>
+        <p class="text-white mb-4" style="opacity:0.9; max-width:500px; margin:0 auto;">Our support team is here to help you with returns, refunds, and exchanges.</p>
+        <a href="/contact" class="btn btn-light btn-lg px-5 fw-bold">REQUEST A RETURN</a>
+    </div>
+</section>
+
+<style>
+    .feature-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+</style>
+{% endblock %}

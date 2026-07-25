@@ -1,0 +1,670 @@
+{% extends "admin_base.html" %}
+{% block head %}
+<style>
+.form-section{margin-bottom:0}
+.form-section-header{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:all .2s}
+.form-section-header:hover{background:rgba(255,255,255,.02)}
+.form-section-header h6{margin:0;font-weight:600;font-size:.9rem}
+.form-section-header i.bi-chevron-down{transition:transform .2s;font-size:.75rem;color:var(--text-muted)}
+.form-section-header.collapsed i.bi-chevron-down{transform:rotate(-90deg)}
+.form-section-body{padding:20px;transition:all .25s}
+.form-section-body.collapsed{display:none}
+.preview-img{width:120px;height:120px;object-fit:cover;border-radius:10px;border:2px dashed var(--border-color);transition:all .2s}
+.preview-img:hover{border-color:var(--primary-orange)}
+.image-slot{position:relative;display:inline-block;margin:6px}
+.image-slot .remove-img{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:#dc3545;border:none;color:#fff;font-size:.65rem;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .2s}
+.image-slot:hover .remove-img{opacity:1}
+.variant-row,.attribute-row{background:rgba(255,255,255,.02);border:1px solid var(--border-color);border-radius:10px;padding:14px;margin-bottom:10px;position:relative}
+.variant-row .remove-btn,.attribute-row .remove-btn{position:absolute;top:10px;right:10px}
+.sidebar-card{background:rgba(255,255,255,.02);border:1px solid var(--border-color);border-radius:12px;overflow:hidden}
+.sidebar-card-header{padding:14px 18px;border-bottom:1px solid var(--border-color);font-weight:600;font-size:.85rem;display:flex;align-items:center;gap:8px}
+.sidebar-card-body{padding:18px}
+.toggle-switch{width:42px;height:22px;background:var(--border-color);border-radius:11px;position:relative;cursor:pointer;transition:all .2s}
+.toggle-switch.active{background:var(--primary-orange)}
+.toggle-switch::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:all .2s}
+.toggle-switch.active::after{left:22px}
+.breadcrumb-custom{background:none;padding:0;margin:0 0 16px 0}
+.breadcrumb-custom .breadcrumb-item{color:var(--text-muted);font-size:.82rem}
+.breadcrumb-custom .breadcrumb-item a{color:var(--primary-orange);text-decoration:none}
+.breadcrumb-custom .breadcrumb-item.active{color:var(--text-muted)}
+.toast-container{position:fixed;top:84px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast-item{padding:12px 20px;border-radius:10px;font-size:.85rem;font-weight:500;color:#fff;min-width:280px;max-width:400px;display:flex;align-items:center;gap:10px;animation:slideInRight .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.toast-success{background:linear-gradient(135deg,#198754,#157347)}
+.toast-error{background:linear-gradient(135deg,#dc3545,#bb2d3b)}
+.toast-info{background:linear-gradient(135deg,#0d6efd,#0b5ed7)}
+@keyframes slideInRight{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.spinner-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(18,16,16,.8);display:flex;align-items:center;justify-content:center;z-index:100;border-radius:12px}
+.spinner-border-custom{width:2.5rem;height:2.5rem;border-width:3px;border-color:var(--primary-orange);border-top-color:transparent}
+.required-dot{color:#dc3545;font-size:.6rem;vertical-align:super}
+.form-label-custom{font-size:.83rem;color:var(--text-muted);margin-bottom:6px;font-weight:500}
+.slug-preview{background:rgba(255,255,255,.04);border:1px solid var(--border-color);border-radius:8px;padding:8px 12px;font-size:.8rem;color:var(--primary-orange);word-break:break-all}
+@media(max-width:992px){.form-layout{flex-direction:column!important}}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="breadcrumb-custom">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/admin">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="/admin/products">Products</a></li>
+        <li class="breadcrumb-item active">Add Product</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">Add New Product</h3>
+        <p class="text-muted mb-0 small">Create a new product and add it to your catalog.</p>
+    </div>
+    <a href="/admin/products" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back to Products</a>
+</div>
+
+<div class="d-flex gap-4 form-layout" style="position:relative">
+    <!-- Loading Spinner -->
+    <div class="spinner-overlay" id="mainSpinner" style="display:none">
+        <div class="spinner-border spinner-border-custom"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-grow-1" style="min-width:0">
+        <!-- General Section -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-info-circle text-primary-orange"></i>
+                <h6>General</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label-custom">Product Name <span class="required-dot">*</span></label>
+                        <input type="text" class="form-control bg-dark text-light border-secondary" id="fName" required placeholder="e.g. Premium Stainless Steel Kettle" oninput="autoSlug()">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-custom">SKU <span class="required-dot">*</span></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="fSku" required placeholder="e.g. KTL-001">
+                            <button class="btn btn-outline-secondary btn-sm" type="button" onclick="generateSKU()" title="Auto-generate SKU"><i class="bi bi-arrow-clockwise"></i></button>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label-custom">Description</label>
+                        <textarea class="form-control bg-dark text-light border-secondary" id="fDesc" rows="4" placeholder="Product description (HTML supported)"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label-custom">URL Slug</label>
+                        <div class="slug-preview" id="slugPreview">—</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label-custom">Status</label>
+                        <div class="d-flex gap-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="status" id="statusActive" value="active" checked>
+                                <label class="form-check-label text-light" for="statusActive" style="font-size:.85rem">Active</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="status" id="statusDraft" value="draft">
+                                <label class="form-check-label text-light" for="statusDraft" style="font-size:.85rem">Draft</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="status" id="statusArchived" value="archived">
+                                <label class="form-check-label text-light" for="statusArchived" style="font-size:.85rem">Archived</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pricing Section -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-tag text-primary-orange"></i>
+                <h6>Pricing</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label-custom">Price (GHS) <span class="required-dot">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-muted" style="font-size:.85rem">GHS</span>
+                            <input type="number" step="0.01" min="0.01" class="form-control bg-dark text-light border-secondary" id="fPrice" required placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-custom">Discount Price (GHS)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-muted" style="font-size:.85rem">GHS</span>
+                            <input type="number" step="0.01" min="0" class="form-control bg-dark text-light border-secondary" id="fDiscPrice" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-custom">Tax Class</label>
+                        <select class="form-select bg-dark text-light border-secondary" id="fTaxClass">
+                            <option value="">No Tax</option>
+                            <option value="standard">Standard (15%)</option>
+                            <option value="reduced">Reduced (3%)</option>
+                            <option value="zero">Zero-rated (0%)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Section -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-box-seam text-primary-orange"></i>
+                <h6>Inventory</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label-custom">Stock Quantity <span class="required-dot">*</span></label>
+                        <input type="number" min="0" class="form-control bg-dark text-light border-secondary" id="fStock" required value="0">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label-custom">Low Stock Threshold</label>
+                        <input type="number" min="0" class="form-control bg-dark text-light border-secondary" id="fLowStockThreshold" value="5">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label-custom">Backorders</label>
+                        <select class="form-select bg-dark text-light border-secondary" id="fBackorders">
+                            <option value="no">Don't Allow</option>
+                            <option value="yes">Allow</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label-custom">Stock Status</label>
+                        <select class="form-select bg-dark text-light border-secondary" id="fStockStatus">
+                            <option value="in_stock">In Stock</option>
+                            <option value="out_of_stock">Out of Stock</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Images Section -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-image text-primary-orange"></i>
+                <h6>Images</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div class="mb-3">
+                    <div id="productImageUpload" style="border:2px dashed var(--border-color);border-radius:10px;padding:24px 16px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg-card);">
+                        <i class="bi bi-cloud-arrow-up" style="font-size:2rem;color:var(--primary);display:block;margin-bottom:8px;"></i>
+                        <p style="color:var(--text-secondary);font-size:0.85rem;margin:0;"><strong>Click to upload</strong> or drag & drop multiple images</p>
+                        <p style="color:var(--text-muted);font-size:0.72rem;margin:4px 0 0;">JPG, PNG, WEBP &mdash; Max 16 MB each &mdash; Select multiple files</p>
+                        <input type="file" id="productImageInput" multiple accept="image/*" style="display:none;">
+                    </div>
+                    <div id="productUploadProgress" style="display:none;margin-top:8px;">
+                        <div class="progress" style="height:4px;background:var(--bg-input);border-radius:2px;">
+                            <div class="progress-bar" style="background:var(--primary);width:0%;transition:width 0.3s;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label-custom">Or paste URL</label>
+                    <div class="input-group input-group-sm">
+                        <input type="url" class="form-control bg-dark text-light border-secondary" id="fImageUrl" placeholder="https://example.com/image.jpg" style="font-size:.82rem;">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" onclick="addImage()"><i class="bi bi-plus-lg"></i></button>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2" id="imagePreviewContainer">
+                </div>
+            </div>
+        </div>
+
+        <!-- Variants Section -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-layers text-primary-orange"></i>
+                <h6>Variants</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div id="variantsContainer"></div>
+                <button class="btn btn-sm btn-outline-secondary" type="button" onclick="addVariant()"><i class="bi bi-plus-lg me-1"></i> Add Variant</button>
+            </div>
+        </div>
+
+        <!-- Attributes Section -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-list-check text-primary-orange"></i>
+                <h6>Attributes</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div id="attributesContainer"></div>
+                <button class="btn btn-sm btn-outline-secondary" type="button" onclick="addAttribute()"><i class="bi bi-plus-lg me-1"></i> Add Attribute</button>
+            </div>
+        </div>
+
+        <!-- SEO Section -->
+        <div class="card card-custom mb-3 overflow-hidden form-section">
+            <div class="form-section-header" onclick="toggleSection(this)">
+                <i class="bi bi-search text-primary-orange"></i>
+                <h6>SEO</h6>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </div>
+            <div class="form-section-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label-custom">Meta Title</label>
+                        <input type="text" class="form-control bg-dark text-light border-secondary" id="fMetaTitle" placeholder="SEO title for search engines">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom">Meta Description</label>
+                        <textarea class="form-control bg-dark text-light border-secondary" id="fMetaDesc" rows="2" placeholder="Brief description for search results"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div style="width:340px;flex-shrink:0" class="d-flex flex-column gap-3">
+        <!-- Publish -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header"><i class="bi bi-send text-primary-orange"></i> Publish</div>
+            <div class="sidebar-card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span style="font-size:.85rem">Status</span>
+                    <span class="badge bg-success bg-opacity-25 text-success rounded-pill px-3 py-1" id="sidebarStatus">Active</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span style="font-size:.85rem">Visibility</span>
+                    <span style="font-size:.85rem;color:var(--primary-orange)">Public</span>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label-custom">Schedule Publish</label>
+                    <input type="datetime-local" class="form-control bg-dark text-light border-secondary" id="fScheduleDate">
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header"><i class="bi bi-tag text-primary-orange"></i> Category</div>
+            <div class="sidebar-card-body">
+                <select class="form-select bg-dark text-light border-secondary" id="fCategory">
+                    <option value="">Select Category</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Brand -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header"><i class="bi bi-award text-primary-orange"></i> Brand</div>
+            <div class="sidebar-card-body">
+                <select class="form-select bg-dark text-light border-secondary" id="fBrand">
+                    <option value="">Select Brand</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tags -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header"><i class="bi bi-hash text-primary-orange"></i> Tags</div>
+            <div class="sidebar-card-body">
+                <input type="text" class="form-control bg-dark text-light border-secondary" id="fTags" placeholder="e.g. kitchen, premium, sale">
+                <small class="text-muted" style="font-size:.75rem">Comma-separated tags</small>
+            </div>
+        </div>
+
+        <!-- Featured -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header"><i class="bi bi-star text-primary-orange"></i> Featured</div>
+            <div class="sidebar-card-body d-flex justify-content-between align-items-center">
+                <span style="font-size:.85rem">Mark as featured</span>
+                <div class="toggle-switch" id="toggleFeatured" onclick="this.classList.toggle('active')"></div>
+            </div>
+        </div>
+
+        <!-- Trending -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header"><i class="bi bi-fire text-primary-orange"></i> Trending</div>
+            <div class="sidebar-card-body d-flex justify-content-between align-items-center">
+                <span style="font-size:.85rem">Mark as trending</span>
+                <div class="toggle-switch" id="toggleTrending" onclick="this.classList.toggle('active')"></div>
+            </div>
+        </div>
+
+        <!-- Save Buttons -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-body d-flex flex-column gap-2">
+                <button class="btn btn-primary-custom w-100" id="saveBtn" onclick="saveProduct('active')">
+                    <i class="bi bi-check-lg me-1"></i> Save Product
+                </button>
+                <button class="btn btn-outline-secondary w-100" onclick="saveProduct('draft')">
+                    <i class="bi bi-pencil me-1"></i> Save as Draft
+                </button>
+                <a href="/admin/products" class="btn btn-outline-secondary w-100"><i class="bi bi-x-lg me-1"></i> Cancel</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+    const API_BASE = '/api';
+    let imageUrls = [];
+    let categories = [];
+    let brands = [];
+
+    document.addEventListener('DOMContentLoaded', init);
+
+    async function init() {
+        await Promise.all([loadCategories(), loadBrands()]);
+        autoSlug();
+    }
+
+    async function apiFetch(url, opts = {}) {
+        try {
+            const resp = await fetch(API_BASE + url, opts);
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({detail: resp.statusText}));
+                throw new Error(err.detail || 'Request failed');
+            }
+            return await resp.json();
+        } catch (e) {
+            showToast(e.message, 'error');
+            throw e;
+        }
+    }
+
+    async function loadCategories() {
+        try {
+            const data = await apiFetch('/admin/categories');
+            categories = data;
+            const sel = document.getElementById('fCategory');
+            data.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id; opt.textContent = c.name;
+                sel.appendChild(opt);
+            });
+        } catch(e) {}
+    }
+
+    async function loadBrands() {
+        try {
+            const data = await apiFetch('/admin/brands');
+            brands = data;
+            const sel = document.getElementById('fBrand');
+            data.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.id; opt.textContent = b.name;
+                sel.appendChild(opt);
+            });
+        } catch(e) {}
+    }
+
+    // ---- Auto-generate slug from name ----
+    window.autoSlug = function() {
+        const name = document.getElementById('fName').value;
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        document.getElementById('slugPreview').textContent = slug || '—';
+    };
+
+    // ---- Auto-generate SKU ----
+    window.generateSKU = function() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let sku = 'SKU-';
+        for (let i = 0; i < 8; i++) sku += chars.charAt(Math.floor(Math.random() * chars.length));
+        document.getElementById('fSku').value = sku;
+    };
+
+    // ---- Toggle Section ----
+    window.toggleSection = function(header) {
+        const body = header.nextElementSibling;
+        header.classList.toggle('collapsed');
+        body.classList.toggle('collapsed');
+    };
+
+    // ---- Status radio sync ----
+    document.querySelectorAll('input[name="status"]').forEach(r => {
+        r.addEventListener('change', function() {
+            const labels = {active: 'Active', draft: 'Draft', archived: 'Archived'};
+            const classes = {active: 'bg-success text-success', draft: 'bg-secondary text-secondary', archived: 'bg-danger text-danger'};
+            const badge = document.getElementById('sidebarStatus');
+            badge.textContent = labels[this.value];
+            badge.className = 'badge rounded-pill px-3 py-1 ' + classes[this.value].replace(/(\w+)/g, 'bg-opacity-25 $1').trim();
+            // Fix: set correct badge classes
+            badge.className = `badge rounded-pill px-3 py-1 bg-opacity-25 ${classes[this.value]}`;
+        });
+    });
+
+    // ---- Images ----
+    window.addImage = function() {
+        const input = document.getElementById('fImageUrl');
+        const url = input.value.trim();
+        if (!url) return;
+        if (!url.match(/^https?:\/\/.+/)) { showToast('Please enter a valid URL', 'error'); return; }
+        imageUrls.push({url: url, is_primary: imageUrls.length === 0});
+        renderImages();
+        input.value = '';
+    };
+
+    window.removeImage = function(idx) {
+        imageUrls.splice(idx, 1);
+        if (imageUrls.length > 0) imageUrls[0].is_primary = true;
+        renderImages();
+    };
+
+    function renderImages() {
+        const container = document.getElementById('imagePreviewContainer');
+        if (imageUrls.length === 0) { container.innerHTML = '<div class="text-muted small" style="font-size:.8rem">No images added yet. Upload or paste a URL above.</div>'; return; }
+        container.innerHTML = imageUrls.map((img, i) => `
+            <div class="image-slot">
+                <img src="${escHtml(img.url)}" class="preview-img" onerror="this.src='https://via.placeholder.com/120x120/1a1a1a/666?text=Error'">
+                <button class="remove-img" onclick="removeImage(${i})"><i class="bi bi-x-lg"></i></button>
+                ${img.is_primary ? '<div style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;font-size:.6rem;padding:2px 8px;border-radius:10px;white-space:nowrap">Primary</div>' : ''}
+            </div>
+        `).join('');
+    }
+
+    // ---- File Upload for Products ----
+    (function() {
+        const dropzone = document.getElementById('productImageUpload');
+        const input = document.getElementById('productImageInput');
+        if (!dropzone || !input) return;
+
+        dropzone.addEventListener('click', () => input.click());
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = 'var(--primary)'; dropzone.style.background = 'var(--primary-ghost)'; });
+        dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = 'var(--border-color)'; dropzone.style.background = 'var(--bg-card)'; });
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = 'var(--border-color)';
+            dropzone.style.background = 'var(--bg-card)';
+            handleProductFileUpload(e.dataTransfer.files);
+        });
+        input.addEventListener('change', () => { if (input.files.length > 0) handleProductFileUpload(input.files); });
+    })();
+
+    async function handleProductFileUpload(files) {
+        const progressEl = document.getElementById('productUploadProgress');
+        const bar = progressEl.querySelector('.progress-bar');
+        progressEl.style.display = '';
+        let done = 0;
+        for (const file of files) {
+            bar.style.width = Math.round((done / files.length) * 100) + '%';
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('folder', 'products');
+            fd.append('media_type', 'entity_product');
+            try {
+                const resp = await fetch('/api/media/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
+                    body: fd,
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const isFirst = imageUrls.length === 0;
+                    imageUrls.push({ url: data.url, is_primary: isFirst });
+                }
+            } catch(e) {}
+            done++;
+        }
+        bar.style.width = '100%';
+        renderImages();
+        setTimeout(() => { progressEl.style.display = 'none'; bar.style.width = '0%'; }, 1000);
+    }
+
+    // ---- Variants ----
+    let variantCount = 0;
+    window.addVariant = function() {
+        const id = variantCount++;
+        const container = document.getElementById('variantsContainer');
+        const row = document.createElement('div');
+        row.className = 'variant-row';
+        row.id = 'variant-' + id;
+        row.innerHTML = `
+            <button class="btn btn-sm btn-outline-danger remove-btn" onclick="removeVariant(${id})" style="font-size:.7rem"><i class="bi bi-x-lg"></i></button>
+            <div class="row g-2">
+                <div class="col-md-5"><label class="form-label-custom">Variant Name</label><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary variant-name" placeholder="e.g. Color: Red"></div>
+                <div class="col-md-3"><label class="form-label-custom">SKU</label><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary variant-sku" placeholder="SKU"></div>
+                <div class="col-md-2"><label class="form-label-custom">Price Mod</label><input type="number" step="0.01" class="form-control form-control-sm bg-dark text-light border-secondary variant-price" value="0"></div>
+                <div class="col-md-2"><label class="form-label-custom">Stock</label><input type="number" min="0" class="form-control form-control-sm bg-dark text-light border-secondary variant-stock" value="0"></div>
+            </div>`;
+        container.appendChild(row);
+    };
+
+    window.removeVariant = function(id) {
+        const el = document.getElementById('variant-' + id);
+        if (el) el.remove();
+    };
+
+    // ---- Attributes ----
+    let attrCount = 0;
+    window.addAttribute = function() {
+        const id = attrCount++;
+        const container = document.getElementById('attributesContainer');
+        const row = document.createElement('div');
+        row.className = 'attribute-row';
+        row.id = 'attr-' + id;
+        row.innerHTML = `
+            <button class="btn btn-sm btn-outline-danger remove-btn" onclick="removeAttribute(${id})" style="font-size:.7rem"><i class="bi bi-x-lg"></i></button>
+            <div class="row g-2">
+                <div class="col-md-5"><label class="form-label-custom">Name</label><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary attr-name" placeholder="e.g. Material"></div>
+                <div class="col-md-7"><label class="form-label-custom">Value</label><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary attr-value" placeholder="e.g. Stainless Steel"></div>
+            </div>`;
+        container.appendChild(row);
+    };
+
+    window.removeAttribute = function(id) {
+        const el = document.getElementById('attr-' + id);
+        if (el) el.remove();
+    };
+
+    // ---- Save Product ----
+    window.saveProduct = async function(presetStatus) {
+        const name = document.getElementById('fName').value.trim();
+        const sku = document.getElementById('fSku').value.trim();
+        const price = parseFloat(document.getElementById('fPrice').value);
+        const stock = parseInt(document.getElementById('fStock').value) || 0;
+
+        if (!name) { showToast('Product name is required', 'error'); document.getElementById('fName').focus(); return; }
+        if (!sku) { showToast('SKU is required', 'error'); document.getElementById('fSku').focus(); return; }
+        if (!price || price <= 0) { showToast('Valid price is required', 'error'); document.getElementById('fPrice').focus(); return; }
+
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const status = presetStatus || document.querySelector('input[name="status"]:checked').value;
+        const discountPrice = parseFloat(document.getElementById('fDiscPrice').value) || null;
+        const categoryId = document.getElementById('fCategory').value ? parseInt(document.getElementById('fCategory').value) : null;
+        const brandId = document.getElementById('fBrand').value ? parseInt(document.getElementById('fBrand').value) : null;
+
+        // Collect variants
+        const variants = [];
+        document.querySelectorAll('.variant-row').forEach(row => {
+            const vName = row.querySelector('.variant-name').value.trim();
+            if (vName) {
+                variants.push({
+                    name: vName,
+                    sku: row.querySelector('.variant-sku').value.trim() || null,
+                    price_modifier: parseFloat(row.querySelector('.variant-price').value) || 0,
+                    stock: parseInt(row.querySelector('.variant-stock').value) || 0
+                });
+            }
+        });
+
+        // Collect attributes
+        const attributes = [];
+        document.querySelectorAll('.attribute-row').forEach(row => {
+            const aName = row.querySelector('.attr-name').value.trim();
+            const aValue = row.querySelector('.attr-value').value.trim();
+            if (aName && aValue) attributes.push({name: aName, value: aValue});
+        });
+
+        // Collect images
+        const images = imageUrls.map(img => ({
+            image_url: img.url,
+            is_primary: img.is_primary,
+            alt_text: name
+        }));
+
+        const payload = {
+            name: name,
+            sku: sku,
+            slug: slug,
+            price: price,
+            discount_price: discountPrice,
+            stock: stock,
+            description: document.getElementById('fDesc').value.trim() || null,
+            is_featured: document.getElementById('toggleFeatured').classList.contains('active'),
+            is_trending: document.getElementById('toggleTrending').classList.contains('active'),
+            status: status,
+            category_id: categoryId,
+            brand_id: brandId,
+            images: images,
+            variants: variants,
+            attributes: attributes
+        };
+
+        const btn = document.getElementById('saveBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+        document.getElementById('mainSpinner').style.display = 'flex';
+
+        try {
+            await apiFetch('/admin/products', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            showToast('Product created successfully!', 'success');
+            setTimeout(() => { window.location.href = '/admin/products'; }, 1200);
+        } catch(e) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save Product';
+            document.getElementById('mainSpinner').style.display = 'none';
+        }
+    };
+
+    function escHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+    function showToast(msg, type) {
+        const c = document.getElementById('toastContainer');
+        const t = document.createElement('div');
+        t.className = 'toast-item toast-' + type;
+        t.innerHTML = `<i class="bi bi-${type==='success'?'check-circle-fill':type==='error'?'exclamation-circle-fill':'info-circle-fill'}"></i><span>${msg}</span>`;
+        c.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(50px)'; t.style.transition = 'all .3s'; setTimeout(() => t.remove(), 300); }, 3500);
+    }
+
+    renderImages();
+})();
+</script>
+{% endblock %}

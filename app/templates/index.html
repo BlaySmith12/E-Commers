@@ -1,0 +1,462 @@
+{% extends "base.html" %}
+{% block title %}Quality. Style. Comfort.{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+{% set b = banners[0] if banners else None %}
+<section class="hero-section" style="background: linear-gradient(rgba(18,16,16,.90), rgba(18,16,16,.85)){% if b and b.image_url %}, url('{{ b.image_url }}') center/cover no-repeat{% elif not b %}, url('/static/images/hero_bg.png') center/cover no-repeat{% endif %}; padding: 100px 0 60px;">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-7 mb-4 mb-lg-0">
+                <div class="hero-content">
+                    <div class="section-label mb-3">Welcome to Asah's Primenest</div>
+                    <h1 class="hero-title">
+                        {% if b %}{{ b.title }}{% else %}Quality Products.<br>Built For <span class="text-primary-orange">Better Living.</span>{% endif %}
+                    </h1>
+                    <p class="hero-subtitle">
+                        {% if b %}{{ b.subtitle }}{% else %}Your one-stop shop for premium plumbing materials, household appliances, tools, and home improvement products across Ghana.{% endif %}
+                    </p>
+                    <div class="d-flex flex-wrap gap-3 hero-buttons">
+                        <a href="{% if b %}{{ b.link_url or '/shop' }}{% else %}/shop{% endif %}" class="btn btn-primary btn-lg px-4">
+                            <i class="bi bi-bag me-2"></i>{% if b %}{{ b.button_text or 'Shop Now' }}{% else %}Shop Now{% endif %}
+                        </a>
+                        <a href="/categories" class="btn btn-outline-primary btn-lg px-4">
+                            <i class="bi bi-grid me-2"></i>Browse Categories
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Strip -->
+<section class="features-strip">
+    <div class="container">
+        <div class="row g-3 justify-content-center">
+            <div class="col-6 col-md-3">
+                <div class="feature-item">
+                    <div class="feature-icon"><i class="bi bi-shield-check"></i></div>
+                    <div class="feature-text">
+                        <h6>100% ORIGINAL</h6>
+                        <small>Genuine Products</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="feature-item">
+                    <div class="feature-icon"><i class="bi bi-truck"></i></div>
+                    <div class="feature-text">
+                        <h6>FAST DELIVERY</h6>
+                        <small>Across Ghana</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="feature-item">
+                    <div class="feature-icon"><i class="bi bi-headset"></i></div>
+                    <div class="feature-text">
+                        <h6>24/7 SUPPORT</h6>
+                        <small>We're Here to Help</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="feature-item">
+                    <div class="feature-icon"><i class="bi bi-tags"></i></div>
+                    <div class="feature-text">
+                        <h6>BEST PRICES</h6>
+                        <small>Unbeatable Deals</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Categories Section -->
+<section id="categories" class="py-5" style="background:var(--darker-bg)">
+    <div class="container py-4">
+        <div class="section-header d-flex justify-content-between align-items-end flex-wrap gap-3">
+            <div>
+                <div class="section-label">Discover</div>
+                <h2 class="section-title mb-0">Premium Categories</h2>
+            </div>
+            <a href="/categories" class="section-link">View All <i class="bi bi-arrow-right"></i></a>
+        </div>
+
+        <div class="row g-3 g-md-4" id="categoriesGrid">
+            <div class="col-6 col-md-4 col-lg-3">
+                <a href="/categories/bathroom-sanitary" class="text-decoration-none">
+                    <div class="category-card">
+                        <img src="/static/images/cat_bathroom.png" class="category-card-img" alt="Bathroom">
+                        <div class="category-card-overlay">
+                            <div class="category-card-title text-white">Bathroom & Sanitary</div>
+                            <div class="category-card-count">Showers, faucets & accessories</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-3">
+                <a href="/categories/kitchen-appliances" class="text-decoration-none">
+                    <div class="category-card">
+                        <img src="/static/images/cat_kitchen.png" class="category-card-img" alt="Kitchen">
+                        <div class="category-card-overlay">
+                            <div class="category-card-title text-white">Kitchen & Appliances</div>
+                            <div class="category-card-count">Sinks, faucets & appliances</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-3 d-none d-md-block">
+                <a href="/categories/plumbing-fittings" class="text-decoration-none">
+                    <div class="category-card">
+                        <img src="/static/images/cat_plumbing.jpg" class="category-card-img" alt="Plumbing">
+                        <div class="category-card-overlay">
+                            <div class="category-card-title text-white">Plumbing & Fittings</div>
+                            <div class="category-card-count">Pipes, valves & connectors</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-3 d-none d-md-block">
+                <a href="/categories/tools-equipment" class="text-decoration-none">
+                    <div class="category-card">
+                        <img src="/static/images/cat_tools.jpg" class="category-card-img" alt="Tools">
+                        <div class="category-card-overlay">
+                            <div class="category-card-title text-white">Tools & Equipment</div>
+                            <div class="category-card-count">Power tools & hand tools</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-3 d-none d-lg-block">
+                <a href="/categories/home-appliances" class="text-decoration-none">
+                    <div class="category-card">
+                        <img src="/static/images/cat_home_appliances.jpg" class="category-card-img" alt="Home Appliances">
+                        <div class="category-card-overlay">
+                            <div class="category-card-title text-white">Home Appliances</div>
+                            <div class="category-card-count">Fans, heaters & more</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-3 d-none d-lg-block">
+                <a href="/categories/electrical-lighting" class="text-decoration-none">
+                    <div class="category-card">
+                        <img src="/static/images/cat_electrical.jpg" class="category-card-img" alt="Electrical">
+                        <div class="category-card-overlay">
+                            <div class="category-card-title text-white">Electrical & Lighting</div>
+                            <div class="category-card-count">Wiring, switches & fixtures</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Products -->
+<section class="py-5" id="featured-products">
+    <div class="container py-4">
+        <div class="section-header d-flex justify-content-between align-items-end flex-wrap gap-3">
+            <div>
+                <div class="section-label">Curated for You</div>
+                <h2 class="section-title mb-0">Featured Products</h2>
+            </div>
+            <a href="/shop" class="section-link">View All <i class="bi bi-arrow-right"></i></a>
+        </div>
+
+        <div class="row g-3 g-md-4" id="featuredGrid">
+            {% if featured_products %}
+                {% for p in featured_products %}
+                <div class="col-6 col-md-4 col-lg-3">
+                    <div class="product-card">
+                        <div class="product-card-img-wrap">
+                            {% if p.discount_price and p.discount_price < p.price %}
+                                <span class="product-badge">-{{ ((1 - p.discount_price / p.price) * 100)|int }}%</span>
+                            {% endif %}
+                            <div class="product-actions">
+                                <button class="product-action-btn" onclick="addToWishlist({{ p.id }})" title="Add to Wishlist">
+                                    <i class="bi bi-heart"></i>
+                                </button>
+                                <a href="/product/{{ p.slug }}" class="product-action-btn" title="Quick View">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                            {% if p.image %}
+                                <img src="{{ p.image }}" class="product-card-img" alt="{{ p.name }}">
+                            {% else %}
+                                <div class="product-card-img d-flex align-items-center justify-content-center" style="background:rgba(255,255,255,.02);color:rgba(255,255,255,.15);font-size:2rem">
+                                    <i class="bi bi-box-seam"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="product-card-body">
+                            <div class="product-card-category">{{ p.category }}</div>
+                            <a href="/product/{{ p.slug }}" class="text-decoration-none">
+                                <h6 class="product-card-name">{{ p.name }}</h6>
+                            </a>
+                            <div class="product-card-rating">
+                                <i class="bi bi-star-fill" style="color:#ffc107;font-size:.75rem"></i>
+                                <span style="font-size:.75rem;color:var(--warm-gray)">4.5</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="product-card-price">
+                                    {% if p.discount_price and p.discount_price < p.price %}
+                                        <span class="price-current">GHS {{ "%.2f"|format(p.discount_price) }}</span>
+                                        <span class="price-original">GHS {{ "%.2f"|format(p.price) }}</span>
+                                    {% else %}
+                                        <span class="price-current">GHS {{ "%.2f"|format(p.price) }}</span>
+                                    {% endif %}
+                                </div>
+                                <button class="product-add-btn" onclick="addToCart({{ p.id }})" title="Add to Cart">
+                                    <i class="bi bi-cart-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                {% set fallback_products = [
+                    {"name": "Premium Thermostatic Shower", "category": "BATHROOM", "price": 1200, "disc": 1020},
+                    {"name": "Kitchen Mixer Faucet", "category": "KITCHEN", "price": 850, "disc": null},
+                    {"name": "LED Ceiling Light Panel", "category": "LIGHTING", "price": 450, "disc": 380},
+                    {"name": "Cordless Drill Machine", "category": "TOOLS", "price": 1500, "disc": null},
+                    {"name": "Ceramic Wash Basin", "category": "BATHROOM", "price": 950, "disc": 799},
+                    {"name": "Stainless Steel Sink", "category": "KITCHEN", "price": 2200, "disc": null},
+                    {"name": "Digital Water Heater", "category": "BATHROOM", "price": 3500, "disc": 2999},
+                    {"name": "Power Extension Board", "category": "ELECTRICAL", "price": 180, "disc": null}
+                ] %}
+                {% for p in fallback_products %}
+                <div class="col-6 col-md-4 col-lg-3">
+                    <div class="product-card h-100">
+                        <div class="product-card-img-wrap">
+                            {% if p.disc %}
+                                <span class="product-badge">-{{ ((1 - p.disc / p.price) * 100)|int }}%</span>
+                            {% endif %}
+                            <div class="product-actions">
+                                <button class="product-action-btn" title="Add to Wishlist"><i class="bi bi-heart"></i></button>
+                                <a href="/shop" class="product-action-btn" title="Quick View"><i class="bi bi-eye"></i></a>
+                            </div>
+                            <div class="product-card-img d-flex align-items-center justify-content-center" style="background:rgba(242,102,15,.04);color:rgba(242,102,15,.25);font-size:3rem">
+                                <i class="bi bi-box-seam"></i>
+                            </div>
+                        </div>
+                        <div class="product-card-body">
+                            <div class="product-card-category">{{ p.category }}</div>
+                            <a href="/shop" class="text-decoration-none">
+                                <h6 class="product-card-name">{{ p.name }}</h6>
+                            </a>
+                            <div class="product-card-rating">
+                                <i class="bi bi-star-fill" style="color:#ffc107;font-size:.75rem"></i>
+                                <span style="font-size:.75rem;color:var(--warm-gray)">4.5</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="product-card-price">
+                                    {% if p.disc %}
+                                        <span class="price-current">GHS {{ "%.2f"|format(p.disc) }}</span>
+                                        <span class="price-original">GHS {{ "%.2f"|format(p.price) }}</span>
+                                    {% else %}
+                                        <span class="price-current">GHS {{ "%.2f"|format(p.price) }}</span>
+                                    {% endif %}
+                                </div>
+                                <a href="/shop" class="product-add-btn" title="Shop Now"><i class="bi bi-cart-plus"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- CTA Banner -->
+<section class="py-5" style="background:linear-gradient(135deg,rgba(242,102,15,.1),rgba(242,102,15,.02))">
+    <div class="container">
+        <div class="row align-items-center g-4">
+            <div class="col-md-8">
+                <div class="section-label">Special Offer</div>
+                <h2 class="section-title mb-2">Get Premium Quality at Best Prices</h2>
+                <p class="text-warm-gray mb-0" style="font-size:1rem">Browse our curated collection of top-quality plumbing materials, appliances, and tools. Fast delivery across Ghana.</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="/shop" class="btn btn-primary btn-lg px-5">Shop Now</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials -->
+<section class="py-5" style="background:var(--darker-bg)">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <div class="section-label">What People Say</div>
+            <h2 class="section-title">Customer Testimonials</h2>
+        </div>
+        <div class="row g-3 g-md-4">
+            <div class="col-md-4">
+                <div class="testimonial-card h-100">
+                    <div class="testimonial-stars">
+                        <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i>
+                    </div>
+                    <p class="testimonial-text">"Excellent quality plumbing materials. The delivery was fast and the products were exactly as described. Highly recommend Asah's Primenest!"</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">KA</div>
+                        <div>
+                            <div class="fw-bold text-white" style="font-size:.9rem">Kwame A.</div>
+                            <small class="text-warm-gray">Accra, Ghana</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="testimonial-card h-100">
+                    <div class="testimonial-stars">
+                        <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-half"></i>
+                    </div>
+                    <p class="testimonial-text">"Great prices and genuine products. I've been buying from them for my construction projects and never disappointed. Customer support is top notch."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">AA</div>
+                        <div>
+                            <div class="fw-bold text-white" style="font-size:.9rem">Ama A.</div>
+                            <small class="text-warm-gray">Kumasi, Ghana</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="testimonial-card h-100">
+                    <div class="testimonial-stars">
+                        <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i>
+                    </div>
+                    <p class="testimonial-text">"Best online store for home improvement products in Ghana. The MoMo payment option made checkout so easy. Will definitely order again."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">YM</div>
+                        <div>
+                            <div class="fw-bold text-white" style="font-size:.9rem">Yaw M.</div>
+                            <small class="text-warm-gray">Takoradi, Ghana</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Newsletter -->
+<section class="newsletter-section py-5">
+    <div class="container py-4">
+        <div class="row align-items-center g-4">
+            <div class="col-md-6">
+                <h3 class="section-title mb-2">Stay Updated</h3>
+                <p class="text-warm-gray mb-0">Subscribe to our newsletter for exclusive offers and product updates.</p>
+            </div>
+            <div class="col-md-6">
+                <form onsubmit="subscribeHome(event)" class="d-flex gap-2">
+                    <input type="email" class="form-control newsletter-input" placeholder="Enter your email" id="homeEmail" required>
+                    <button class="btn btn-primary px-4" type="submit">Subscribe</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Mobile Bottom Nav -->
+<div class="mobile-bottom-bar">
+    <div class="d-flex">
+        <a href="/" class="mobile-bottom-link active">
+            <i class="bi bi-house-fill"></i>
+            <span>Home</span>
+        </a>
+        <a href="/shop" class="mobile-bottom-link">
+            <i class="bi bi-bag"></i>
+            <span>Shop</span>
+        </a>
+        <a href="/wishlist" class="mobile-bottom-link">
+            <i class="bi bi-heart"></i>
+            <span>Wishlist</span>
+        </a>
+        <a href="/cart" class="mobile-bottom-link">
+            <i class="bi bi-cart3"></i>
+            <span>Cart</span>
+        </a>
+        <a href="/login" class="mobile-bottom-link">
+            <i class="bi bi-person"></i>
+            <span>Account</span>
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function addToCart(productId) {
+    const token = localStorage.getItem('token');
+    if (!token) { window.location.href = '/login'; return; }
+    try {
+        const resp = await fetch('/api/cart/items', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+            body: JSON.stringify({product_id: productId, quantity: 1})
+        });
+        if (resp.ok) {
+            if (typeof updateCartCount === 'function') updateCartCount();
+            showToast('Added to cart! <a href="/cart" style="color:#fff;text-decoration:underline;margin-left:6px">View Cart</a>', 'success');
+        } else {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.detail || 'Failed to add to cart', 'error');
+        }
+    } catch(e) { showToast('Network error', 'error'); }
+}
+
+async function addToWishlist(productId) {
+    const token = localStorage.getItem('token');
+    if (!token) { window.location.href = '/login'; return; }
+    try {
+        const resp = await fetch('/api/wishlists', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+            body: JSON.stringify({product_id: productId})
+        });
+        if (resp.ok) {
+            showToast('Added to wishlist!', 'success');
+            const btn = document.querySelector('button[onclick="addToWishlist(' + productId + ')"] i');
+            if (btn) { btn.classList.remove('bi-heart'); btn.classList.add('bi-heart-fill'); }
+        } else {
+            const err = await resp.json().catch(() => ({}));
+            if (resp.status === 400) showToast(err.detail || 'Already in wishlist', 'warning');
+            else if (resp.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; }
+            else showToast(err.detail || 'Failed to add to wishlist', 'error');
+        }
+    } catch(e) { showToast('Network error', 'error'); }
+}
+
+async function subscribeHome(e) {
+    e.preventDefault();
+    const email = document.getElementById('homeEmail').value;
+    try {
+        const resp = await fetch('/api/newsletters/subscribe', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email})
+        });
+        if (resp.ok) {
+            document.getElementById('homeEmail').value = '';
+            showToast('Subscribed successfully!', 'success');
+        }
+    } catch(e) {}
+}
+
+function showToast(msg, type) {
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;padding:12px 20px;border-radius:10px;color:#fff;font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.3);animation:fadeIn .3s ease;max-width:380px';
+    toast.style.background = type === 'success' ? 'linear-gradient(135deg,#198754,#157347)' : 'linear-gradient(135deg,#dc3545,#bb2d3b)';
+    toast.innerHTML = '<i class="bi bi-' + (type === 'success' ? 'check-circle-fill' : 'exclamation-circle-fill') + '"></i><span>' + msg + '</span>';
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(() => toast.remove(), 300); }, 4000);
+}
+</script>
+{% endblock %}

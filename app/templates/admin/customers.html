@@ -1,0 +1,1282 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<style>
+    .customer-avatar {
+        width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center;
+        justify-content: center; font-weight: 700; font-size: 0.85rem; color: #fff; flex-shrink: 0;
+        text-transform: uppercase;
+    }
+    .avatar-sm { width: 32px; height: 32px; font-size: 0.75rem; }
+    .avatar-lg { width: 64px; height: 64px; font-size: 1.5rem; }
+    .avatar-xl { width: 80px; height: 80px; font-size: 1.8rem; }
+    .stat-card { padding: 20px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-color); }
+    .stat-card .stat-value { font-size: 1.75rem; font-weight: 800; color: var(--text-light); }
+    .stat-card .stat-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .stat-card .stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+    .table-custom { --bs-table-bg: transparent; }
+    .table-custom thead th { border-bottom: 1px solid var(--border-color); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .table-custom tbody td { border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+    .table-custom tbody tr:hover { background-color: rgba(242, 102, 15, 0.04); }
+    .table-custom tbody tr:last-child td { border-bottom: none; }
+    .action-dot { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); cursor: pointer; transition: all 0.2s; font-size: 0.9rem; }
+    .action-dot:hover { background: rgba(242, 102, 15, 0.1); color: var(--primary-orange); border-color: var(--primary-orange); }
+    .filter-input { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-light); border-radius: 8px; font-size: 0.875rem; padding: 8px 14px; transition: all 0.2s; }
+    .filter-input:focus { outline: none; border-color: var(--primary-orange); background: rgba(255,255,255,0.04); box-shadow: 0 0 0 3px rgba(242, 102, 15, 0.1); }
+    .filter-input::placeholder { color: rgba(219, 210, 203, 0.6); }
+    .filter-input-sm { padding: 6px 12px; font-size: 0.82rem; }
+    .modal-content { background: var(--bg-darker); border: 1px solid var(--border-color); }
+    .modal-header { border-bottom: 1px solid var(--border-color); }
+    .modal-footer { border-top: 1px solid var(--border-color); }
+    .detail-tab { padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.2s; border: none; background: transparent; }
+    .detail-tab:hover { color: var(--text-light); background: rgba(255,255,255,0.04); }
+    .detail-tab.active { color: var(--primary-orange); background: rgba(242, 102, 15, 0.1); }
+    .detail-tab-content { display: none; }
+    .detail-tab-content.active { display: block; }
+    .info-row { padding: 12px 0; border-bottom: 1px solid var(--border-color); }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .info-value { font-size: 0.95rem; color: var(--text-light); font-weight: 500; }
+    .timeline-item { position: relative; padding-left: 30px; padding-bottom: 24px; }
+    .timeline-item::before { content: ''; position: absolute; left: 8px; top: 6px; bottom: 0; width: 2px; background: var(--border-color); }
+    .timeline-item:last-child::before { display: none; }
+    .timeline-item:last-child { padding-bottom: 0; }
+    .timeline-dot { position: absolute; left: 2px; top: 4px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--primary-orange); background: var(--bg-darker); }
+    .pagination-custom .page-link { background: var(--bg-card); border-color: var(--border-color); color: var(--text-muted); font-size: 0.85rem; padding: 6px 12px; }
+    .pagination-custom .page-link:hover { background: rgba(242, 102, 15, 0.1); color: var(--primary-orange); border-color: var(--primary-orange); }
+    .pagination-custom .page-item.active .page-link { background: var(--primary-orange); border-color: var(--primary-orange); color: #fff; }
+    .pagination-custom .page-item.disabled .page-link { opacity: 0.4; }
+    .bulk-bar { background: rgba(242, 102, 15, 0.08); border: 1px solid rgba(242, 102, 15, 0.2); border-radius: 10px; padding: 10px 16px; }
+    .form-check-input:checked { background-color: var(--primary-orange); border-color: var(--primary-orange); }
+    .form-check-input:focus { box-shadow: 0 0 0 3px rgba(242, 102, 15, 0.15); border-color: var(--primary-orange); }
+    .toast-container { position: fixed; top: 80px; right: 24px; z-index: 9999; }
+    .toast-custom { background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-light); border-radius: 10px; min-width: 300px; }
+    .toast-custom .toast-body { font-size: 0.875rem; }
+    .loading-overlay { position: absolute; inset: 0; background: rgba(18, 16, 16, 0.85); display: flex; align-items: center; justify-content: center; z-index: 10; border-radius: 12px; }
+    .spinner-grow-sm { width: 0.7rem; height: 0.7rem; }
+    .badge-status { padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .note-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+    .note-card .note-text { font-size: 0.9rem; color: var(--text-light); line-height: 1.5; }
+    .note-card .note-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; }
+    .address-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; }
+    .dropdown-menu-custom { background: var(--bg-darker); border: 1px solid var(--border-color); border-radius: 10px; padding: 6px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+    .dropdown-menu-custom .dropdown-item { border-radius: 6px; padding: 8px 14px; font-size: 0.85rem; color: var(--text-muted); transition: all 0.15s; }
+    .dropdown-menu-custom .dropdown-item:hover { background: rgba(242, 102, 15, 0.08); color: var(--text-light); }
+    .dropdown-menu-custom .dropdown-item.text-danger:hover { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+    .customer-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+    .order-row { cursor: pointer; }
+    .order-row:hover td { background: rgba(242, 102, 15, 0.04) !important; }
+    .empty-state { padding: 60px 20px; text-align: center; }
+    .empty-state i { font-size: 3rem; opacity: 0.3; color: var(--text-muted); }
+    .empty-state p { color: var(--text-muted); margin-top: 12px; }
+    .view-panel { position: fixed; top: 0; right: -600px; width: 560px; height: 100vh; background: var(--bg-darker); border-left: 1px solid var(--border-color); z-index: 1060; transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1); overflow-y: auto; box-shadow: -10px 0 40px rgba(0,0,0,0.3); }
+    .view-panel.open { right: 0; }
+    .view-panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1055; display: none; }
+    .view-panel-overlay.open { display: block; }
+    @media (max-width: 768px) { .view-panel { width: 100%; } }
+    .search-results-hint { font-size: 0.8rem; color: var(--text-muted); }
+    .btn-ghost { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); }
+    .btn-ghost:hover { background: rgba(255,255,255,0.04); color: var(--text-light); border-color: rgba(255,255,255,0.1); }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+    <div>
+        <h3 class="fw-bold mb-1">Customers</h3>
+        <p class="text-muted mb-0" style="font-size: 0.9rem;">View and manage your customer base. <span id="totalCountHeader" class="fw-semibold"></span></p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-ghost btn-sm" onclick="exportCSV()" title="Export CSV">
+            <i class="bi bi-download me-1"></i> Export
+        </button>
+        <button class="btn btn-primary-custom btn-sm" onclick="openAddCustomerModal()" title="Add Customer">
+            <i class="bi bi-plus-lg me-1"></i> Add Customer
+        </button>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="stat-icon" style="background: rgba(242, 102, 15, 0.1); color: var(--primary-orange);">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+            </div>
+            <div class="stat-value" id="statTotal">-</div>
+            <div class="stat-label">Total Customers</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="stat-icon" style="background: rgba(25, 135, 84, 0.12); color: #198754;">
+                    <i class="bi bi-person-check-fill"></i>
+                </div>
+            </div>
+            <div class="stat-value" id="statActive">-</div>
+            <div class="stat-label">Active</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="stat-icon" style="background: rgba(220, 53, 69, 0.12); color: #dc3545;">
+                    <i class="bi bi-person-x-fill"></i>
+                </div>
+            </div>
+            <div class="stat-value" id="statInactive">-</div>
+            <div class="stat-label">Inactive</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="stat-icon" style="background: rgba(13, 202, 240, 0.12); color: #0dcaf0;">
+                    <i class="bi bi-person-plus-fill"></i>
+                </div>
+            </div>
+            <div class="stat-value" id="statNew">-</div>
+            <div class="stat-label">New This Month</div>
+        </div>
+    </div>
+</div>
+
+<!-- Toolbar -->
+<div class="card card-custom p-3 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <div class="position-relative flex-grow-1" style="min-width: 220px; max-width: 360px;">
+            <i class="bi bi-search position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem;"></i>
+            <input type="text" class="filter-input w-100" id="searchInput" placeholder="Search by name, email, or phone..." style="padding-left: 36px;" oninput="handleSearch()">
+        </div>
+        <select class="filter-input filter-input-sm" id="statusFilter" onchange="applyFilters()" style="width: 140px;">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+        </select>
+        <input type="date" class="filter-input filter-input-sm" id="dateFrom" title="Joined from" onchange="applyFilters()" style="width: 155px;">
+        <input type="date" class="filter-input filter-input-sm" id="dateTo" title="Joined to" onchange="applyFilters()" style="width: 155px;">
+        <button class="btn btn-ghost btn-sm" onclick="clearFilters()" title="Clear filters">
+            <i class="bi bi-x-lg me-1"></i> Clear
+        </button>
+        <div class="ms-auto d-flex align-items-center">
+            <span class="text-muted me-3" style="font-size: 0.8rem;" id="showingCount"></span>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Actions Bar -->
+<div class="bulk-bar mb-3 d-none" id="bulkBar">
+    <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fw-semibold text-light" style="font-size: 0.9rem;"><span id="selectedCount">0</span> selected</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-ghost" onclick="bulkAction('activate')">
+                <i class="bi bi-check-circle me-1"></i> Activate
+            </button>
+            <button class="btn btn-sm btn-ghost" onclick="bulkAction('deactivate')">
+                <i class="bi bi-x-circle me-1"></i> Deactivate
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="bulkAction('delete')">
+                <i class="bi bi-trash me-1"></i> Delete
+            </button>
+            <button class="btn btn-sm btn-ghost ms-2" onclick="clearSelection()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Customer Table -->
+<div class="card card-custom p-0 overflow-hidden" style="position: relative;">
+    <div class="loading-overlay d-none" id="tableLoader">
+        <div class="text-center">
+            <div class="spinner-border text-warning mb-2" role="status" style="width:2rem;height:2rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <div class="text-muted" style="font-size: 0.85rem;">Loading customers...</div>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-custom table-dark table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th class="text-muted fw-normal px-3" style="width: 44px;">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                        </div>
+                    </th>
+                    <th class="text-muted fw-normal">Customer</th>
+                    <th class="text-muted fw-normal">Phone</th>
+                    <th class="text-muted fw-normal">Role</th>
+                    <th class="text-muted fw-normal text-center">Orders</th>
+                    <th class="text-muted fw-normal text-end">Total Spent</th>
+                    <th class="text-muted fw-normal">Joined</th>
+                    <th class="text-muted fw-normal">Last Active</th>
+                    <th class="text-muted fw-normal text-center">Status</th>
+                    <th class="text-muted fw-normal text-end pe-3" style="width: 50px;"></th>
+                </tr>
+            </thead>
+            <tbody id="customersTableBody">
+                <tr id="loadingRow">
+                    <td colspan="10" class="text-center py-5 border-secondary">
+                        <div class="spinner-border spinner-border-sm text-warning mb-2" role="status"></div>
+                        <div class="text-muted d-block">Loading customers...</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+<div class="d-flex flex-wrap align-items-center justify-content-between mt-3 gap-2">
+    <div class="text-muted" style="font-size: 0.82rem;" id="paginationInfo"></div>
+    <nav>
+        <ul class="pagination pagination-custom mb-0" id="pagination"></ul>
+    </nav>
+</div>
+
+<!-- View Panel Overlay -->
+<div class="view-panel-overlay" id="viewPanelOverlay" onclick="closeViewPanel()"></div>
+
+<!-- View / Detail Panel -->
+<div class="view-panel" id="viewPanel">
+    <div class="p-4">
+        <!-- Panel Header -->
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h5 class="fw-bold text-light mb-0">Customer Details</h5>
+            <button class="action-dot" onclick="closeViewPanel()"><i class="bi bi-x-lg"></i></button>
+        </div>
+
+        <!-- Customer Header -->
+        <div class="d-flex align-items-center mb-4" id="panelHeader">
+            <div class="customer-avatar avatar-lg me-3" id="panelAvatar" style="background: var(--primary-orange);">U</div>
+            <div>
+                <h5 class="text-light fw-bold mb-0" id="panelName">-</h5>
+                <div class="text-muted" style="font-size: 0.85rem;" id="panelEmail">-</div>
+                <div class="mt-1" id="panelBadge"></div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="d-flex gap-1 mb-4 p-1 rounded-10" style="background: var(--bg-card); border: 1px solid var(--border-color); overflow-x: auto;">
+            <button class="detail-tab active" onclick="switchDetailTab('overview')">Overview</button>
+            <button class="detail-tab" onclick="switchDetailTab('orders')">Orders</button>
+            <button class="detail-tab" onclick="switchDetailTab('addresses')">Addresses</button>
+            <button class="detail-tab" onclick="switchDetailTab('activity')">Activity</button>
+            <button class="detail-tab" onclick="switchDetailTab('notes')">Notes</button>
+        </div>
+
+        <!-- Tab: Overview -->
+        <div class="detail-tab-content active" id="tabOverview">
+            <div class="mb-4">
+                <h6 class="fw-bold text-light mb-3" style="font-size: 0.9rem;">Summary</h6>
+                <div class="customer-info-grid" id="overviewStats">
+                    <div class="stat-card text-center">
+                        <div class="stat-value" id="panelTotalOrders" style="font-size: 1.4rem;">0</div>
+                        <div class="stat-label" style="font-size: 0.7rem;">Total Orders</div>
+                    </div>
+                    <div class="stat-card text-center">
+                        <div class="stat-value" id="panelTotalSpent" style="font-size: 1.4rem;">GHS 0</div>
+                        <div class="stat-label" style="font-size: 0.7rem;">Total Spent</div>
+                    </div>
+                    <div class="stat-card text-center">
+                        <div class="stat-value" id="panelAvgOrder" style="font-size: 1.4rem;">GHS 0</div>
+                        <div class="stat-label" style="font-size: 0.7rem;">Avg. Order</div>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3">
+                <h6 class="fw-bold text-light mb-3" style="font-size: 0.9rem;">Details</h6>
+                <div class="info-row">
+                    <div class="info-label">Phone</div>
+                    <div class="info-value" id="panelPhone">-</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Role</div>
+                    <div class="info-value" id="panelRole">-</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Member Since</div>
+                    <div class="info-value" id="panelJoined">-</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Last Active</div>
+                    <div class="info-value" id="panelLastActive">-</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Account Status</div>
+                    <div class="info-value" id="panelStatus">-</div>
+                </div>
+            </div>
+            <div class="d-flex gap-2 mt-4">
+                <button class="btn btn-primary-custom btn-sm flex-grow-1" onclick="openEditPanel()">
+                    <i class="bi bi-pencil me-1"></i> Edit Customer
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="toggleBlockCustomer()" id="panelBlockBtn">
+                    <i class="bi bi-shield-x me-1"></i> Block
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab: Orders -->
+        <div class="detail-tab-content" id="tabOrders">
+            <div id="panelOrdersList">
+                <div class="empty-state">
+                    <i class="bi bi-bag"></i>
+                    <p>No orders yet</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Addresses -->
+        <div class="detail-tab-content" id="tabAddresses">
+            <div id="panelAddressesList">
+                <div class="empty-state">
+                    <i class="bi bi-geo-alt"></i>
+                    <p>No addresses saved</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Activity -->
+        <div class="detail-tab-content" id="tabActivity">
+            <div id="panelActivityList">
+                <div class="empty-state">
+                    <i class="bi bi-clock-history"></i>
+                    <p>No activity recorded</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Notes -->
+        <div class="detail-tab-content" id="tabNotes">
+            <div class="mb-3">
+                <div class="d-flex gap-2 mb-3">
+                    <input type="text" class="filter-input flex-grow-1" id="noteInput" placeholder="Add a note about this customer...">
+                    <button class="btn btn-primary-custom btn-sm" onclick="addNote()">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+                <div id="panelNotesList">
+                    <div class="empty-state">
+                        <i class="bi bi-journal-text"></i>
+                        <p>No notes yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Customer Modal -->
+<div class="modal fade" id="editCustomerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 14px;">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-light">Edit Customer</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editCustomerForm" onsubmit="saveCustomerEdit(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="editId">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted" style="font-size: 0.82rem;">First Name</label>
+                            <input type="text" class="filter-input w-100" id="editFirstName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted" style="font-size: 0.82rem;">Last Name</label>
+                            <input type="text" class="filter-input w-100" id="editLastName" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted" style="font-size: 0.82rem;">Email</label>
+                            <input type="email" class="filter-input w-100" id="editEmail" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted" style="font-size: 0.82rem;">Phone</label>
+                            <input type="text" class="filter-input w-100" id="editPhone">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted" style="font-size: 0.82rem;">Role</label>
+                            <select class="filter-input w-100" id="editRole">
+                                <option value="customer">Customer</option>
+                                <option value="admin">Admin</option>
+                                <option value="staff">Staff</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted" style="font-size: 0.82rem;">Status</label>
+                            <select class="filter-input w-100" id="editActive">
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom btn-sm" id="editSaveBtn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Customer Modal -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 14px;">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-light">Add Customer</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addCustomerForm" onsubmit="saveNewCustomer(event)">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted" style="font-size: 0.82rem;">First Name</label>
+                            <input type="text" class="filter-input w-100" id="addFirstName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted" style="font-size: 0.82rem;">Last Name</label>
+                            <input type="text" class="filter-input w-100" id="addLastName" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted" style="font-size: 0.82rem;">Email</label>
+                            <input type="email" class="filter-input w-100" id="addEmail" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted" style="font-size: 0.82rem;">Phone</label>
+                            <input type="text" class="filter-input w-100" id="addPhone">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted" style="font-size: 0.82rem;">Password</label>
+                            <input type="password" class="filter-input w-100" id="addPassword" required minlength="8">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted" style="font-size: 0.82rem;">Role</label>
+                            <select class="filter-input w-100" id="addRole">
+                                <option value="customer">Customer</option>
+                                <option value="admin">Admin</option>
+                                <option value="staff">Staff</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom btn-sm" id="addSaveBtn">Add Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 14px;">
+            <div class="modal-body text-center py-4">
+                <div class="mb-3">
+                    <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2.5rem;"></i>
+                </div>
+                <h6 class="fw-bold text-light mb-2">Delete Customer?</h6>
+                <p class="text-muted mb-0" style="font-size: 0.85rem;" id="deleteMsg">This action cannot be undone. The customer and all associated data will be permanently removed.</p>
+            </div>
+            <div class="modal-footer border-0 pt-0 justify-content-center">
+                <button type="button" class="btn btn-ghost btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger btn-sm" id="confirmDeleteBtn" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    const PAGE_SIZE = 15;
+    let allCustomers = [];
+    let filteredCustomers = [];
+    let currentPage = 1;
+    let totalCount = 0;
+    let isLoading = false;
+    let selectedIds = new Set();
+    let currentViewCustomer = null;
+    let deleteTarget = null;
+    let customerNotes = {};
+    let searchDebounce = null;
+
+    const AVATAR_COLORS = [
+        '#F2660F', '#0d6efd', '#198754', '#dc3545', '#6f42c1',
+        '#fd7e14', '#20c997', '#d63384', '#0dcaf0', '#6610f2',
+        '#198754', '#0d6efd', '#e83e8c', '#28a745', '#17a2b8'
+    ];
+
+    function getAvatarColor(name) {
+        if (!name) return AVATAR_COLORS[0];
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+    }
+
+    function getInitials(first, last) {
+        const f = (first || '').trim();
+        const l = (last || '').trim();
+        if (f && l) return (f[0] + l[0]).toUpperCase();
+        if (f) return f.substring(0, 2).toUpperCase();
+        if (l) return l.substring(0, 2).toUpperCase();
+        return 'U';
+    }
+
+    function formatDate(d) {
+        if (!d) return '-';
+        const dt = new Date(d);
+        return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function formatDateTime(d) {
+        if (!d) return '-';
+        const dt = new Date(d);
+        return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatCurrency(v) {
+        return 'GHS ' + parseFloat(v || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function showToast(msg, type) {
+        const icons = { success: 'bi-check-circle-fill text-success', error: 'bi-x-circle-fill text-danger', info: 'bi-info-circle-fill text-info' };
+        const html = `
+            <div class="toast toast-custom show mb-2" role="alert">
+                <div class="toast-body d-flex align-items-center">
+                    <i class="bi ${icons[type] || icons.info} me-2"></i>
+                    <span>${msg}</span>
+                    <button type="button" class="btn-close btn-close-white ms-auto" style="font-size:0.65rem;" onclick="this.closest('.toast').remove()"></button>
+                </div>
+            </div>`;
+        const c = document.getElementById('toastContainer');
+        c.insertAdjacentHTML('beforeend', html);
+        setTimeout(() => { const t = c.querySelector('.toast'); if (t) t.remove(); }, 4000);
+    }
+    window.showToast = showToast;
+
+    async function fetchCustomers() {
+        if (isLoading) return;
+        isLoading = true;
+        document.getElementById('tableLoader').classList.remove('d-none');
+        document.getElementById('selectAll').checked = false;
+
+        try {
+            const res = await fetch(`/api/admin/customers?skip=0&limit=500`);
+            if (!res.ok) throw new Error('Failed to fetch customers');
+            const data = await res.json();
+            allCustomers = Array.isArray(data) ? data : (data.customers || data.data || []);
+            totalCount = allCustomers.length;
+            computeStats();
+            applyFilters();
+        } catch (err) {
+            console.error(err);
+            showToast('Failed to load customers', 'error');
+            renderTable([]);
+        } finally {
+            isLoading = false;
+            document.getElementById('tableLoader').classList.add('d-none');
+        }
+    }
+
+    function computeStats() {
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const active = allCustomers.filter(c => c.is_active !== false);
+        const inactive = allCustomers.filter(c => c.is_active === false);
+        const newThisMonth = allCustomers.filter(c => c.created_at && new Date(c.created_at) >= monthStart);
+
+        document.getElementById('statTotal').textContent = allCustomers.length;
+        document.getElementById('statActive').textContent = active.length;
+        document.getElementById('statInactive').textContent = inactive.length;
+        document.getElementById('statNew').textContent = newThisMonth.length;
+        document.getElementById('totalCountHeader').textContent = `(${allCustomers.length} total)`;
+    }
+
+    function applyFilters() {
+        const q = document.getElementById('searchInput').value.toLowerCase().trim();
+        const status = document.getElementById('statusFilter').value;
+        const from = document.getElementById('dateFrom').value;
+        const to = document.getElementById('dateTo').value;
+
+        filteredCustomers = allCustomers.filter(c => {
+            if (q) {
+                const name = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
+                const email = (c.email || '').toLowerCase();
+                const phone = (c.phone || '').toLowerCase();
+                if (!name.includes(q) && !email.includes(q) && !phone.includes(q)) return false;
+            }
+            if (status === 'active' && c.is_active === false) return false;
+            if (status === 'inactive' && c.is_active !== false) return false;
+            if (from) {
+                const d = c.created_at ? new Date(c.created_at) : null;
+                if (!d || d < new Date(from)) return false;
+            }
+            if (to) {
+                const d = c.created_at ? new Date(c.created_at) : null;
+                const toDate = new Date(to);
+                toDate.setHours(23, 59, 59, 999);
+                if (!d || d > toDate) return false;
+            }
+            return true;
+        });
+
+        currentPage = 1;
+        selectedIds.clear();
+        updateBulkBar();
+        renderTable(filteredCustomers);
+    }
+
+    function handleSearch() {
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(applyFilters, 250);
+    }
+    window.handleSearch = handleSearch;
+
+    function clearFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('dateFrom').value = '';
+        document.getElementById('dateTo').value = '';
+        applyFilters();
+    }
+    window.clearFilters = clearFilters;
+
+    function renderTable(list) {
+        const tbody = document.getElementById('customersTableBody');
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const page = list.slice(start, start + PAGE_SIZE);
+        const total = list.length;
+        const totalPages = Math.ceil(total / PAGE_SIZE);
+
+        document.getElementById('showingCount').textContent = total > 0 ? `Showing ${start + 1}-${Math.min(start + PAGE_SIZE, total)} of ${total}` : '';
+        document.getElementById('paginationInfo').textContent = total > 0 ? `${start + 1}-${Math.min(start + PAGE_SIZE, total)} of ${total} customers` : '';
+
+        if (total === 0) {
+            tbody.innerHTML = `
+                <tr><td colspan="10" class="border-secondary">
+                    <div class="empty-state">
+                        <i class="bi bi-people"></i>
+                        <p>No customers found</p>
+                    </div>
+                </td></tr>`;
+            document.getElementById('pagination').innerHTML = '';
+            return;
+        }
+
+        let html = '';
+        page.forEach(c => {
+            const name = `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
+            const initials = getInitials(c.first_name, c.last_name);
+            const color = getAvatarColor(name);
+            const isActive = c.is_active !== false;
+            const checked = selectedIds.has(c.id) ? 'checked' : '';
+            const orderCount = c.order_count != null ? c.order_count : (c.orders_count || 0);
+            const totalSpent = c.total_spent != null ? c.total_spent : (c.total_amount || 0);
+            const lastActive = c.last_login_at || c.last_active || c.updated_at;
+
+            html += `
+                <tr data-id="${c.id}">
+                    <td class="px-3 border-secondary">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" ${checked} onchange="toggleSelect(${c.id})">
+                        </div>
+                    </td>
+                    <td class="border-secondary">
+                        <div class="d-flex align-items-center">
+                            <div class="customer-avatar me-3" style="background: ${color};">${initials}</div>
+                            <div>
+                                <div class="text-light fw-semibold" style="font-size: 0.9rem;">${name}</div>
+                                <div class="text-muted" style="font-size: 0.8rem;">${c.email || '-'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="border-secondary text-muted" style="font-size: 0.87rem;">${c.phone || '-'}</td>
+                    <td class="border-secondary">
+                        <span class="text-muted" style="font-size: 0.82rem; text-transform: capitalize;">${c.role || 'customer'}</span>
+                    </td>
+                    <td class="border-secondary text-center">
+                        <span class="fw-semibold text-light">${orderCount}</span>
+                    </td>
+                    <td class="border-secondary text-end pe-3">
+                        <span class="fw-semibold text-light">${formatCurrency(totalSpent)}</span>
+                    </td>
+                    <td class="border-secondary text-muted" style="font-size: 0.84rem;">${formatDate(c.created_at)}</td>
+                    <td class="border-secondary text-muted" style="font-size: 0.84rem;">${formatDate(lastActive)}</td>
+                    <td class="border-secondary text-center">
+                        <span class="badge-status ${isActive ? 'bg-success bg-opacity-15 text-success' : 'bg-danger bg-opacity-15 text-danger'}">
+                            ${isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td class="border-secondary text-end pe-3">
+                        <div class="dropdown">
+                            <button class="action-dot" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-custom dropdown-menu-end">
+                                <a class="dropdown-item" href="#" onclick="viewCustomer(${c.id}); return false;">
+                                    <i class="bi bi-eye me-2"></i> View
+                                </a>
+                                <a class="dropdown-item" href="#" onclick="editCustomer(${c.id}); return false;">
+                                    <i class="bi bi-pencil me-2"></i> Edit
+                                </a>
+                                <a class="dropdown-item" href="#" onclick="toggleBlockCustomerById(${c.id}, ${isActive}); return false;">
+                                    <i class="bi bi-${isActive ? 'shield-x' : 'shield-check'} me-2"></i> ${isActive ? 'Block' : 'Unblock'}
+                                </a>
+                                <hr class="dropdown-divider my-1" style="border-color: var(--border-color);">
+                                <a class="dropdown-item text-danger" href="#" onclick="promptDelete(${c.id}, '${name.replace(/'/g, "\\'")}'); return false;">
+                                    <i class="bi bi-trash me-2"></i> Delete
+                                </a>
+                            </div>
+                        </div>
+                    </td>
+                </tr>`;
+        });
+
+        tbody.innerHTML = html;
+        renderPagination(totalPages);
+    }
+
+    function renderPagination(totalPages) {
+        const pg = document.getElementById('pagination');
+        if (totalPages <= 1) { pg.innerHTML = ''; return; }
+
+        let html = `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="goToPage(${currentPage - 1}); return false;">
+                <i class="bi bi-chevron-left"></i>
+            </a></li>`;
+
+        const range = 2;
+        let pages = [];
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - range && i <= currentPage + range)) {
+                pages.push(i);
+            } else if (pages[pages.length - 1] !== '...') {
+                pages.push('...');
+            }
+        }
+
+        pages.forEach(p => {
+            if (p === '...') {
+                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            } else {
+                html += `<li class="page-item ${p === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="goToPage(${p}); return false;">${p}</a></li>`;
+            }
+        });
+
+        html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="goToPage(${currentPage + 1}); return false;">
+                <i class="bi bi-chevron-right"></i>
+            </a></li>`;
+
+        pg.innerHTML = html;
+    }
+
+    window.goToPage = function(page) {
+        const totalPages = Math.ceil(filteredCustomers.length / PAGE_SIZE);
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        selectedIds.clear();
+        updateBulkBar();
+        renderTable(filteredCustomers);
+        document.querySelector('.card-custom.p-0')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    window.toggleSelectAll = function() {
+        const checked = document.getElementById('selectAll').checked;
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const page = filteredCustomers.slice(start, start + PAGE_SIZE);
+        page.forEach(c => {
+            if (checked) selectedIds.add(c.id);
+            else selectedIds.delete(c.id);
+        });
+        document.querySelectorAll('#customersTableBody .form-check-input').forEach(cb => cb.checked = checked);
+        updateBulkBar();
+    };
+
+    window.toggleSelect = function(id) {
+        if (selectedIds.has(id)) selectedIds.delete(id);
+        else selectedIds.add(id);
+        updateBulkBar();
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const page = filteredCustomers.slice(start, start + PAGE_SIZE);
+        document.getElementById('selectAll').checked = page.every(c => selectedIds.has(c.id));
+    };
+
+    function updateBulkBar() {
+        const bar = document.getElementById('bulkBar');
+        const count = selectedIds.size;
+        if (count > 0) {
+            bar.classList.remove('d-none');
+            document.getElementById('selectedCount').textContent = count;
+        } else {
+            bar.classList.add('d-none');
+        }
+    }
+    window.clearSelection = function() {
+        selectedIds.clear();
+        document.getElementById('selectAll').checked = false;
+        document.querySelectorAll('#customersTableBody .form-check-input').forEach(cb => cb.checked = false);
+        updateBulkBar();
+    };
+
+    window.bulkAction = async function(action) {
+        const ids = Array.from(selectedIds);
+        if (ids.length === 0) return;
+
+        if (action === 'delete') {
+            if (!confirm(`Delete ${ids.length} customer(s)? This cannot be undone.`)) return;
+        }
+
+        try {
+            let res;
+            if (action === 'delete') {
+                res = await fetch('/api/admin/customers/bulk-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_ids: ids })
+                });
+            } else {
+                const isActive = action === 'activate';
+                res = await fetch('/api/admin/customers/bulk-status-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_ids: ids, is_active: isActive })
+                });
+            }
+
+            if (!res.ok) throw new Error('Request failed');
+            showToast(`${ids.length} customer(s) ${action === 'delete' ? 'deleted' : action + 'd'} successfully`, 'success');
+            selectedIds.clear();
+            updateBulkBar();
+            await fetchCustomers();
+        } catch (err) {
+            console.error(err);
+            showToast('Operation failed. Please try again.', 'error');
+        }
+    };
+
+    window.viewCustomer = function(id) {
+        const c = allCustomers.find(x => x.id === id);
+        if (!c) return;
+        currentViewCustomer = c;
+        const name = `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
+        const initials = getInitials(c.first_name, c.last_name);
+        const color = getAvatarColor(name);
+        const isActive = c.is_active !== false;
+        const orderCount = c.order_count != null ? c.order_count : (c.orders_count || 0);
+        const totalSpent = c.total_spent != null ? c.total_spent : (c.total_amount || 0);
+        const lastActive = c.last_login_at || c.last_active || c.updated_at;
+
+        document.getElementById('panelAvatar').textContent = initials;
+        document.getElementById('panelAvatar').style.background = color;
+        document.getElementById('panelName').textContent = name;
+        document.getElementById('panelEmail').textContent = c.email || '-';
+        document.getElementById('panelBadge').innerHTML = `<span class="badge-status ${isActive ? 'bg-success bg-opacity-15 text-success' : 'bg-danger bg-opacity-15 text-danger'}">${isActive ? 'Active' : 'Inactive'}</span>`;
+
+        document.getElementById('panelTotalOrders').textContent = orderCount;
+        document.getElementById('panelTotalSpent').textContent = formatCurrency(totalSpent);
+        document.getElementById('panelAvgOrder').textContent = orderCount > 0 ? formatCurrency(totalSpent / orderCount) : 'GHS 0';
+        document.getElementById('panelPhone').textContent = c.phone || '-';
+        document.getElementById('panelRole').textContent = (c.role || 'customer').charAt(0).toUpperCase() + (c.role || 'customer').slice(1);
+        document.getElementById('panelJoined').textContent = formatDate(c.created_at);
+        document.getElementById('panelLastActive').textContent = formatDate(lastActive);
+        document.getElementById('panelStatus').innerHTML = `<span class="badge-status ${isActive ? 'bg-success bg-opacity-15 text-success' : 'bg-danger bg-opacity-15 text-danger'}">${isActive ? 'Active' : 'Inactive'}</span>`;
+
+        const blockBtn = document.getElementById('panelBlockBtn');
+        if (isActive) {
+            blockBtn.innerHTML = '<i class="bi bi-shield-x me-1"></i> Block';
+            blockBtn.className = 'btn btn-ghost btn-sm text-danger';
+        } else {
+            blockBtn.innerHTML = '<i class="bi bi-shield-check me-1"></i> Unblock';
+            blockBtn.className = 'btn btn-ghost btn-sm text-success';
+        }
+
+        renderCustomerOrders(c);
+        renderCustomerAddresses(c);
+        renderCustomerActivity(c);
+        renderCustomerNotes(c.id);
+        switchDetailTab('overview');
+
+        document.getElementById('viewPanel').classList.add('open');
+        document.getElementById('viewPanelOverlay').classList.add('open');
+    };
+
+    window.closeViewPanel = function() {
+        document.getElementById('viewPanel').classList.remove('open');
+        document.getElementById('viewPanelOverlay').classList.remove('open');
+    };
+
+    window.switchDetailTab = function(tab) {
+        document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.detail-tab-content').forEach(c => c.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+    };
+
+    function renderCustomerOrders(c) {
+        const container = document.getElementById('panelOrdersList');
+        const orders = c.orders || [];
+
+        if (orders.length === 0) {
+            container.innerHTML = `<div class="empty-state"><i class="bi bi-bag"></i><p>No orders yet</p></div>`;
+            return;
+        }
+
+        let html = '';
+        orders.forEach(o => {
+            const statusClasses = {
+                'pending': 'bg-warning text-dark', 'processing': 'bg-info text-dark',
+                'shipped': 'bg-primary', 'delivered': 'bg-success',
+                'cancelled': 'bg-danger', 'refunded': 'bg-secondary'
+            };
+            html += `
+                <div class="d-flex align-items-center justify-content-between p-3 rounded mb-2" style="background: var(--bg-card); border: 1px solid var(--border-color);">
+                    <div>
+                        <div class="fw-semibold text-light" style="font-size: 0.9rem;">#${o.order_number || o.id}</div>
+                        <div class="text-muted" style="font-size: 0.8rem;">${formatDate(o.created_at)}</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-semibold text-light" style="font-size: 0.9rem;">${formatCurrency(o.total_amount)}</div>
+                        <span class="badge ${statusClasses[(o.status || '').toLowerCase()] || 'bg-secondary'} rounded-pill px-2 py-1" style="font-size: 0.7rem;">${o.status || '-'}</span>
+                    </div>
+                </div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    function renderCustomerAddresses(c) {
+        const container = document.getElementById('panelAddressesList');
+        const addresses = c.addresses || [];
+
+        if (addresses.length === 0) {
+            container.innerHTML = `<div class="empty-state"><i class="bi bi-geo-alt"></i><p>No addresses saved</p></div>`;
+            return;
+        }
+
+        let html = '';
+        addresses.forEach(a => {
+            html += `
+                <div class="address-card mb-2">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-geo-alt text-muted me-2 mt-1"></i>
+                        <div>
+                            <div class="text-light fw-semibold" style="font-size: 0.9rem;">${a.street || a.line1 || ''} ${a.street_2 || a.line2 || ''}</div>
+                            <div class="text-muted" style="font-size: 0.85rem;">
+                                ${[a.city, a.state, a.country].filter(Boolean).join(', ')}
+                                ${a.postal_code || a.zip ? ' - ' + (a.postal_code || a.zip) : ''}
+                            </div>
+                            ${a.is_default ? '<span class="badge bg-primary bg-opacity-15 text-primary mt-1" style="font-size: 0.7rem;">Default</span>' : ''}
+                        </div>
+                    </div>
+                </div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    function renderCustomerActivity(c) {
+        const container = document.getElementById('panelActivityList');
+        const activities = [];
+
+        if (c.created_at) {
+            activities.push({ date: c.created_at, text: 'Account created', icon: 'bi-person-plus', color: '#0dcaf0' });
+        }
+        (c.orders || []).forEach(o => {
+            activities.push({ date: o.created_at, text: `Order #${o.order_number || o.id} placed - ${formatCurrency(o.total_amount)}`, icon: 'bi-bag-check', color: '#F2660F' });
+            if (o.status === 'delivered') {
+                activities.push({ date: o.delivered_at || o.updated_at, text: `Order #${o.order_number || o.id} delivered`, icon: 'bi-truck', color: '#198754' });
+            }
+        });
+        if (c.last_login_at || c.last_active) {
+            activities.push({ date: c.last_login_at || c.last_active, text: 'Last active', icon: 'bi-clock', color: '#9a9a9a' });
+        }
+
+        if (activities.length === 0) {
+            container.innerHTML = `<div class="empty-state"><i class="bi bi-clock-history"></i><p>No activity recorded</p></div>`;
+            return;
+        }
+
+        activities.sort((a, b) => new Date(b.date) - new Date(a.date));
+        const shown = activities.slice(0, 15);
+
+        let html = '';
+        shown.forEach(a => {
+            html += `
+                <div class="timeline-item">
+                    <div class="timeline-dot" style="border-color: ${a.color};"></div>
+                    <div class="text-light fw-semibold" style="font-size: 0.87rem;">${a.text}</div>
+                    <div class="text-muted" style="font-size: 0.78rem;">${formatDateTime(a.date)}</div>
+                </div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    function renderCustomerNotes(userId) {
+        const container = document.getElementById('panelNotesList');
+        const notes = customerNotes[userId] || [];
+
+        if (notes.length === 0) {
+            container.innerHTML = `<div class="empty-state"><i class="bi bi-journal-text"></i><p>No notes yet</p></div>`;
+            return;
+        }
+
+        let html = '';
+        notes.forEach((n, i) => {
+            html += `
+                <div class="note-card">
+                    <div class="note-text">${escapeHtml(n.text)}</div>
+                    <div class="note-meta">
+                        <span>${formatDateTime(n.created_at)}</span>
+                        <span class="ms-2">${n.author || 'Admin'}</span>
+                        <button class="btn btn-sm p-0 ms-2 text-danger" style="font-size: 0.75rem;" onclick="deleteNote(${userId}, ${i})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    window.addNote = function() {
+        if (!currentViewCustomer) return;
+        const input = document.getElementById('noteInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        const userId = currentViewCustomer.id;
+        if (!customerNotes[userId]) customerNotes[userId] = [];
+        customerNotes[userId].unshift({ text, created_at: new Date().toISOString(), author: 'Admin' });
+        input.value = '';
+        renderCustomerNotes(userId);
+        showToast('Note added', 'success');
+    };
+
+    window.deleteNote = function(userId, index) {
+        if (!customerNotes[userId]) return;
+        customerNotes[userId].splice(index, 1);
+        renderCustomerNotes(userId);
+    };
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    window.editCustomer = function(id) {
+        const c = allCustomers.find(x => x.id === id);
+        if (!c) return;
+        document.getElementById('editId').value = c.id;
+        document.getElementById('editFirstName').value = c.first_name || '';
+        document.getElementById('editLastName').value = c.last_name || '';
+        document.getElementById('editEmail').value = c.email || '';
+        document.getElementById('editPhone').value = c.phone || '';
+        document.getElementById('editRole').value = c.role || 'customer';
+        document.getElementById('editActive').value = c.is_active !== false ? 'true' : 'false';
+        new bootstrap.Modal(document.getElementById('editCustomerModal')).show();
+    };
+
+    window.openEditPanel = function() {
+        if (!currentViewCustomer) return;
+        closeViewPanel();
+        setTimeout(() => editCustomer(currentViewCustomer.id), 350);
+    };
+
+    window.saveCustomerEdit = async function(e) {
+        e.preventDefault();
+        const id = document.getElementById('editId').value;
+        const btn = document.getElementById('editSaveBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+
+        try {
+            const body = {
+                first_name: document.getElementById('editFirstName').value.trim(),
+                last_name: document.getElementById('editLastName').value.trim(),
+                email: document.getElementById('editEmail').value.trim(),
+                phone: document.getElementById('editPhone').value.trim(),
+                role: document.getElementById('editRole').value,
+                is_active: document.getElementById('editActive').value === 'true'
+            };
+
+            const res = await fetch(`/api/admin/users/${id}/role`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (!res.ok) throw new Error('Failed to save');
+            showToast('Customer updated successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editCustomerModal')).hide();
+            await fetchCustomers();
+        } catch (err) {
+            console.error(err);
+            showToast('Failed to update customer', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Save Changes';
+        }
+    };
+
+    window.toggleBlockCustomer = function() {
+        if (!currentViewCustomer) return;
+        toggleBlockCustomerById(currentViewCustomer.id, currentViewCustomer.is_active !== false);
+    };
+
+    window.toggleBlockCustomerById = async function(id, isActive) {
+        const action = isActive ? 'block' : 'unblock';
+        if (!confirm(`Are you sure you want to ${action} this customer?`)) return;
+
+        try {
+            const res = await fetch(`/api/admin/users/${id}/role`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: !isActive })
+            });
+
+            if (!res.ok) throw new Error('Failed');
+            showToast(`Customer ${action}ed successfully`, 'success');
+            await fetchCustomers();
+
+            if (currentViewCustomer && currentViewCustomer.id === id) {
+                currentViewCustomer.is_active = !isActive;
+                viewCustomer(id);
+            }
+        } catch (err) {
+            console.error(err);
+            showToast(`Failed to ${action} customer`, 'error');
+        }
+    };
+
+    window.promptDelete = function(id, name) {
+        deleteTarget = id;
+        document.getElementById('deleteMsg').textContent = `Are you sure you want to delete "${name}"? This action cannot be undone.`;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    };
+
+    window.confirmDelete = async function() {
+        if (!deleteTarget) return;
+        const btn = document.getElementById('confirmDeleteBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        try {
+            const res = await fetch('/api/admin/customers/bulk-delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_ids: [deleteTarget] })
+            });
+
+            if (!res.ok) throw new Error('Failed');
+            showToast('Customer deleted successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+            deleteTarget = null;
+            closeViewPanel();
+            await fetchCustomers();
+        } catch (err) {
+            console.error(err);
+            showToast('Failed to delete customer', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Delete';
+        }
+    };
+
+    window.openAddCustomerModal = function() {
+        document.getElementById('addCustomerForm').reset();
+        new bootstrap.Modal(document.getElementById('addCustomerModal')).show();
+    };
+
+    window.saveNewCustomer = async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('addSaveBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Creating...';
+
+        try {
+            const body = {
+                first_name: document.getElementById('addFirstName').value.trim(),
+                last_name: document.getElementById('addLastName').value.trim(),
+                email: document.getElementById('addEmail').value.trim(),
+                phone: document.getElementById('addPhone').value.trim(),
+                password: document.getElementById('addPassword').value,
+                role: document.getElementById('addRole').value
+            };
+
+            const res = await fetch('/api/admin/customers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.message || 'Failed to create customer');
+            }
+            showToast('Customer created successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('addCustomerModal')).hide();
+            await fetchCustomers();
+        } catch (err) {
+            console.error(err);
+            showToast(err.message || 'Failed to create customer', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Add Customer';
+        }
+    };
+
+    window.exportCSV = function() {
+        const list = filteredCustomers.length > 0 ? filteredCustomers : allCustomers;
+        if (list.length === 0) {
+            showToast('No data to export', 'info');
+            return;
+        }
+
+        const headers = ['ID', 'First Name', 'Last Name', 'Email', 'Phone', 'Role', 'Orders', 'Total Spent (GHS)', 'Joined', 'Status'];
+        const rows = list.map(c => [
+            c.id,
+            `"${(c.first_name || '').replace(/"/g, '""')}"`,
+            `"${(c.last_name || '').replace(/"/g, '""')}"`,
+            `"${(c.email || '').replace(/"/g, '""')}"`,
+            `"${(c.phone || '').replace(/"/g, '""')}"`,
+            c.role || 'customer',
+            c.order_count != null ? c.order_count : (c.orders_count || 0),
+            parseFloat(c.total_spent || c.total_amount || 0).toFixed(2),
+            c.created_at ? new Date(c.created_at).toISOString().split('T')[0] : '',
+            c.is_active !== false ? 'Active' : 'Inactive'
+        ]);
+
+        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `customers_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        showToast(`Exported ${list.length} customers`, 'success');
+    };
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeViewPanel();
+    });
+
+    fetchCustomers();
+})();
+</script>
+{% endblock %}

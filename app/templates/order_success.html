@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Order Confirmed — ASAH'S PRIMENEST{% endblock %}
+
+{% block content %}
+<style>
+.os-page{padding:1rem 0 3rem;max-width:640px;margin:0 auto}
+@media(min-width:768px){.os-page{padding:2.5rem 0}}
+.os-skeleton{background:linear-gradient(90deg,#1a1818 25%,#252323 50%,#1a1818 75%);background-size:200% 100%;animation:oshim 1.5s infinite;border-radius:6px}
+@keyframes oshim{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* Success animation */
+.os-icon{width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;background:linear-gradient(135deg,rgba(242,102,15,.15),rgba(242,102,15,.05));border:3px solid var(--primary-orange);animation:osScale .5s cubic-bezier(.175,.885,.32,1.275)}
+.os-icon i{font-size:2.5rem;color:var(--primary-orange);animation:osBounce .6s .3s both}
+@keyframes osScale{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes osBounce{0%{transform:scale(0) rotate(-45deg);opacity:0}50%{transform:scale(1.2) rotate(0);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+@media(min-width:768px){.os-icon{width:110px;height:110px}.os-icon i{font-size:3.5rem}}
+
+.os-header{text-align:center;margin-bottom:1.5rem}
+.os-header h2{font-size:1.3rem;font-weight:700;color:#fff;margin-bottom:.35rem}
+.os-header p{font-size:.85rem;color:var(--text-secondary,#C8BEB7);margin-bottom:.25rem}
+.os-header .os-order-num{color:var(--primary-orange);font-weight:700;font-size:1rem}
+@media(min-width:768px){.os-header h2{font-size:1.6rem}}
+
+/* Status badge */
+.os-status{display:flex;align-items:center;gap:12px;background:#1a1717;border:1px solid var(--border-color,#2a2727);border-radius:12px;padding:.875rem 1rem;margin-bottom:.75rem}
+.os-status-icon{width:40px;height:40px;border-radius:50%;background:rgba(242,102,15,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.os-status-icon i{color:var(--primary-orange);font-size:1.1rem}
+.os-status .os-label{font-size:.7rem;color:var(--text-muted,#9a9590);text-transform:uppercase;letter-spacing:.5px}
+.os-status .os-val{color:var(--primary-orange);font-weight:600;font-size:.95rem}
+
+/* Card */
+.os-card{background:#1a1717;border:1px solid var(--border-color,#2a2727);border-radius:12px;margin-bottom:.75rem;overflow:hidden}
+.os-card-head{display:flex;align-items:center;gap:8px;padding:.75rem 1rem;border-bottom:1px solid var(--border-color,#2a2727)}
+.os-card-head i{color:var(--primary-orange)}
+.os-card-head span{color:#fff;font-size:.88rem;font-weight:600}
+.os-card-body{padding:.75rem 1rem}
+
+/* Items */
+.os-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-color,#2a2727)}
+.os-item:last-child{border-bottom:none}
+.os-item-img{width:50px;height:50px;border-radius:8px;object-fit:cover;background:#242020;border:1px solid var(--border-color,#2a2727);flex-shrink:0}
+.os-item-icon{width:50px;height:50px;border-radius:8px;background:#242020;border:1px solid var(--border-color,#2a2727);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.os-item-icon i{color:#555}
+.os-item-info{flex:1;min-width:0}
+.os-item-name{color:#fff;font-size:.85rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.os-item-meta{color:var(--text-muted,#9a9590);font-size:.72rem}
+.os-item-qty{color:var(--text-secondary,#C8BEB7);font-size:.75rem}
+.os-item-price{color:var(--primary-orange);font-weight:600;font-size:.85rem;white-space:nowrap}
+
+/* Totals */
+.os-row{display:flex;justify-content:space-between;padding:5px 0;font-size:.88rem}
+.os-row .label{color:var(--text-secondary,#C8BEB7)}
+.os-row .value{color:#fff}
+.os-total{display:flex;justify-content:space-between;padding-top:8px;margin-top:6px;border-top:2px solid var(--primary-orange);font-size:1.05rem;font-weight:700;color:#fff}
+.os-total .val{color:var(--primary-orange)}
+
+/* Address */
+.os-address{color:var(--warm-gray);font-size:.9rem;line-height:1.6}
+
+/* Actions */
+.os-actions{display:flex;flex-direction:column;gap:10px;margin-top:1.25rem}
+.os-actions a{display:flex;align-items:center;justify-content:center;gap:8px;padding:.85rem;border-radius:12px;font-weight:600;font-size:.95rem;text-decoration:none;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.os-actions a:active{transform:scale(.98)}
+.os-btn-primary{background:var(--primary-orange);color:#fff;border:none}
+.os-btn-primary:hover{background:#d45a0d;color:#fff}
+.os-btn-outline{background:transparent;color:var(--primary-orange);border:2px solid var(--primary-orange)}
+.os-btn-outline:hover{background:rgba(242,102,15,.08);color:var(--primary-orange)}
+@media(min-width:576px){.os-actions{flex-direction:row}.os-actions a{flex:1}}
+@media(max-width:576px){
+    .os-item-img,.os-item-icon{width:44px;height:44px}
+    .os-item-name{font-size:.8rem}
+    .os-item-meta{font-size:.68rem}
+    .os-item-price{font-size:.8rem}
+}
+</style>
+
+<div class="container os-page">
+    <!-- Loading -->
+    <div id="osLoading" class="text-center py-5">
+        <div class="os-skeleton mx-auto mb-3" style="width:90px;height:90px;border-radius:50%"></div>
+        <div class="os-skeleton mx-auto mb-2" style="width:240px;height:22px"></div>
+        <div class="os-skeleton mx-auto mb-4" style="width:160px;height:14px"></div>
+        <div class="os-skeleton mx-auto mb-2" style="width:100%;height:70px;border-radius:12px"></div>
+        <div class="os-skeleton mx-auto" style="width:100%;height:120px;border-radius:12px"></div>
+    </div>
+
+    <!-- Content -->
+    <div id="osContent" style="display:none">
+        <div class="os-header">
+            <div class="os-icon"><i class="bi bi-check-lg"></i></div>
+            <h2>Order Placed Successfully!</h2>
+            <p>Thank you for shopping with ASAH'S PRIMENEST</p>
+            <div class="os-order-num" id="osOrderNum">—</div>
+        </div>
+
+        <div class="os-status">
+            <div class="os-status-icon"><i class="bi bi-hourglass-split"></i></div>
+            <div><div class="os-label">Order Status</div><div class="os-val" id="osStatus">Pending</div></div>
+        </div>
+
+        <div class="os-card">
+            <div class="os-card-head"><i class="bi bi-bag"></i><span>Order Items</span></div>
+            <div class="os-card-body" id="osItems"></div>
+        </div>
+
+        <div class="os-card">
+            <div class="os-card-head"><i class="bi bi-receipt"></i><span>Order Summary</span></div>
+            <div class="os-card-body" id="osTotals"></div>
+        </div>
+
+        <div class="os-card" id="osAddrCard">
+            <div class="os-card-head"><i class="bi bi-geo-alt"></i><span>Shipping Address</span></div>
+            <div class="os-card-body os-address" id="osAddr"></div>
+        </div>
+
+        <div class="os-card">
+            <div class="os-card-head"><i class="bi bi-credit-card"></i><span>Payment Method</span></div>
+            <div class="os-card-body" style="color:var(--warm-gray);font-size:.9rem" id="osPayment">Payment on delivery</div>
+        </div>
+
+        <div class="os-actions">
+            <a href="/customer/dashboard" class="os-btn-primary"><i class="bi bi-list-ul"></i> View My Order</a>
+            <a href="/shop" class="os-btn-outline"><i class="bi bi-bag"></i> Continue Shopping</a>
+        </div>
+    </div>
+
+    <!-- Fallback -->
+    <div id="osFallback" style="display:none">
+        <div class="os-header">
+            <div class="os-icon"><i class="bi bi-check-lg"></i></div>
+            <h2>Order Placed Successfully!</h2>
+            <p>Thank you for your purchase.</p>
+            <p style="opacity:.5">You will receive a confirmation email shortly.</p>
+        </div>
+        <div class="os-actions">
+            <a href="/shop" class="os-btn-primary"><i class="bi bi-bag"></i> Continue Shopping</a>
+            <a href="/customer/dashboard" class="os-btn-outline"><i class="bi bi-list-ul"></i> View Orders</a>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    var p=new URLSearchParams(window.location.search);
+    var oid=p.get('order_id');
+    if(!oid){showFallback();return}
+
+    function fmt(v){return'GHS '+parseFloat(v||0).toFixed(2)}
+    function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+    function showFallback(){
+        document.getElementById('osLoading').style.display='none';
+        document.getElementById('osFallback').style.display='block';
+    }
+
+    var token=localStorage.getItem('token');
+    var headers={'Content-Type':'application/json'};
+    if(token)headers['Authorization']='Bearer '+token;
+
+    fetch('/api/orders/'+oid,{headers:headers})
+    .then(function(r){if(!r.ok)throw new Error();return r.json()})
+    .then(function(o){
+        document.getElementById('osOrderNum').textContent='#'+(o.order_number||o.id);
+        document.getElementById('osStatus').textContent=o.status||'Pending';
+
+        // Items
+        var ih='';
+        (o.items||[]).forEach(function(item){
+            var img=item.product_image||item.snapshot_image||'';
+            var name=item.product_name||item.snapshot_name||item.name||'Product #'+item.product_id;
+            var sku=item.product_sku||item.snapshot_sku||'';
+            var brand=item.product_brand||item.snapshot_brand||'';
+            var variant=item.product_variant||item.snapshot_variant||'';
+            var slug=item.product_slug||item.snapshot_slug||'';
+            var lineTotal=item.line_total||(item.price*item.quantity);
+            var meta=([brand,sku]).filter(Boolean).join(' · ');
+            ih+='<div class="os-item">'+
+                (img?'<img src="'+esc(img)+'" class="os-item-img" alt="'+esc(name)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="os-item-icon" style="display:none"><i class="bi bi-box"></i></div>':'<div class="os-item-icon"><i class="bi bi-box"></i></div>')+
+                '<div class="os-item-info"><div class="os-item-name">'+esc(name)+'</div>'+
+                (meta?'<div class="os-item-meta">'+esc(meta)+'</div>':'')+
+                (variant?'<div class="os-item-meta">'+esc(variant)+'</div>':'')+
+                '<div class="os-item-qty">Qty: '+item.quantity+' × '+fmt(item.price)+'</div></div>'+
+                '<div class="os-item-price">'+fmt(lineTotal)+'</div></div>';
+        });
+        document.getElementById('osItems').innerHTML=ih||'<p style="opacity:.5">No details</p>';
+
+        // Totals
+        var th='';
+        if(o.subtotal!=null)th+='<div class="os-row"><span class="label">Subtotal</span><span class="value">'+fmt(o.subtotal)+'</span></div>';
+        if(o.shipping_fee!=null)th+='<div class="os-row"><span class="label">Shipping</span><span class="value">'+(o.shipping_fee==0?'Free':fmt(o.shipping_fee))+'</span></div>';
+        if(o.tax!=null)th+='<div class="os-row"><span class="label">Tax</span><span class="value">'+fmt(o.tax)+'</span></div>';
+        if(o.total_amount!=null)th+='<div class="os-total"><span>Total</span><span class="val">'+fmt(o.total_amount)+'</span></div>';
+        document.getElementById('osTotals').innerHTML=th;
+
+        // Address
+        var a=o.shipping_address;
+        if(a&&typeof a==='object'){
+            var parts=[];
+            if(a.street)parts.push(esc(a.street));
+            var city=[a.city,a.state,a.zip_code].filter(Boolean).map(esc).join(', ');
+            if(city)parts.push(city);
+            if(a.country)parts.push(esc(a.country));
+            document.getElementById('osAddr').innerHTML=parts.join('<br>')||'No address';
+        }else{document.getElementById('osAddrCard').style.display='none'}
+
+        // Payment
+        if(o.payment)document.getElementById('osPayment').textContent=o.payment.payment_method||'Payment on delivery';
+
+        document.getElementById('osLoading').style.display='none';
+        document.getElementById('osContent').style.display='block';
+    })
+    .catch(function(){showFallback()});
+})();
+</script>
+{% endblock %}

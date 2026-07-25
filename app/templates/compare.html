@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Compare Products{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-5" data-aos="fade-up">
+        <div>
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Side by Side</span>
+            <h2 class="text-white mb-0 mt-2">Compare Products</h2>
+        </div>
+        <button class="btn btn-outline-primary" onclick="clearAll()" id="clear-btn">Clear All</button>
+    </div>
+
+    <!-- Compare Table -->
+    <div id="compare-section" data-aos="fade-up">
+        <div class="table-responsive">
+            <table class="table table-borderless align-middle" id="compare-table" style="display: none;">
+                <thead>
+                    <tr id="compare-images"></tr>
+                </thead>
+                <tbody id="compare-rows"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="compare-empty" class="text-center py-5" data-aos="fade-up">
+        <i class="bi bi-layout-split text-primary-orange" style="font-size: 5rem;"></i>
+        <h3 class="text-white mt-4 mb-3">No Products to Compare</h3>
+        <p class="text-warm-gray mb-4" style="max-width: 450px; margin: 0 auto;">
+            Add products to compare their features side by side. You can compare up to 3 products at a time.
+        </p>
+        <a href="{{ url_for('shop.index') }}" class="btn btn-primary btn-lg px-5">BROWSE PRODUCTS</a>
+    </div>
+</div>
+
+<style>
+    .compare-table td, .compare-table th {
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        padding: 16px 20px;
+        vertical-align: middle;
+    }
+    .compare-table .compare-img {
+        height: 180px;
+        object-fit: contain;
+        padding: 10px;
+    }
+    .compare-table .compare-remove {
+        color: var(--warm-gray);
+        cursor: pointer;
+        transition: color 0.3s;
+    }
+    .compare-table .compare-remove:hover {
+        color: #dc3545;
+    }
+    .compare-table tr td:first-child {
+        background-color: rgba(255, 255, 255, 0.03);
+        color: var(--primary-orange);
+        font-weight: 600;
+        white-space: nowrap;
+        width: 160px;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const COMPARE_KEY = 'compare_products';
+    const MAX_COMPARE = 3;
+
+    function getCompared() {
+        try {
+            return JSON.parse(localStorage.getItem(COMPARE_KEY)) || [];
+        } catch { return []; }
+    }
+
+    function saveCompared(items) {
+        localStorage.setItem(COMPARE_KEY, JSON.stringify(items));
+    }
+
+    const attributes = [
+        { key: 'name', label: 'Name' },
+        { key: 'price', label: 'Price', format: v => 'GHS ' + Number(v).toLocaleString() },
+        { key: 'rating', label: 'Rating', format: v => v ? '★ ' + v + ' / 5' : 'N/A' },
+        { key: 'stock', label: 'Stock', format: v => v > 0 ? 'In Stock (' + v + ')' : 'Out of Stock' },
+        { key: 'brand', label: 'Brand', format: v => v || 'N/A' },
+        { key: 'category', label: 'Category', format: v => v || 'N/A' }
+    ];
+
+    function render() {
+        const items = getCompared();
+        const table = document.getElementById('compare-table');
+        const empty = document.getElementById('compare-empty');
+        const clearBtn = document.getElementById('clear-btn');
+
+        if (items.length === 0) {
+            table.style.display = 'none';
+            empty.classList.remove('d-none');
+            clearBtn.style.display = 'none';
+            return;
+        }
+
+        table.style.display = 'table';
+        empty.classList.add('d-none');
+        clearBtn.style.display = '';
+
+        const theadRow = document.getElementById('compare-images');
+        const tbody = document.getElementById('compare-rows');
+
+        let headHtml = '<th style="background: transparent; border: none;"></th>';
+        items.forEach(p => {
+            const img = p.image || p.image_url || 'https://via.placeholder.com/200x200/121010/DBD2CB?text=Product';
+            headHtml += `
+                <td class="text-center card-custom" style="border-radius: 12px 12px 0 0 !important;">
+                    <span class="compare-remove float-end" onclick="removeCompare(${p.id})" title="Remove">
+                        <i class="bi bi-x-lg"></i>
+                    </span>
+                    <img src="${img}" class="compare-img mb-3" alt="${p.name}">
+                    <h6 class="text-white fw-bold mb-0">${p.name}</h6>
+                </td>
+            `;
+        });
+        theadRow.innerHTML = headHtml;
+
+        let bodyHtml = '';
+        attributes.forEach(attr => {
+            bodyHtml += `<tr><td>${attr.label}</td>`;
+            items.forEach(p => {
+                let val = p[attr.key];
+                val = attr.format ? attr.format(val) : (val || 'N/A');
+                bodyHtml += `<td class="text-warm-gray text-center">${val}</td>`;
+            });
+            bodyHtml += '</tr>';
+        });
+
+        bodyHtml += `<tr><td>Action</td>`;
+        items.forEach(p => {
+            bodyHtml += `<td class="text-center">
+                <button class="btn btn-primary btn-sm" onclick="addToCart(${p.id})">Add to Cart</button>
+            </td>`;
+        });
+        bodyHtml += '</tr>';
+        tbody.innerHTML = bodyHtml;
+    }
+
+    window.removeCompare = function(id) {
+        const items = getCompared().filter(p => p.id !== id);
+        saveCompared(items);
+        render();
+    };
+
+    window.clearAll = function() {
+        saveCompared([]);
+        render();
+    };
+
+    window.addToCart = async function(productId) {
+        try {
+            await fetch('/api/cart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: productId, quantity: 1 })
+            });
+            alert('Added to cart!');
+        } catch (err) {
+            console.error('Failed to add to cart:', err);
+        }
+    };
+
+    render();
+});
+</script>
+{% endblock %}

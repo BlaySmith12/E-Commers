@@ -1,0 +1,602 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<style>
+    .media-dropzone {
+        border: 2px dashed var(--border-color);
+        border-radius: 12px;
+        padding: 40px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        background: var(--bg-card);
+    }
+    .media-dropzone:hover, .media-dropzone.dragover {
+        border-color: var(--primary);
+        background: var(--primary-ghost);
+    }
+    .media-dropzone i { font-size: 2.5rem; color: var(--primary); margin-bottom: 12px; display: block; }
+    .media-dropzone p { color: var(--text-secondary); margin: 0; font-size: 0.9rem; }
+    .media-dropzone .small { color: var(--text-muted); font-size: 0.78rem; margin-top: 6px; }
+    .media-grid-item {
+        position: relative;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        background: var(--bg-card);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .media-grid-item:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+    .media-grid-item.selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary); }
+    .media-grid-item .media-thumb {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+        display: block;
+        background: var(--bg-input);
+    }
+    .media-grid-item .media-info {
+        padding: 10px;
+        font-size: 0.75rem;
+    }
+    .media-grid-item .media-info .fname {
+        color: var(--text-primary);
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .media-grid-item .media-info .fmeta {
+        color: var(--text-muted);
+        font-size: 0.7rem;
+    }
+    .media-grid-item .media-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+    .media-grid-item:hover .media-overlay { display: flex; }
+    .media-grid-item .media-overlay .btn { font-size: 0.7rem; padding: 4px 8px; }
+    .media-list-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border-color);
+        transition: background 0.15s;
+    }
+    .media-list-item:hover { background: var(--hover-bg); }
+    .media-list-item img {
+        width: 48px;
+        height: 48px;
+        object-fit: cover;
+        border-radius: 6px;
+        background: var(--bg-input);
+    }
+    .media-list-item .ml-info { flex: 1; min-width: 0; }
+    .media-list-item .ml-name { color: var(--text-primary); font-size: 0.85rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .media-list-item .ml-meta { color: var(--text-muted); font-size: 0.75rem; }
+    .media-list-item .ml-actions { display: flex; gap: 4px; }
+    .filter-btn { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); border-radius: 6px; padding: 5px 12px; font-size: 0.78rem; cursor: pointer; transition: all 0.15s; }
+    .filter-btn:hover, .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .stat-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px; text-align: center; }
+    .stat-card .stat-val { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); }
+    .stat-card .stat-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+    .upload-progress { display: none; margin-top: 10px; }
+    .upload-progress .progress-bar { background: var(--primary); }
+    .progress-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+    .progress-overlay.show { display: flex; }
+    .progress-card { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 12px; padding: 30px; text-align: center; min-width: 300px; }
+    .detail-panel {
+        position: fixed;
+        top: 0;
+        right: -450px;
+        width: 420px;
+        height: 100vh;
+        background: var(--bg-panel);
+        border-left: 1px solid var(--border-color);
+        z-index: 1050;
+        transition: right 0.3s ease;
+        overflow-y: auto;
+        padding: 20px;
+    }
+    .detail-panel.open { right: 0; }
+    .detail-panel .dp-img { width: 100%; border-radius: 8px; background: var(--bg-input); margin-bottom: 16px; }
+    .detail-panel .dp-field { margin-bottom: 12px; }
+    .detail-panel .dp-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+    .detail-panel .dp-value { color: var(--text-primary); font-size: 0.88rem; word-break: break-all; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0" style="color:var(--text-primary);">Media Library</h4>
+        <p style="color:var(--text-muted);font-size:0.82rem;margin-top:4px;">Upload, manage, and organize all your images</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-sm" style="background:var(--bg-card);border:1px solid var(--border-color);color:var(--text-secondary);" onclick="toggleView()">
+            <i id="viewIcon" class="bi bi-grid-3x3-gap"></i>
+        </button>
+        <label class="btn btn-sm" style="background:var(--primary);color:#fff;border:none;cursor:pointer;">
+            <i class="bi bi-upload me-1"></i> Upload Files
+            <input type="file" id="bulkUploadInput" multiple accept="image/*" style="display:none;" onchange="handleBulkUpload(this.files)">
+        </label>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-val" id="statTotal">-</div>
+            <div class="stat-label">Total Files</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-val" id="statSize">-</div>
+            <div class="stat-label">Total Size</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-val" id="statImages">-</div>
+            <div class="stat-label">Images</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-val" id="statRecent">-</div>
+            <div class="stat-label">This Week</div>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;">
+    <div class="card-body p-3">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <div class="flex-grow-1" style="max-width:300px;">
+                <input type="text" class="form-control form-control-sm" id="mediaSearch" placeholder="Search media..."
+                    style="background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);font-size:0.82rem;"
+                    oninput="debounceSearch()">
+            </div>
+            <div class="d-flex gap-1 flex-wrap" id="folderFilters">
+                <button class="filter-btn active" data-folder="" onclick="setFolderFilter(this)">All</button>
+                <button class="filter-btn" data-folder="products" onclick="setFolderFilter(this)">Products</button>
+                <button class="filter-btn" data-folder="categories" onclick="setFolderFilter(this)">Categories</button>
+                <button class="filter-btn" data-folder="brands" onclick="setFolderFilter(this)">Brands</button>
+                <button class="filter-btn" data-folder="banners" onclick="setFolderFilter(this)">Banners</button>
+                <button class="filter-btn" data-folder="site" onclick="setFolderFilter(this)">Site</button>
+                <button class="filter-btn" data-folder="users" onclick="setFolderFilter(this)">Users</button>
+            </div>
+            <select class="form-select form-select-sm" id="sortSelect" style="width:auto;background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);font-size:0.82rem;" onchange="loadMedia()">
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="name">Name A-Z</option>
+                <option value="size">Largest First</option>
+            </select>
+        </div>
+
+        <div id="dropzoneArea" class="media-dropzone mb-3">
+            <i class="bi bi-cloud-arrow-up"></i>
+            <p><strong>Drag & drop images here</strong> or click to browse</p>
+            <div class="small">JPG, PNG, WEBP, GIF, SVG &mdash; Max 16 MB per file</div>
+            <input type="file" id="dropzoneInput" multiple accept="image/*" style="display:none;" onchange="handleBulkUpload(this.files)">
+        </div>
+
+        <div id="mediaGrid" class="row g-2"></div>
+        <div id="mediaList" style="display:none;"></div>
+
+        <div id="emptyState" class="text-center py-5" style="display:none;">
+            <i class="bi bi-image" style="font-size:3rem;color:var(--text-muted);"></i>
+            <p class="mt-2" style="color:var(--text-muted);font-size:0.88rem;">No media found. Upload your first image!</p>
+        </div>
+
+        <div id="loadMoreArea" class="text-center py-3" style="display:none;">
+            <button class="btn btn-sm" style="background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-secondary);" onclick="loadMore()">Load More</button>
+        </div>
+    </div>
+</div>
+
+<div class="progress-overlay" id="progressOverlay">
+    <div class="progress-card">
+        <div class="spinner-border text-warning mb-3"></div>
+        <p style="color:var(--text-primary);font-weight:600;" id="progressText">Uploading...</p>
+        <div class="progress" style="height:6px;background:var(--bg-input);border-radius:3px;">
+            <div class="progress-bar" id="progressBar" style="width:0%;transition:width 0.3s;"></div>
+        </div>
+        <p style="color:var(--text-muted);font-size:0.78rem;margin-top:8px;" id="progressDetail"></p>
+    </div>
+</div>
+
+<div class="detail-panel" id="detailPanel">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 style="color:var(--text-primary);font-weight:600;margin:0;">Media Details</h6>
+        <button class="btn btn-sm" style="color:var(--text-muted);background:none;border:none;" onclick="closeDetail()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <img id="detailImg" class="dp-img" src="" alt="">
+    <div class="dp-field">
+        <div class="dp-label">Filename</div>
+        <div class="dp-value" id="detailFilename">-</div>
+    </div>
+    <div class="dp-field">
+        <div class="dp-label">URL</div>
+        <div class="dp-value d-flex gap-1">
+            <input type="text" class="form-control form-control-sm" id="detailUrl" readonly style="background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);font-size:0.78rem;">
+            <button class="btn btn-sm" style="background:var(--primary);color:#fff;border:none;" onclick="copyUrl()"><i class="bi bi-clipboard"></i></button>
+        </div>
+    </div>
+    <div class="dp-field">
+        <div class="dp-label">Dimensions</div>
+        <div class="dp-value" id="detailDims">-</div>
+    </div>
+    <div class="dp-field">
+        <div class="dp-label">File Size</div>
+        <div class="dp-value" id="detailSize">-</div>
+    </div>
+    <div class="dp-field">
+        <div class="dp-label">Type</div>
+        <div class="dp-value" id="detailType">-</div>
+    </div>
+    <div class="dp-field">
+        <div class="dp-label">Folder</div>
+        <div class="dp-value" id="detailFolder">-</div>
+    </div>
+    <div class="dp-field">
+        <div class="dp-label">Uploaded</div>
+        <div class="dp-value" id="detailDate">-</div>
+    </div>
+    <div class="dp-field">
+        <div class="dp-label">Alt Text</div>
+        <input type="text" class="form-control form-control-sm" id="detailAlt" style="background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);font-size:0.82rem;">
+    </div>
+    <div class="dp-field" id="detailUsageSection" style="display:none;">
+        <div class="dp-label">Used By</div>
+        <div class="dp-value" id="detailUsage">-</div>
+    </div>
+    <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-sm flex-fill" style="background:var(--primary);color:#fff;border:none;" onclick="saveAltText()"><i class="bi bi-check-lg me-1"></i>Save</button>
+        <button class="btn btn-sm flex-fill" style="background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-secondary);" onclick="replaceMedia()"><i class="bi bi-arrow-repeat me-1"></i>Replace</button>
+        <button class="btn btn-sm" style="background:rgba(220,53,69,0.1);border:1px solid rgba(220,53,69,0.3);color:#dc3545;" onclick="deleteSelectedMedia()"><i class="bi bi-trash"></i></button>
+    </div>
+    <input type="file" id="replaceInput" accept="image/*" style="display:none;" onchange="handleReplace(this.files[0])">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+    let currentFolder = '';
+    let currentSort = 'newest';
+    let searchQuery = '';
+    let searchTimer = null;
+    let currentPage = 0;
+    const PAGE_SIZE = 50;
+    let allMedia = [];
+    let viewMode = 'grid';
+    let selectedMedia = null;
+
+    const API = '/api/media';
+
+    function getToken() {
+        return localStorage.getItem('admin_token') || '';
+    }
+
+    function headers() {
+        return { 'Authorization': 'Bearer ' + getToken() };
+    }
+
+    window.debounceSearch = function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            searchQuery = document.getElementById('mediaSearch').value;
+            currentPage = 0;
+            allMedia = [];
+            loadMedia();
+        }, 300);
+    };
+
+    window.setFolderFilter = function(btn) {
+        document.querySelectorAll('#folderFilters .filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFolder = btn.dataset.folder;
+        currentPage = 0;
+        allMedia = [];
+        loadMedia();
+    };
+
+    window.toggleView = function() {
+        viewMode = viewMode === 'grid' ? 'list' : 'grid';
+        document.getElementById('viewIcon').className = viewMode === 'grid' ? 'bi bi-grid-3x3-gap' : 'bi bi-list';
+        document.getElementById('mediaGrid').style.display = viewMode === 'grid' ? '' : 'none';
+        document.getElementById('mediaList').style.display = viewMode === 'list' ? '' : 'none';
+        renderMedia();
+    };
+
+    async function loadStats() {
+        try {
+            const res = await fetch(API + '/stats', { headers: headers() });
+            if (!res.ok) return;
+            const data = await res.json();
+            document.getElementById('statTotal').textContent = data.total_count;
+            document.getElementById('statSize').textContent = data.total_size_formatted;
+        } catch(e) {}
+    }
+
+    window.loadMedia = async function(append) {
+        if (!append) { currentPage = 0; allMedia = []; }
+        const params = new URLSearchParams({
+            skip: currentPage * PAGE_SIZE,
+            limit: PAGE_SIZE,
+            sort: currentSort,
+        });
+        if (searchQuery) params.set('q', searchQuery);
+        if (currentFolder) params.set('folder', currentFolder);
+
+        try {
+            const res = await fetch(API + '?' + params.toString(), { headers: headers() });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (append) {
+                allMedia = allMedia.concat(data);
+            } else {
+                allMedia = data;
+            }
+            renderMedia();
+            document.getElementById('loadMoreArea').style.display = data.length >= PAGE_SIZE ? '' : 'none';
+            document.getElementById('statImages').textContent = allMedia.length;
+        } catch(e) {
+            console.error('Failed to load media', e);
+        }
+    };
+
+    window.loadMore = function() {
+        currentPage++;
+        loadMedia(true);
+    };
+
+    function renderMedia() {
+        const grid = document.getElementById('mediaGrid');
+        const list = document.getElementById('mediaList');
+        const empty = document.getElementById('emptyState');
+
+        if (allMedia.length === 0) {
+            grid.innerHTML = '';
+            list.innerHTML = '';
+            empty.style.display = '';
+            return;
+        }
+        empty.style.display = 'none';
+
+        if (viewMode === 'grid') {
+            grid.innerHTML = allMedia.map(m => {
+                const thumb = m.thumbnail_url || m.url;
+                const sz = formatSize(m.file_size);
+                const dims = m.width && m.height ? m.width + '×' + m.height : '';
+                return `<div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                    <div class="media-grid-item ${selectedMedia && selectedMedia.id === m.id ? 'selected' : ''}" onclick="selectMedia(${m.id})">
+                        <img class="media-thumb" src="${thumb}" alt="${m.alt_text || ''}" loading="lazy">
+                        <div class="media-info">
+                            <div class="fname" title="${m.original_filename}">${m.original_filename}</div>
+                            <div class="fmeta">${dims ? dims + ' · ' : ''}${sz}</div>
+                        </div>
+                        <div class="media-overlay">
+                            <button class="btn btn-sm" style="background:var(--primary);color:#fff;border:none;" onclick="event.stopPropagation();selectMedia(${m.id})"><i class="bi bi-eye"></i></button>
+                            <button class="btn btn-sm" style="background:rgba(220,53,69,0.8);color:#fff;border:none;" onclick="event.stopPropagation();quickDelete(${m.id})"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        } else {
+            list.innerHTML = allMedia.map(m => {
+                const thumb = m.thumbnail_url || m.url;
+                const sz = formatSize(m.file_size);
+                const dims = m.width && m.height ? m.width + '×' + m.height : '';
+                const date = m.created_at ? new Date(m.created_at).toLocaleDateString() : '-';
+                return `<div class="media-list-item" onclick="selectMedia(${m.id})" style="cursor:pointer;">
+                    <img src="${thumb}" alt="${m.alt_text || ''}">
+                    <div class="ml-info">
+                        <div class="ml-name">${m.original_filename}</div>
+                        <div class="ml-meta">${dims ? dims + ' · ' : ''}${sz} · ${m.folder || 'uploads'} · ${date}</div>
+                    </div>
+                    <div class="ml-actions">
+                        <button class="btn btn-sm" style="color:var(--text-muted);background:none;border:none;" onclick="event.stopPropagation();quickDelete(${m.id})"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    }
+
+    function formatSize(bytes) {
+        if (!bytes) return '0 B';
+        if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB';
+        if (bytes >= 1024) return (bytes / 1024).toFixed(0) + ' KB';
+        return bytes + ' B';
+    }
+
+    window.selectMedia = async function(id) {
+        const m = allMedia.find(x => x.id === id);
+        if (!m) return;
+        selectedMedia = m;
+        document.getElementById('detailImg').src = m.thumbnail_url || m.url;
+        document.getElementById('detailFilename').textContent = m.original_filename;
+        document.getElementById('detailUrl').value = m.url;
+        document.getElementById('detailDims').textContent = (m.width && m.height) ? m.width + ' × ' + m.height + ' px' : 'Unknown';
+        document.getElementById('detailSize').textContent = formatSize(m.file_size);
+        document.getElementById('detailType').textContent = m.file_type || '-';
+        document.getElementById('detailFolder').textContent = m.folder || 'uploads';
+        document.getElementById('detailDate').textContent = m.created_at ? new Date(m.created_at).toLocaleString() : '-';
+        document.getElementById('detailAlt').value = m.alt_text || '';
+
+        document.getElementById('detailPanel').classList.add('open');
+        document.querySelectorAll('.media-grid-item').forEach(el => el.classList.remove('selected'));
+        event.currentTarget?.classList?.add('selected');
+
+        try {
+            const res = await fetch(API + '/' + m.id + '/usage', { headers: headers() });
+            if (res.ok) {
+                const data = await res.json();
+                const sec = document.getElementById('detailUsageSection');
+                if (data.usage_count > 0) {
+                    sec.style.display = '';
+                    document.getElementById('detailUsage').textContent = data.used_by.map(u => u.type + ': ' + u.name).join(', ');
+                } else {
+                    sec.style.display = 'none';
+                }
+            }
+        } catch(e) {}
+    };
+
+    window.closeDetail = function() {
+        document.getElementById('detailPanel').classList.remove('open');
+        selectedMedia = null;
+    };
+
+    window.copyUrl = function() {
+        const url = document.getElementById('detailUrl').value;
+        navigator.clipboard.writeText(url).then(() => {
+            showToast('URL copied!', 'success');
+        });
+    };
+
+    window.saveAltText = async function() {
+        if (!selectedMedia) return;
+        const alt = document.getElementById('detailAlt').value;
+        try {
+            const res = await fetch(API + '/' + selectedMedia.id, {
+                method: 'PUT',
+                headers: { ...headers(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ alt_text: alt }),
+            });
+            if (res.ok) {
+                selectedMedia.alt_text = alt;
+                showToast('Alt text saved', 'success');
+            }
+        } catch(e) { showToast('Failed to save', 'error'); }
+    };
+
+    window.replaceMedia = function() {
+        document.getElementById('replaceInput').click();
+    };
+
+    window.handleReplace = async function(file) {
+        if (!file || !selectedMedia) return;
+        const fd = new FormData();
+        fd.append('file', file);
+        try {
+            const res = await fetch(API + '/' + selectedMedia.id + '/replace', {
+                method: 'PUT',
+                headers: headers(),
+                body: fd,
+            });
+            if (res.ok) {
+                showToast('Image replaced', 'success');
+                closeDetail();
+                loadMedia();
+            } else {
+                const err = await res.json();
+                showToast(err.detail || 'Replace failed', 'error');
+            }
+        } catch(e) { showToast('Replace failed', 'error'); }
+    };
+
+    window.quickDelete = async function(id) {
+        if (!confirm('Delete this image?')) return;
+        try {
+            const res = await fetch(API + '/' + id + '?force=true', {
+                method: 'DELETE',
+                headers: headers(),
+            });
+            if (res.ok) {
+                showToast('Deleted', 'success');
+                loadMedia();
+                loadStats();
+            } else {
+                const err = await res.json();
+                showToast(err.detail || 'Delete failed', 'error');
+            }
+        } catch(e) { showToast('Delete failed', 'error'); }
+    };
+
+    window.deleteSelectedMedia = function() {
+        if (selectedMedia) quickDelete(selectedMedia.id);
+    };
+
+    window.handleBulkUpload = async function(files) {
+        if (!files || files.length === 0) return;
+        const overlay = document.getElementById('progressOverlay');
+        const bar = document.getElementById('progressBar');
+        const text = document.getElementById('progressText');
+        const detail = document.getElementById('progressDetail');
+        overlay.classList.add('show');
+
+        let done = 0;
+        const total = files.length;
+
+        for (const file of files) {
+            text.textContent = `Uploading ${done + 1} of ${total}...`;
+            detail.textContent = file.name;
+            bar.style.width = Math.round((done / total) * 100) + '%';
+
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('folder', currentFolder || 'uploads');
+
+            try {
+                await fetch(API + '/upload', {
+                    method: 'POST',
+                    headers: headers(),
+                    body: fd,
+                });
+            } catch(e) {}
+            done++;
+        }
+
+        bar.style.width = '100%';
+        text.textContent = 'Upload complete!';
+        detail.textContent = `${total} file(s) uploaded`;
+        setTimeout(() => {
+            overlay.classList.remove('show');
+            bar.style.width = '0%';
+            loadMedia();
+            loadStats();
+        }, 1200);
+    };
+
+    const dropzone = document.getElementById('dropzoneArea');
+    const dropInput = document.getElementById('dropzoneInput');
+
+    dropzone.addEventListener('click', () => dropInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        handleBulkUpload(e.dataTransfer.files);
+    });
+
+    function showToast(msg, type) {
+        const el = document.createElement('div');
+        el.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;padding:12px 20px;border-radius:8px;font-size:0.85rem;font-weight:500;animation:fadeIn 0.3s;';
+        el.style.background = type === 'success' ? 'rgba(25,135,84,0.95)' : 'rgba(220,53,69,0.95)';
+        el.style.color = '#fff';
+        el.textContent = msg;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 3000);
+    }
+
+    loadMedia();
+    loadStats();
+})();
+</script>
+{% endblock %}

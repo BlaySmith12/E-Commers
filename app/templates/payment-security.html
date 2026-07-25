@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block title %}Payment & Security{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="position-relative" style="background: linear-gradient(rgba(18,16,16,0.85), rgba(18,16,16,0.95)), url('{{ url_for("static", filename="images/hero_bg.png") }}') center/cover no-repeat; padding: 120px 0 60px;">
+    <div class="container position-relative" style="z-index: 2;">
+        <div class="text-center" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">ASAH'S PRIMENEST</span>
+            <h1 class="display-4 fw-bold text-white mt-3">Payment & Security</h1>
+            <nav aria-label="breadcrumb" class="mt-3">
+                <ol class="breadcrumb justify-content-center mb-0">
+                    <li class="breadcrumb-item"><a href="/" class="text-warm-gray text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item active text-primary-orange" aria-current="page">Payment & Security</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+</section>
+
+<!-- Overview -->
+<section class="py-5" style="background-color: var(--dark-bg);">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center" data-aos="fade-up">
+                <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Safe & Secure</span>
+                <h2 class="text-white mt-3 mb-4">Your Security Is Our Priority</h2>
+                <p class="text-warm-gray" style="font-size: 1.05rem; line-height: 1.8;">
+                    At Asah's Primenest, we use industry-leading security measures to protect your personal and financial information. Every transaction on our platform is fully encrypted and safeguarded.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Payment Methods -->
+<section class="py-5" style="background-color: #0a0909;">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Convenient Options</span>
+            <h2 class="text-white mt-3">Accepted Payment Methods</h2>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-phone text-primary-orange fs-1"></i>
+                        </div>
+                    </div>
+                    <h6 class="text-white fw-bold mb-2">Mobile Money</h6>
+                    <p class="text-warm-gray small mb-1">MTN Mobile Money</p>
+                    <p class="text-warm-gray small mb-1">Vodafone Cash</p>
+                    <p class="text-warm-gray small mb-0">AirtelTigo Money</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-bank text-primary-orange fs-1"></i>
+                        </div>
+                    </div>
+                    <h6 class="text-white fw-bold mb-2">Bank Transfer</h6>
+                    <p class="text-warm-gray small mb-0">Direct bank-to-bank transfers from all major Ghanaian banks. Transfer details provided at checkout.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-credit-card text-primary-orange fs-1"></i>
+                        </div>
+                    </div>
+                    <h6 class="text-white fw-bold mb-2">Credit / Debit Card</h6>
+                    <p class="text-warm-gray small mb-1">Visa</p>
+                    <p class="text-warm-gray small mb-0">Mastercard</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="400">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-cash-stack text-primary-orange fs-1"></i>
+                        </div>
+                    </div>
+                    <h6 class="text-white fw-bold mb-2">Cash on Delivery</h6>
+                    <p class="text-warm-gray small mb-0">Pay with cash when your order arrives at your doorstep. Available for select areas.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Payment Security -->
+<section class="py-5" style="background-color: var(--dark-bg);">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Bank-Level Protection</span>
+            <h2 class="text-white mt-3">Payment Security</h2>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-lock text-primary-orange fs-1"></i>
+                        </div>
+                    </div>
+                    <h6 class="text-white fw-bold">SSL Encryption</h6>
+                    <p class="text-warm-gray small mb-0">All data transmitted between your browser and our servers is encrypted with 256-bit SSL technology.</p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-shield-check text-primary-orange fs-1"></i>
+                        </div>
+                    </div>
+                    <h6 class="text-white fw-bold">PCI DSS Compliant</h6>
+                    <p class="text-warm-gray small mb-0">We adhere to the Payment Card Industry Data Security Standard for handling cardholder data.</p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="300">
+                <div class="card card-custom p-4 text-center h-100 feature-card">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:70px; height:70px; background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-hdd-network text-primary-orange fs-1"></i>
+                        </div>
+                    </div>
+                    <h6 class="text-white fw-bold">Secure Gateway</h6>
+                    <p class="text-warm-gray small mb-0">Payments are processed through a trusted, PCI-authorized payment gateway — we never store your card details.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Transaction Protection -->
+<section class="py-5" style="background-color: #0a0909;">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Peace of Mind</span>
+            <h2 class="text-white mt-3">Transaction Protection</h2>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card card-custom p-5" data-aos="fade-up">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 mt-1"><i class="bi bi-envelope-check text-primary-orange fs-3"></i></div>
+                                <div>
+                                    <h6 class="text-white fw-bold mb-1">Order Confirmation</h6>
+                                    <p class="text-warm-gray small mb-0">You receive an instant email and SMS confirmation every time you place an order, so you always know your transaction was successful.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 mt-1"><i class="bi bi-receipt text-primary-orange fs-3"></i></div>
+                                <div>
+                                    <h6 class="text-white fw-bold mb-1">Transaction Receipt</h6>
+                                    <p class="text-warm-gray small mb-0">A detailed receipt is provided for every transaction, accessible from your account dashboard and sent via email.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 mt-1"><i class="bi bi-arrow-counterclockwise text-primary-orange fs-3"></i></div>
+                                <div>
+                                    <h6 class="text-white fw-bold mb-1">Refund Guarantee</h6>
+                                    <p class="text-warm-gray small mb-0">If you're not satisfied, our <a href="/returns-refunds" class="text-primary-orange text-decoration-none fw-bold">return policy</a> ensures you get a full refund within 5–10 business days.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 mt-1"><i class="bi bi-telephone-inbound text-primary-orange fs-3"></i></div>
+                                <div>
+                                    <h6 class="text-white fw-bold mb-1">24/7 Fraud Monitoring</h6>
+                                    <p class="text-warm-gray small mb-0">Our systems monitor all transactions around the clock for any suspicious activity to keep your account safe.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Payment Failures -->
+<section class="py-5" style="background-color: var(--dark-bg);">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Troubleshooting</span>
+            <h2 class="text-white mt-3">Payment Failures</h2>
+        </div>
+        <div class="row g-5">
+            <div class="col-lg-6" data-aos="fade-right">
+                <div class="card card-custom p-5 h-100">
+                    <h5 class="text-white fw-bold mb-4"><i class="bi bi-exclamation-triangle text-primary-orange me-2"></i>Common Reasons</h5>
+                    <ul class="text-warm-gray mb-0" style="list-style: none; padding-left: 0; line-height: 2.2;">
+                        <li><i class="bi bi-x-circle text-danger me-2"></i>Insufficient funds in your account or Mobile Money wallet</li>
+                        <li><i class="bi bi-x-circle text-danger me-2"></i>Incorrect card number, PIN, or expiry date</li>
+                        <li><i class="bi bi-x-circle text-danger me-2"></i>Card or Mobile Money daily transaction limit reached</li>
+                        <li><i class="bi bi-x-circle text-danger me-2"></i>Network timeout due to poor internet connection</li>
+                        <li><i class="bi bi-x-circle text-danger me-2"></i>Bank or provider temporarily blocking the transaction</li>
+                        <li><i class="bi bi-x-circle text-danger me-2"></i>Session expired during checkout</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-lg-6" data-aos="fade-left">
+                <div class="card card-custom p-5 h-100">
+                    <h5 class="text-white fw-bold mb-4"><i class="bi bi-lightbulb text-primary-orange me-2"></i>What To Do</h5>
+                    <ul class="text-warm-gray mb-0" style="list-style: none; padding-left: 0; line-height: 2.2;">
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>Double-check all your payment details before retrying</li>
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>Ensure you have sufficient balance or credit</li>
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>Try a different payment method (e.g., switch to Mobile Money)</li>
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>Wait a few minutes and retry — the issue may be temporary</li>
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>Clear your browser cache and start a new session</li>
+                        <li><i class="bi bi-check2-circle text-primary-orange me-2"></i>Contact your bank or Mobile Money provider to confirm no blocks</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Refund Processing -->
+<section class="py-5" style="background-color: #0a0909;">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="text-primary-orange text-uppercase fw-bold" style="letter-spacing:1px;">Getting Your Money Back</span>
+            <h2 class="text-white mt-3">Refund Processing</h2>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-8" data-aos="fade-up">
+                <div class="card card-custom p-5">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 mt-1"><i class="bi bi-clock-history text-primary-orange fs-3"></i></div>
+                                <div>
+                                    <h6 class="text-white fw-bold">Processing Timeline</h6>
+                                    <p class="text-warm-gray small mb-0">Refunds are processed within <strong class="text-primary-orange">5–10 business days</strong> from the date your return is approved and the item is received by our team.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 mt-1"><i class="bi bi-arrow-return-left text-primary-orange fs-3"></i></div>
+                                <div>
+                                    <h6 class="text-white fw-bold">Original Payment Method</h6>
+                                    <p class="text-warm-gray small mb-0">Refunds are always returned to the original payment method used at checkout — whether Mobile Money, card, or bank transfer.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 mt-1"><i class="bi bi-phone text-primary-orange fs-3"></i></div>
+                                <div>
+                                    <h6 class="text-white fw-bold">Mobile Money Refunds</h6>
+                                    <p class="text-warm-gray small mb-0">Mobile Money refunds are typically the fastest, often reflecting within 1–3 business days after approval.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 mt-1"><i class="bi bi-envelope text-primary-orange fs-3"></i></div>
+                                <div>
+                                    <h6 class="text-white fw-bold">Confirmation Email</h6>
+                                    <p class="text-warm-gray small mb-0">You'll receive an email confirmation once your refund has been processed, including the amount and method used.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="py-5" style="background: linear-gradient(135deg, var(--primary-orange), #d1560c);">
+    <div class="container py-5 text-center" data-aos="fade-up">
+        <h2 class="text-white fw-bold mb-3">Questions About Payment?</h2>
+        <p class="text-white mb-4" style="opacity:0.9; max-width:500px; margin:0 auto;">Our team is here to help you with any payment or security concerns.</p>
+        <a href="/contact" class="btn btn-light btn-lg px-5 fw-bold">CONTACT US</a>
+    </div>
+</section>
+
+<style>
+    .feature-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+</style>
+{% endblock %}

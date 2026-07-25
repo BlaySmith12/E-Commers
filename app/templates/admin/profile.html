@@ -1,0 +1,236 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1">My Profile</h3>
+            <p style="color:#9a9590;margin:0;">Manage your account information</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-4">
+            <div class="card card-custom p-4 text-center">
+                <img id="profile-avatar" src="https://ui-avatars.com/api/?name=Admin&background=F2660F&color=fff&size=120" class="rounded-circle mb-3" style="width:100px;height:100px;" alt="">
+                <h5 class="fw-bold" id="profile-name-display">Administrator</h5>
+                <p style="color:#9a9590;" id="profile-role-display">Admin</p>
+                <hr style="border-color:var(--border-color);">
+                <div class="text-start" style="font-size:.85rem;">
+                    <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--border-color);">
+                        <span style="color:#9a9590;">Member since</span>
+                        <span id="profile-created" style="color:#C8BEB7;">-</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--border-color);">
+                        <span style="color:#9a9590;">Last login</span>
+                        <span id="profile-last-login" style="color:#C8BEB7;">-</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2">
+                        <span style="color:#9a9590;">2FA</span>
+                        <span id="profile-2fa" style="color:#C8BEB7;">Disabled</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-8">
+            <div class="card card-custom p-4 mb-4">
+                <h5 class="fw-bold mb-4">Personal Information</h5>
+                <form id="profile-form">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" style="color:#9a9590;font-size:.82rem;">First Name</label>
+                            <input type="text" class="form-control" id="pf-first-name" style="background:#242020;border-color:var(--border-color);color:#F6F9F9;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" style="color:#9a9590;font-size:.82rem;">Last Name</label>
+                            <input type="text" class="form-control" id="pf-last-name" style="background:#242020;border-color:var(--border-color);color:#F6F9F9;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" style="color:#9a9590;font-size:.82rem;">Email</label>
+                            <input type="email" class="form-control" id="pf-email" style="background:#242020;border-color:var(--border-color);color:#F6F9F9;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" style="color:#9a9590;font-size:.82rem;">Phone</label>
+                            <input type="text" class="form-control" id="pf-phone" style="background:#242020;border-color:var(--border-color);color:#F6F9F9;">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" style="color:#9a9590;font-size:.82rem;">Profile Photo</label>
+                            <div id="profileAvatarUpload"></div>
+                            <input type="hidden" id="pf-avatar" value="">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary-custom" id="profile-save-btn">
+                                <i class="bi bi-check-lg me-1"></i> Save Changes
+                            </button>
+                            <span id="profile-status" class="ms-3" style="color:#198754;font-size:.85rem;display:none;">Saved!</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card card-custom p-4">
+                <h5 class="fw-bold mb-4">Change Password</h5>
+                <form id="password-form">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" style="color:#9a9590;font-size:.82rem;">Current Password</label>
+                            <input type="password" class="form-control" id="pw-current" required style="background:#242020;border-color:var(--border-color);color:#F6F9F9;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" style="color:#9a9590;font-size:.82rem;">New Password</label>
+                            <input type="password" class="form-control" id="pw-new" required minlength="6" style="background:#242020;border-color:var(--border-color);color:#F6F9F9;">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-outline-danger" id="pw-save-btn">
+                                <i class="bi bi-shield-lock me-1"></i> Change Password
+                            </button>
+                            <span id="pw-status" class="ms-3" style="font-size:.85rem;display:none;"></span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(async function() {
+    const token = localStorage.getItem('admin_token');
+    if (!token) { window.location.href = '/admin/login'; return; }
+    const H = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+    async function api(url, opts={}) {
+        const r = await fetch(url, { headers: H, ...opts });
+        if (r.status === 401) { localStorage.removeItem('admin_token'); window.location.href = '/admin/login'; return null; }
+        return r.json();
+    }
+
+    const profile = await api('/api/admin/profile');
+    if (!profile) return;
+
+    const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username;
+    document.getElementById('profile-name-display').textContent = name;
+    document.getElementById('profile-role-display').textContent = profile.role_name || 'Admin';
+    document.getElementById('profile-avatar').src = profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=F2660F&color=fff&size=120`;
+    document.getElementById('profile-created').textContent = profile.created_at ? new Date(profile.created_at).toLocaleDateString() : '-';
+    document.getElementById('profile-last-login').textContent = profile.last_login ? new Date(profile.last_login).toLocaleString() : 'Never';
+    document.getElementById('profile-2fa').textContent = profile.two_factor_enabled ? 'Enabled' : 'Disabled';
+
+    document.getElementById('pf-first-name').value = profile.first_name || '';
+    document.getElementById('pf-last-name').value = profile.last_name || '';
+    document.getElementById('pf-email').value = profile.email || '';
+    document.getElementById('pf-phone').value = profile.phone || '';
+    document.getElementById('pf-avatar').value = profile.avatar_url || '';
+
+    if (profile.avatar_url) {
+        const zone = document.querySelector('#profileAvatarUpload .asaah-upload-zone');
+        if (zone) {
+            const uid = zone.id.replace('_zone', '');
+            document.getElementById(uid + '_previewImg').src = profile.avatar_url;
+            document.getElementById(uid + '_preview').style.display = '';
+            document.getElementById(uid + '_ph').style.display = 'none';
+        }
+    }
+
+    (function() {
+        const container = document.getElementById('profileAvatarUpload');
+        if (!container) return;
+        const uid = 'prof_' + Math.random().toString(36).substr(2, 8);
+        container.innerHTML = `
+            <div class="asaah-upload-zone" id="${uid}_zone" style="border:2px dashed var(--border-color);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg-card);">
+                <div id="${uid}_preview" style="display:none;position:relative;">
+                    <img id="${uid}_previewImg" style="max-width:100px;max-height:100px;border-radius:50%;object-fit:cover;" src="" alt="">
+                    <button type="button" class="btn btn-sm" style="position:absolute;top:2px;right:2px;background:rgba(220,53,69,0.9);color:#fff;border:none;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;" onclick="event.stopPropagation();document.getElementById('${uid}_preview').style.display='none';document.getElementById('${uid}_ph').style.display='';document.getElementById('pf-avatar').value='';document.getElementById('profile-avatar').src='https://ui-avatars.com/api/?name=Admin&background=F2660F&color=fff&size=120';">&times;</button>
+                </div>
+                <div id="${uid}_ph">
+                    <i class="bi bi-camera" style="font-size:1.5rem;color:var(--primary);display:block;margin-bottom:4px;"></i>
+                    <p style="color:var(--text-secondary);font-size:0.78rem;margin:0;">Upload Photo</p>
+                </div>
+                <input type="file" id="${uid}_input" accept="image/*" style="display:none;">
+            </div>
+            <div id="${uid}_progress" style="display:none;margin-top:6px;">
+                <div class="progress" style="height:3px;background:var(--bg-input);border-radius:2px;">
+                    <div class="progress-bar" style="background:var(--primary);width:0%;transition:width 0.3s;border-radius:2px;"></div>
+                </div>
+            </div>`;
+        const zone = document.getElementById(uid + '_zone');
+        const input = document.getElementById(uid + '_input');
+        zone.addEventListener('click', () => input.click());
+        zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.style.borderColor = 'var(--primary)'; });
+        zone.addEventListener('dragleave', () => { zone.style.borderColor = 'var(--border-color)'; });
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault(); zone.style.borderColor = 'var(--border-color)';
+            if (e.dataTransfer.files.length > 0) profUpload(uid, e.dataTransfer.files[0]);
+        });
+        input.addEventListener('change', () => { if (input.files.length > 0) profUpload(uid, input.files[0]); });
+
+        async function profUpload(uid, file) {
+            const progressEl = document.getElementById(uid + '_progress');
+            const bar = progressEl.querySelector('.progress-bar');
+            progressEl.style.display = ''; bar.style.width = '30%';
+            const fd = new FormData(); fd.append('file', file); fd.append('folder', 'users'); fd.append('media_type', 'avatar');
+            try {
+                const resp = await fetch('/api/media/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
+                bar.style.width = '80%';
+                if (resp.ok) {
+                    const data = await resp.json(); bar.style.width = '100%';
+                    document.getElementById(uid + '_previewImg').src = data.url;
+                    document.getElementById(uid + '_preview').style.display = '';
+                    document.getElementById(uid + '_ph').style.display = 'none';
+                    document.getElementById('pf-avatar').value = data.url;
+                    document.getElementById('profile-avatar').src = data.url;
+                    setTimeout(() => { progressEl.style.display = 'none'; bar.style.width = '0%'; }, 800);
+                } else { const err = await resp.json(); alert(err.detail || 'Upload failed'); progressEl.style.display = 'none'; }
+            } catch(e) { alert('Upload failed'); progressEl.style.display = 'none'; }
+        }
+    })();
+
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('profile-save-btn');
+        btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+        const data = await api('/api/admin/profile', {
+            method: 'PATCH',
+            body: JSON.stringify({
+                first_name: document.getElementById('pf-first-name').value,
+                last_name: document.getElementById('pf-last-name').value,
+                email: document.getElementById('pf-email').value,
+                phone: document.getElementById('pf-phone').value,
+                avatar_url: document.getElementById('pf-avatar').value,
+            })
+        });
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save Changes';
+        if (data) {
+            const st = document.getElementById('profile-status');
+            st.style.display = 'inline';
+            setTimeout(() => st.style.display = 'none', 3000);
+            ADMIN.loadUser();
+        }
+    });
+
+    document.getElementById('password-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('pw-save-btn');
+        btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Changing...';
+        const st = document.getElementById('pw-status');
+        const data = await api('/api/admin/change-password', {
+            method: 'POST',
+            body: JSON.stringify({
+                current_password: document.getElementById('pw-current').value,
+                new_password: document.getElementById('pw-new').value,
+            })
+        });
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-shield-lock me-1"></i> Change Password';
+        if (data && data.detail) {
+            st.textContent = data.detail; st.style.color = '#198754'; st.style.display = 'inline';
+            document.getElementById('pw-current').value = '';
+            document.getElementById('pw-new').value = '';
+        } else {
+            st.textContent = 'Failed to change password'; st.style.color = '#dc3545'; st.style.display = 'inline';
+        }
+        setTimeout(() => st.style.display = 'none', 4000);
+    });
+})();
+</script>
+{% endblock %}

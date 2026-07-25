@@ -1,0 +1,532 @@
+{% extends "base.html" %}
+{% block title %}Checkout — ASAH'S PRIMENEST{% endblock %}
+
+{% block head %}
+<style>
+/* Hide base navbar/footer during checkout on mobile */
+@media(max-width:991.98px){
+    .top-bar,#mainNav,.site-footer{display:none!important}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<style>
+/* ═══════════ MOBILE-FIRST CHECKOUT ═══════════ */
+.ck-page{padding:0 0 140px}
+@media(min-width:992px){.ck-page{padding:2rem 0}}
+
+/* Simplified header */
+.ck-header{display:flex;align-items:center;gap:12px;padding:.75rem 1rem;background:#121010;border-bottom:1px solid var(--border-color,#2a2727);position:sticky;top:0;z-index:1040}
+.ck-header .ck-back{color:var(--warm-gray);font-size:1.2rem;text-decoration:none;padding:4px;display:flex;align-items:center;flex-shrink:0}
+.ck-header .ck-title{color:#fff;font-size:1rem;font-weight:700;flex:1;text-align:center}
+.ck-header .ck-secure{color:var(--primary-orange);font-size:.75rem;display:flex;align-items:center;gap:4px;flex-shrink:0}
+@media(min-width:992px){.ck-header{display:none}}
+
+/* Section */
+.ck-section{background:#1a1717;border:1px solid var(--border-color,#2a2727);border-radius:12px;margin-bottom:.75rem;overflow:hidden}
+.ck-section-head{display:flex;align-items:center;justify-content:space-between;padding:.875rem 1rem;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.ck-section-head h5{color:#fff;font-size:.9rem;font-weight:600;margin:0;display:flex;align-items:center;gap:8px}
+.ck-section-head h5 i{color:var(--primary-orange);font-size:1rem}
+.ck-section-head .ck-chevron{color:var(--warm-gray);font-size:.8rem;transition:transform .25s}
+.ck-section.open .ck-chevron{transform:rotate(180deg)}
+.ck-section-body{padding:0 1rem;display:none}
+.ck-section.open .ck-section-body{display:block;padding-bottom:1rem}
+@media(min-width:992px){
+    .ck-section-head{cursor:default}
+    .ck-section-body{display:block!important;padding-bottom:1.25rem}
+    .ck-section-head .ck-chevron{display:none}
+}
+
+/* Forms */
+.ck-form-label{font-size:.8rem;color:var(--text-secondary,#C8BEB7);font-weight:500;margin-bottom:4px;display:block}
+.ck-input{width:100%;padding:12px 14px;background:#242020;border:1px solid var(--border-color,#333);border-radius:10px;color:#fff;font-size:.95rem;transition:border-color .2s;-webkit-appearance:none}
+.ck-input:focus{outline:none;border-color:var(--primary-orange);box-shadow:0 0 0 3px rgba(242,102,15,.12)}
+.ck-input::placeholder{color:#8a8580}
+select.ck-input{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+textarea.ck-input{min-height:80px;resize:vertical}
+.ck-field{margin-bottom:.75rem}
+.ck-row{display:grid;grid-template-columns:1fr;gap:.75rem}
+@media(min-width:576px){.ck-row{grid-template-columns:1fr 1fr}}
+
+/* Address select */
+.ck-saved-addr{background:rgba(242,102,15,.04);border:1px solid rgba(242,102,15,.15);border-radius:10px;padding:.75rem;margin-bottom:.75rem}
+.ck-saved-addr label{color:var(--primary-orange);font-size:.8rem;font-weight:600;display:block;margin-bottom:4px}
+
+/* Payment */
+.ck-pay-card{display:flex;align-items:center;gap:12px;padding:.875rem;background:#242020;border:2px solid var(--border-color,#2a2727);border-radius:12px;cursor:pointer;transition:all .2s;margin-bottom:.625rem;-webkit-tap-highlight-color:transparent}
+.ck-pay-card:active{transform:scale(.98)}
+.ck-pay-card.active{border-color:var(--primary-orange);background:rgba(242,102,15,.05)}
+.ck-pay-radio{width:20px;height:20px;border-radius:50%;border:2px solid #555;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.ck-pay-card.active .ck-pay-radio{border-color:var(--primary-orange)}
+.ck-pay-card.active .ck-pay-radio::after{content:'';width:10px;height:10px;border-radius:50%;background:var(--primary-orange)}
+.ck-pay-icon{font-size:1.3rem;color:var(--primary-orange);flex-shrink:0}
+.ck-pay-info h6{color:#fff;font-size:.88rem;font-weight:600;margin:0 0 2px}
+.ck-pay-info p{color:var(--text-secondary,#C8BEB7);font-size:.75rem;margin:0;line-height:1.3}
+
+/* Order Summary (mobile collapsible) */
+.ck-summary{background:#1a1717;border:1px solid var(--border-color,#2a2727);border-radius:12px;overflow:hidden}
+.ck-summary-head{display:flex;align-items:center;justify-content:space-between;padding:.875rem 1rem;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ck-summary-head h5{margin:0;font-size:.9rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px}
+.ck-summary-head h5 i{color:var(--primary-orange)}
+.ck-summary-toggle{display:flex;align-items:center;gap:8px}
+.ck-summary-total-badge{background:var(--primary-orange);color:#fff;font-size:.82rem;font-weight:700;padding:4px 10px;border-radius:20px}
+.ck-summary-chevron{color:var(--warm-gray);font-size:.75rem;transition:transform .25s}
+.ck-summary.open .ck-summary-chevron{transform:rotate(180deg)}
+.ck-summary-body{padding:0 1rem;display:none}
+.ck-summary.open .ck-summary-body{display:block;padding-bottom:1rem}
+@media(min-width:992px){
+    .ck-summary-head{cursor:default}
+    .ck-summary-body{display:block!important;padding-bottom:1.25rem}
+    .ck-summary-toggle .ck-summary-chevron,.ck-summary-toggle .ck-summary-total-badge{display:none}
+}
+
+/* Summary items */
+.ck-sum-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-color,#2a2727)}
+.ck-sum-item:last-child{border-bottom:none}
+.ck-sum-img{width:48px;height:48px;border-radius:8px;object-fit:cover;background:#242020;border:1px solid var(--border-color,#2a2727);flex-shrink:0}
+.ck-sum-info{flex:1;min-width:0}
+.ck-sum-name{color:#fff;font-size:.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ck-sum-meta{color:var(--text-muted,#9a9590);font-size:.7rem}
+.ck-sum-qty{color:var(--text-secondary,#C8BEB7);font-size:.72rem}
+.ck-sum-price{color:var(--primary-orange);font-weight:600;font-size:.85rem;white-space:nowrap}
+.ck-sum-line{display:flex;justify-content:space-between;padding:5px 0;font-size:.88rem}
+.ck-sum-line .label{color:var(--text-secondary,#C8BEB7)}
+.ck-sum-line .value{color:#fff}
+.ck-sum-line.disc{color:#4caf50}
+.ck-sum-total{display:flex;justify-content:space-between;padding-top:8px;margin-top:6px;border-top:2px solid var(--primary-orange);font-size:1.05rem;font-weight:700;color:#fff}
+.ck-sum-total .val{color:var(--primary-orange)}
+
+/* Place Order Button */
+.ck-place-wrap{position:fixed;bottom:0;left:0;right:0;z-index:1040;background:#121010;border-top:1px solid var(--border-color,#2a2727);padding:.75rem 1rem}
+@media(min-width:992px){.ck-place-wrap{position:static;border:none;background:transparent;padding:0;margin-top:1.25rem}}
+.ck-place-btn{width:100%;padding:14px;background:var(--primary-orange);color:#fff;border:none;border-radius:12px;font-size:1.05rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent}
+.ck-place-btn:active{transform:scale(.98)}
+.ck-place-btn:hover{background:#d45a0d}
+.ck-place-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.ck-place-btn .spinner{width:1.1rem;height:1.1rem;border-width:.15em}
+.ck-place-secure{text-align:center;font-size:.72rem;color:var(--text-muted,#9a9590);margin-top:6px;display:none}
+@media(min-width:992px){.ck-place-secure{display:block}}
+
+/* Error */
+.ck-error{background:rgba(220,53,69,.08);border:1px solid rgba(220,53,69,.3);color:#dc3545;padding:10px 14px;border-radius:8px;font-size:.85rem;margin-bottom:.75rem;display:none}
+.ck-error.show{display:block}
+
+/* Empty */
+.ck-empty{text-align:center;padding:3rem 1rem}
+.ck-empty i{font-size:4rem;color:#333;display:block;margin-bottom:1rem}
+.ck-empty h4{color:#fff;font-size:1.1rem;margin-bottom:.5rem}
+.ck-empty p{color:var(--text-secondary,#C8BEB7);font-size:.88rem;margin-bottom:1.25rem}
+.ck-empty a{display:inline-flex;align-items:center;gap:6px;padding:.7rem 1.5rem;background:var(--primary-orange);color:#fff;border-radius:10px;text-decoration:none;font-weight:600}
+@media(max-width:576px){
+    .ck-sum-img{width:42px;height:42px}
+    .ck-sum-name{font-size:.78rem}
+    .ck-sum-meta{font-size:.65rem}
+    .ck-sum-price{font-size:.8rem}
+}
+</style>
+
+<!-- Simplified Mobile Header -->
+<header class="ck-header">
+    <a href="/cart" class="ck-back"><i class="bi bi-arrow-left"></i></a>
+    <div class="ck-title">Checkout</div>
+    <div class="ck-secure"><i class="bi bi-shield-lock"></i> Secure</div>
+</header>
+
+<!-- Empty Cart -->
+<div id="ckEmpty" class="ck-page" style="display:none">
+    <div class="container" style="max-width:600px">
+        <div class="ck-empty">
+            <i class="bi bi-cart-x"></i>
+            <h4>Your cart is empty</h4>
+            <p>Add items before checking out.</p>
+            <a href="/shop"><i class="bi bi-bag"></i> Continue Shopping</a>
+        </div>
+    </div>
+</div>
+
+<!-- Checkout Content -->
+<div id="ckContent" class="ck-page" style="display:none">
+    <div class="container" style="max-width:720px">
+        <div id="ckError" class="ck-error"></div>
+
+        <!-- 1. Contact -->
+        <div class="ck-section open" data-section="contact">
+            <div class="ck-section-head" onclick="toggleSection(this)">
+                <h5><i class="bi bi-person"></i> Contact Information</h5>
+                <span class="ck-chevron"><i class="bi bi-chevron-down"></i></span>
+            </div>
+            <div class="ck-section-body">
+                <div class="ck-row">
+                    <div class="ck-field">
+                        <label class="ck-form-label">First Name</label>
+                        <input type="text" id="ckFirst" class="ck-input" placeholder="John" autocomplete="given-name">
+                    </div>
+                    <div class="ck-field">
+                        <label class="ck-form-label">Last Name</label>
+                        <input type="text" id="ckLast" class="ck-input" placeholder="Doe" autocomplete="family-name">
+                    </div>
+                </div>
+                <div class="ck-field">
+                    <label class="ck-form-label">Email</label>
+                    <input type="email" id="ckEmail" class="ck-input" placeholder="john@example.com" autocomplete="email">
+                </div>
+                <div class="ck-field">
+                    <label class="ck-form-label">Phone</label>
+                    <input type="tel" id="ckPhone" class="ck-input" placeholder="+233 XX XXX XXXX" autocomplete="tel">
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Shipping Address -->
+        <div class="ck-section open" data-section="shipping">
+            <div class="ck-section-head" onclick="toggleSection(this)">
+                <h5><i class="bi bi-geo-alt"></i> Shipping Address</h5>
+                <span class="ck-chevron"><i class="bi bi-chevron-down"></i></span>
+            </div>
+            <div class="ck-section-body">
+                <div id="ckSavedAddrWrap" class="ck-saved-addr" style="display:none">
+                    <label><i class="bi bi-bookmark me-1"></i> Saved Address</label>
+                    <select id="ckSavedAddr" class="ck-input" onchange="fillAddr(this)">
+                        <option value="">— Select —</option>
+                    </select>
+                </div>
+                <div class="ck-field">
+                    <label class="ck-form-label">Street Address *</label>
+                    <input type="text" id="ckStreet" class="ck-input" placeholder="123 Osu Badu St, Labone" autocomplete="street-address" required>
+                </div>
+                <div class="ck-row">
+                    <div class="ck-field">
+                        <label class="ck-form-label">City *</label>
+                        <input type="text" id="ckCity" class="ck-input" placeholder="Accra" autocomplete="address-level2" required>
+                    </div>
+                    <div class="ck-field">
+                        <label class="ck-form-label">Region *</label>
+                        <select id="ckState" class="ck-input" autocomplete="address-level1" required>
+                            <option value="">Select</option>
+                            <option>Greater Accra</option><option>Ashanti</option><option>Western</option>
+                            <option>Central</option><option>Eastern</option><option>Northern</option>
+                            <option>Volta</option><option>Upper East</option><option>Upper West</option>
+                            <option>Bono</option><option>Bono East</option><option>Ahafo</option>
+                            <option>Western North</option><option>Oti</option><option>Savannah</option>
+                            <option>North East</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="ck-row">
+                    <div class="ck-field">
+                        <label class="ck-form-label">Country</label>
+                        <input type="text" class="ck-input" value="Ghana" readonly style="opacity:.6;cursor:default">
+                    </div>
+                    <div class="ck-field">
+                        <label class="ck-form-label">Postal Code</label>
+                        <input type="text" id="ckZip" class="ck-input" placeholder="00233" autocomplete="postal-code">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Delivery Method -->
+        <div class="ck-section" data-section="delivery">
+            <div class="ck-section-head" onclick="toggleSection(this)">
+                <h5><i class="bi bi-truck"></i> Delivery Method</h5>
+                <span class="ck-chevron"><i class="bi bi-chevron-down"></i></span>
+            </div>
+            <div class="ck-section-body">
+                <div class="ck-pay-card active" onclick="selectDelivery(this,'standard')">
+                    <div class="ck-pay-radio"></div>
+                    <div class="ck-pay-icon"><i class="bi bi-truck"></i></div>
+                    <div class="ck-pay-info"><h6>Standard Delivery</h6><p>3-5 business days • GHS 15.00</p></div>
+                </div>
+                <div class="ck-pay-card" onclick="selectDelivery(this,'express')">
+                    <div class="ck-pay-radio"></div>
+                    <div class="ck-pay-icon"><i class="bi bi-lightning"></i></div>
+                    <div class="ck-pay-info"><h6>Express Delivery</h6><p>1-2 business days • GHS 35.00</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Coupon -->
+        <div class="ck-section" data-section="coupon">
+            <div class="ck-section-head" onclick="toggleSection(this)">
+                <h5><i class="bi bi-tag"></i> Coupon Code</h5>
+                <span class="ck-chevron"><i class="bi bi-chevron-down"></i></span>
+            </div>
+            <div class="ck-section-body">
+                <div id="ckCouponInput" style="display:flex;gap:6px">
+                    <input type="text" id="ckCouponCode" class="ck-input" placeholder="Enter code" style="flex:1" maxlength="30">
+                    <button onclick="applyCoupon()" class="ck-input" style="width:auto;padding:0 16px;background:var(--primary-orange);color:#fff;border:none;font-weight:600;cursor:pointer;border-radius:10px">Apply</button>
+                </div>
+                <div id="ckCouponActive" style="display:none;margin-top:8px">
+                    <div style="display:flex;align-items:center;gap:6px;color:var(--primary-orange);font-size:.85rem;font-weight:600">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span id="ckCouponCode"></span>
+                        <button onclick="removeCoupon()" style="background:none;border:none;color:inherit;cursor:pointer;font-size:1rem;padding:0">&times;</button>
+                    </div>
+                    <div id="ckCouponSavings" style="color:#4caf50;font-size:.78rem;margin-top:2px"></div>
+                </div>
+                <div id="ckCouponErr" style="color:#dc3545;font-size:.78rem;margin-top:4px;display:none"></div>
+            </div>
+        </div>
+
+        <!-- 5. Order Summary -->
+        <div class="ck-summary open" id="ckSummary">
+            <div class="ck-summary-head" onclick="toggleSummary()">
+                <h5><i class="bi bi-bag-check"></i> Order Summary</h5>
+                <div class="ck-summary-toggle">
+                    <span class="ck-summary-total-badge" id="ckSumBadge">GHS 0.00</span>
+                    <span class="ck-summary-chevron"><i class="bi bi-chevron-down"></i></span>
+                </div>
+            </div>
+            <div class="ck-summary-body" id="ckSumBody"></div>
+        </div>
+
+        <!-- 6. Payment -->
+        <div class="ck-section open" data-section="payment" style="margin-top:.75rem">
+            <div class="ck-section-head" onclick="toggleSection(this)">
+                <h5><i class="bi bi-credit-card"></i> Payment Method</h5>
+                <span class="ck-chevron"><i class="bi bi-chevron-down"></i></span>
+            </div>
+            <div class="ck-section-body">
+                <div class="ck-pay-card active" onclick="selectPay(this,'Mobile Money')">
+                    <div class="ck-pay-radio"></div>
+                    <div class="ck-pay-icon"><i class="bi bi-phone"></i></div>
+                    <div class="ck-pay-info"><h6>Mobile Money</h6><p>MTN MoMo, Vodafone Cash, AirtelTigo</p></div>
+                </div>
+                <div class="ck-pay-card" onclick="selectPay(this,'Credit Card')">
+                    <div class="ck-pay-radio"></div>
+                    <div class="ck-pay-icon"><i class="bi bi-credit-card-2-front"></i></div>
+                    <div class="ck-pay-info"><h6>Credit / Debit Card</h6><p>Visa or Mastercard</p></div>
+                </div>
+                <div class="ck-pay-card" onclick="selectPay(this,'Cash on Delivery')">
+                    <div class="ck-pay-radio"></div>
+                    <div class="ck-pay-icon"><i class="bi bi-cash-stack"></i></div>
+                    <div class="ck-pay-info"><h6>Cash on Delivery</h6><p>Pay when order arrives</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. Notes -->
+        <div class="ck-section" data-section="notes">
+            <div class="ck-section-head" onclick="toggleSection(this)">
+                <h5><i class="bi bi-pencil-square"></i> Order Notes</h5>
+                <span class="ck-chevron"><i class="bi bi-chevron-down"></i></span>
+            </div>
+            <div class="ck-section-body">
+                <textarea id="ckNotes" class="ck-input" placeholder="Special delivery instructions, landmarks…"></textarea>
+            </div>
+        </div>
+
+        <!-- Place Order -->
+        <div class="ck-place-wrap">
+            <button id="ckPlaceBtn" class="ck-place-btn" onclick="placeOrder()">
+                <span id="ckBtnTxt"><i class="bi bi-lock-fill"></i> Place Order</span>
+                <span id="ckBtnSpin" style="display:none"><span class="spinner-border spinner me-1"></span>Processing…</span>
+            </button>
+            <p class="ck-place-secure"><i class="bi bi-shield-lock me-1"></i>Your payment is secure and encrypted</p>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    var API='/api', LOGIN='/login';
+    var cart=null, selectedPay='Mobile Money', shippingFee=15, deliveryMethod='standard';
+
+    function tok(){return localStorage.getItem('token')}
+    function hdr(){var t=tok();return t?{'Authorization':'Bearer '+t,'Content-Type':'application/json'}:{'Content-Type':'application/json'}}
+    function fmt(n){return'GHS '+Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')}
+    function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+    // Auto-open first section on mobile
+    function toggleSection(head){
+        var sec=head.closest('.ck-section');
+        if(sec)sec.classList.toggle('open');
+    }
+    window.toggleSection=toggleSection;
+
+    function toggleSummary(){
+        document.getElementById('ckSummary').classList.toggle('open');
+    }
+    window.toggleSummary=toggleSummary;
+
+    // Payment selection
+    function selectPay(el,method){
+        selectedPay=method;
+        document.querySelectorAll('[data-section="payment"] .ck-pay-card').forEach(function(c){c.classList.remove('active')});
+        el.classList.add('active');
+    }
+    window.selectPay=selectPay;
+
+    // Delivery selection
+    function selectDelivery(el,method){
+        deliveryMethod=method;
+        shippingFee=method==='express'?35:15;
+        document.querySelectorAll('[data-section="delivery"] .ck-pay-card').forEach(function(c){c.classList.remove('active')});
+        el.classList.add('active');
+        renderSummary();
+    }
+    window.selectDelivery=selectDelivery;
+
+    // Fetch addresses
+    async function loadAddresses(){
+        try{
+            var r=await fetch(API+'/customers/addresses',{headers:hdr()});
+            if(!r.ok)return;
+            var d=await r.json();
+            var addrs=Array.isArray(d)?d:(d.results||d.addresses||[]);
+            if(!addrs.length)return;
+            var wrap=document.getElementById('ckSavedAddrWrap');
+            var sel=document.getElementById('ckSavedAddr');
+            wrap.style.display='';
+            sel.innerHTML='<option value="">— Select —</option>';
+            addrs.forEach(function(a){
+                var o=document.createElement('option');
+                o.value=a.id;
+                o.dataset.addr=JSON.stringify(a);
+                o.textContent=[a.street,a.city,a.state,a.country].filter(Boolean).join(', ');
+                sel.appendChild(o);
+            });
+        }catch(e){}
+    }
+
+    window.fillAddr=function(sel){
+        var opt=sel.options[sel.selectedIndex];
+        if(!opt.value)return;
+        try{
+            var a=JSON.parse(opt.dataset.addr);
+            document.getElementById('ckStreet').value=a.street||'';
+            document.getElementById('ckCity').value=a.city||'';
+            var st=document.getElementById('ckState');
+            for(var i=0;i<st.options.length;i++){if(st.options[i].value===a.state){st.selectedIndex=i;break}}
+            document.getElementById('ckZip').value=a.zip_code||'';
+        }catch(e){}
+    };
+
+    // Fetch cart
+    async function init(){
+        if(!tok()){window.location.href=LOGIN;return}
+        try{
+            var r=await fetch(API+'/cart',{headers:hdr()});
+            if(!r.ok)throw new Error();
+            cart=await r.json();
+        }catch(e){showError('Could not load cart');return}
+
+        if(!cart||!cart.items||!cart.items.length){
+            document.getElementById('ckEmpty').style.display='block';
+            document.getElementById('ckContent').style.display='none';
+            return;
+        }
+        document.getElementById('ckEmpty').style.display='none';
+        document.getElementById('ckContent').style.display='block';
+        renderSummary();
+        loadAddresses();
+    }
+
+    function renderSummary(){
+        var el=document.getElementById('ckSumBody');
+        var html='';
+        cart.items.forEach(function(item){
+            var img=item.image_url||'';
+            var name=esc(item.name);
+            var brand=esc(item.brand||'');
+            var sku=esc(item.sku||'');
+            var hasDisc=item.discount_price&&item.discount_price<item.original_price;
+            var meta=([brand,sku]).filter(Boolean).join(' · ');
+            html+='<div class="ck-sum-item">'+
+                (img?'<img src="'+esc(img)+'" class="ck-sum-img" alt="'+name+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="ck-sum-img" style="display:none;align-items:center;justify-content:center"><i class="bi bi-box" style="color:#444"></i></div>':'<div class="ck-sum-img" style="display:flex;align-items:center;justify-content:center"><i class="bi bi-box" style="color:#444"></i></div>')+
+                '<div class="ck-sum-info"><div class="ck-sum-name">'+name+'</div>'+
+                (meta?'<div class="ck-sum-meta">'+meta+'</div>':'')+
+                '<div class="ck-sum-qty">Qty: '+item.quantity+(hasDisc?' · <span style="text-decoration:line-through;color:#9a9590">'+fmt(item.original_price)+'</span>':'')+'</div></div>'+
+                '<div class="ck-sum-price">'+fmt(item.line_total)+'</div></div>';
+        });
+
+        html+='<div class="ck-sum-line"><span class="label">Subtotal</span><span class="value">'+fmt(cart.subtotal)+'</span></div>';
+        if(cart.discount>0) html+='<div class="ck-sum-line disc"><span class="label">Discount</span><span class="value">-'+fmt(cart.discount)+'</span></div>';
+        html+='<div class="ck-sum-line"><span class="label">Shipping</span><span class="value">'+fmt(shippingFee)+'</span></div>';
+        html+='<div class="ck-sum-line"><span class="label">Tax</span><span class="value">'+fmt(cart.tax)+'</span></div>';
+
+        var total=cart.total+shippingFee-(cart.subtotal>0?0:0);
+        total=Math.max(cart.subtotal-cart.discount,0)+shippingFee+cart.tax;
+        html+='<div class="ck-sum-total"><span>Total</span><span class="val">'+fmt(total)+'</span></div>';
+
+        el.innerHTML=html;
+        document.getElementById('ckSumBadge').textContent=fmt(total);
+    }
+
+    // Coupon
+    window.applyCoupon=async function(){
+        var code=document.getElementById('ckCouponCode').value.trim();
+        var errEl=document.getElementById('ckCouponErr');
+        if(!code){errEl.textContent='Enter a code';errEl.style.display='';return}
+        try{
+            var r=await fetch(API+'/cart/coupon',{method:'POST',headers:hdr(),body:JSON.stringify({coupon_code:code})});
+            var d=await r.json();
+            if(!r.ok){errEl.textContent=d.detail||'Invalid code';errEl.style.display='';return}
+            cart=d;
+            document.getElementById('ckCouponInput').style.display='none';
+            document.getElementById('ckCouponActive').style.display='';
+            document.getElementById('ckCouponCode').textContent=cart.coupon_code;
+            document.getElementById('ckCouponSavings').textContent=cart.discount>0?'Savings: -'+fmt(cart.discount):'';
+            errEl.style.display='none';
+            renderSummary();
+        }catch(e){errEl.textContent='Try again';errEl.style.display=''}
+    };
+
+    window.removeCoupon=async function(){
+        try{
+            var r=await fetch(API+'/cart/coupon/remove',{method:'POST',headers:hdr()});
+            if(!r.ok)throw new Error();
+            cart=await r.json();
+            document.getElementById('ckCouponInput').style.display='';
+            document.getElementById('ckCouponActive').style.display='none';
+            document.getElementById('ckCouponCode').value='';
+            renderSummary();
+        }catch(e){}
+    };
+
+    function showError(msg){
+        var el=document.getElementById('ckError');
+        el.textContent=msg;el.classList.add('show');
+        el.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+    function hideError(){document.getElementById('ckError').classList.remove('show')}
+
+    // Place Order
+    window.placeOrder=function(){
+        hideError();
+        var street=document.getElementById('ckStreet').value.trim();
+        var city=document.getElementById('ckCity').value.trim();
+        var state=document.getElementById('ckState').value;
+        if(!street){showError('Enter your street address');return}
+        if(!city){showError('Enter your city');return}
+        if(!state){showError('Select a region');return}
+
+        var payload={
+            address_id:null,street:street,city:city,state:state,country:'Ghana',
+            zip_code:document.getElementById('ckZip').value.trim(),
+            payment_method:selectedPay,shipping_fee:shippingFee,tax:cart.tax,
+            coupon_code:cart.coupon_code||null,
+            notes:document.getElementById('ckNotes').value.trim()||null
+        };
+
+        var saved=document.getElementById('ckSavedAddr');
+        if(saved&&saved.value)payload.address_id=parseInt(saved.value,10);
+
+        setLoading(true);
+        fetch(API+'/orders/checkout?cart_id=default',{method:'POST',headers:hdr(),body:JSON.stringify(payload)})
+        .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.detail||'Checkout failed');return d})})
+        .then(function(order){window.location.href='/order/success?order_id='+order.id})
+        .catch(function(e){showError(e.message);setLoading(false)});
+    };
+
+    function setLoading(on){
+        document.getElementById('ckBtnTxt').style.display=on?'none':'';
+        document.getElementById('ckBtnSpin').style.display=on?'':'none';
+        document.getElementById('ckPlaceBtn').disabled=on;
+    }
+
+    init();
+})();
+</script>
+{% endblock %}
