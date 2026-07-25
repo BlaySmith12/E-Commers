@@ -114,8 +114,12 @@
         </div>
 
         <div class="os-card">
-            <div class="os-card-head"><i class="bi bi-credit-card"></i><span>Payment Method</span></div>
-            <div class="os-card-body" style="color:var(--warm-gray);font-size:.9rem" id="osPayment">Payment on delivery</div>
+            <div class="os-card-head"><i class="bi bi-credit-card"></i><span>Payment Details</span></div>
+            <div class="os-card-body" id="osPayment">
+                <div class="os-row"><span class="label">Method</span><span class="value" id="osPayMethod">-</span></div>
+                <div class="os-row"><span class="label">Status</span><span class="value" id="osPayStatus" style="color:#198754">-</span></div>
+                <div class="os-row" id="osPayRefRow"><span class="label">Transaction Ref</span><span class="value" id="osPayRef" style="font-family:monospace;font-size:.82rem;color:var(--primary-orange)">-</span></div>
+            </div>
         </div>
 
         <div class="os-actions">
@@ -204,7 +208,21 @@
         }else{document.getElementById('osAddrCard').style.display='none'}
 
         // Payment
-        if(o.payment)document.getElementById('osPayment').textContent=o.payment.payment_method||'Payment on delivery';
+        if(o.payment){
+            document.getElementById('osPayMethod').textContent=o.payment.payment_method||o.payment.channel||'Paystack';
+            document.getElementById('osPayStatus').textContent=o.payment.status||'Paid';
+            document.getElementById('osPayStatus').style.color=o.payment.status==='Completed'||o.payment.status==='Paid'?'#198754':'#ffc107';
+            if(o.payment.transaction_reference||o.payment.paystack_reference){
+                document.getElementById('osPayRef').textContent=o.payment.transaction_reference||o.payment.paystack_reference;
+                document.getElementById('osPayRefRow').style.display='';
+            }else{
+                document.getElementById('osPayRefRow').style.display='none';
+            }
+        }else{
+            document.getElementById('osPayMethod').textContent='Payment on delivery';
+            document.getElementById('osPayStatus').textContent='Pending';
+            document.getElementById('osPayRefRow').style.display='none';
+        }
 
         document.getElementById('osLoading').style.display='none';
         document.getElementById('osContent').style.display='block';

@@ -1109,10 +1109,16 @@ async def admin_list_payments(db: AsyncSession = Depends(get_db), admin: User = 
             "order_id": r.Payment.order_id,
             "order_number": r.Order.order_number if r.Order else None,
             "amount": r.Payment.amount,
+            "currency": r.Payment.currency or "GHS",
             "status": r.Payment.status,
             "payment_method": r.Payment.payment_method,
-            "transaction_id": r.Payment.transaction_id,
+            "transaction_id": r.Payment.transaction_reference or r.Payment.paystack_reference or str(r.Payment.id),
+            "channel": r.Payment.channel or "",
+            "provider": r.Payment.provider or "paystack",
             "customer_name": f"{r.User.first_name or ''} {r.User.last_name or ''}".strip() if r.User else "Guest",
+            "customer_email": r.Payment.customer_email or (r.User.email if r.User else ""),
+            "paid_at": r.Payment.paid_at.isoformat() if r.Payment.paid_at else None,
+            "failure_reason": r.Payment.failure_reason or "",
             "created_at": r.Payment.created_at.isoformat() if r.Payment.created_at else None,
         }
         for r in rows

@@ -244,12 +244,16 @@ async def checkout(
     total_amount = round(taxable + shipping_fee + tax, 2)
 
     # Create order
+    is_paystack = payload.payment_method in ('Paystack', 'Credit Card', 'Mobile Money', 'Bank Transfer')
     order = Order(
         order_number=_gen_order_number(),
         user_id=current_user.id,
         shipping_address_id=address.id,
-        status='Pending',
+        status='Pending Payment' if is_paystack else 'Pending',
+        payment_status='Pending' if is_paystack else 'Pending',
+        currency='GHS',
         subtotal=round(subtotal, 2),
+        discount=discount,
         shipping_fee=shipping_fee,
         tax=tax,
         total_amount=total_amount,
@@ -258,7 +262,7 @@ async def checkout(
     db.add(order)
     await db.flush()
 
-    # Create order items and decrement stock
+    # Create order items (don't decrement stock yet for online payments - wait for payment verification)
     for item_data in order_items:
         oi = OrderItem(
             order_id=order.id,
@@ -273,27 +277,35 @@ async def checkout(
             snapshot_variant=item_data.get('snapshot_variant'),
         )
         db.add(oi)
-        # Decrement stock
-        product = (await db.execute(select(Product).where(Product.id == item_data['product_id']))).scalar_one_or_none()
-        if product:
-            product.stock -= item_data['quantity']
+
+    # For COD: decrement stock immediately. For Paystack: wait for payment verification.
+    if not is_paystack:
+        for item_data in order_items:
+            product = (await db.execute(select(Product).where(Product.id == item_data['product_id']))).scalar_one_or_none()
+            if product:
+                product.stock -= item_data['quantity']
 
     # Create payment record
+    from datetime import datetime as _dt
     payment = Payment(
         order_id=order.id,
+        provider='paystack' if is_paystack else 'cod',
         amount=total_amount,
-        status='Pending' if payload.payment_method != 'Cash on Delivery' else 'Pending',
+        currency='GHS',
+        status='Pending',
         payment_method=payload.payment_method,
     )
     db.add(payment)
 
     await db.commit()
     await db.refresh(order)
+    await db.refresh(payment)
 
-    # Clear cart
-    _cart_store = __import__('app.api.cart', fromlist=['_cart_store'])._cart_store
-    _cart_store.pop(cart_id, None)
-    _cart_coupons.pop(cart_id, None)
+    # For COD: clear cart immediately. For Paystack: clear after payment verified.
+    if not is_paystack:
+        _cart_store = __import__('app.api.cart', fromlist=['_cart_store'])._cart_store
+        _cart_store.pop(cart_id, None)
+        _cart_coupons.pop(cart_id, None)
 
     # Audit log
     await log_audit(
@@ -302,7 +314,7 @@ async def checkout(
         entity_type="Order",
         entity_id=order.id,
         user_id=current_user.id,
-        details=f"Created order: {order.order_number} total={total_amount} items={len(order_items)}"
+        details=f"Created order: {order.order_number} total={total_amount} items={len(order_items)} payment={payload.payment_method}"
     )
 
     return order
@@ -319,6 +331,19 @@ async def update_order_status(
         raise HTTPException(status_code=404, detail='Order not found')
     old_status = order.status
     order.status = payload.status
+
+    # Auto-update payment_status when order status changes
+    status_to_payment = {
+        'Paid': 'Paid',
+        'Processing': 'Paid',
+        'Shipped': 'Paid',
+        'Delivered': 'Paid',
+        'Payment Failed': 'Failed',
+        'Payment Processing': 'Processing',
+    }
+    if payload.status in status_to_payment:
+        order.payment_status = status_to_payment[payload.status]
+
     await db.commit()
     await db.refresh(order)
 
@@ -346,14 +371,15 @@ async def cancel_order(
         raise HTTPException(status_code=404, detail='Order not found')
     if order.user_id != current_user.id:
         raise HTTPException(status_code=403, detail='Forbidden')
-    if order.status not in ('Pending', 'Processing'):
+    if order.status not in ('Pending Payment', 'Pending', 'Processing'):
         raise HTTPException(status_code=400, detail='Order cannot be cancelled at this stage')
 
-    # Restore stock
-    for item in order.items:
-        product = (await db.execute(select(Product).where(Product.id == item.product_id))).scalar_one_or_none()
-        if product:
-            product.stock += item.quantity
+    # Restore stock only if stock was decremented (non-Paystack orders)
+    if order.payment_status != 'Pending':
+        for item in order.items:
+            product = (await db.execute(select(Product).where(Product.id == item.product_id))).scalar_one_or_none()
+            if product:
+                product.stock += item.quantity
 
     order.status = 'Cancelled'
     await db.commit()

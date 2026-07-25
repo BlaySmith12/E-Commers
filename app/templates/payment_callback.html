@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Verifying Payment — ASAH'S PRIMENEST{% endblock %}
+
+{% block content %}
+<style>
+.pc-page{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:2rem 1rem}
+.pc-card{max-width:480px;width:100%;text-align:center}
+.pc-spinner{width:60px;height:60px;border:4px solid var(--border-color,#2a2727);border-top:4px solid var(--primary-orange);border-radius:50%;animation:pcSpin 1s linear infinite;margin:0 auto 1.5rem}
+@keyframes pcSpin{to{transform:rotate(360deg)}}
+.pc-title{font-size:1.2rem;font-weight:700;color:#fff;margin-bottom:.5rem}
+.pc-sub{font-size:.88rem;color:var(--text-secondary,#C8BEB7)}
+
+/* Success */
+.pc-icon{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;background:linear-gradient(135deg,rgba(25,135,84,.15),rgba(25,135,84,.05));border:3px solid #198754;animation:pcPopIn .5s cubic-bezier(.175,.885,.32,1.275)}
+.pc-icon i{font-size:2.2rem;color:#198754}
+@keyframes pcPopIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* Error */
+.pc-icon-error{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;background:linear-gradient(135deg,rgba(220,53,69,.15),rgba(220,53,69,.05));border:3px solid #dc3545;animation:pcPopIn .5s cubic-bezier(.175,.885,.32,1.275)}
+.pc-icon-error i{font-size:2.2rem;color:#dc3545}
+
+.pc-detail{background:#1a1717;border:1px solid var(--border-color,#2a2727);border-radius:12px;padding:.875rem 1rem;margin:1rem 0;text-align:left}
+.pc-detail-row{display:flex;justify-content:space-between;padding:4px 0;font-size:.85rem}
+.pc-detail-row .label{color:var(--text-secondary,#C8BEB7)}
+.pc-detail-row .value{color:#fff;font-weight:600}
+
+.pc-actions{display:flex;flex-direction:column;gap:10px;margin-top:1.5rem}
+.pc-actions a{display:flex;align-items:center;justify-content:center;gap:8px;padding:.85rem;border-radius:12px;font-weight:600;font-size:.95rem;text-decoration:none;transition:all .2s}
+.pc-btn-primary{background:var(--primary-orange);color:#fff;border:none}
+.pc-btn-primary:hover{background:#d45a0d;color:#fff}
+.pc-btn-outline{background:transparent;color:var(--primary-orange);border:2px solid var(--primary-orange)}
+.pc-btn-outline:hover{background:rgba(242,102,15,.08);color:var(--primary-orange)}
+@media(min-width:576px){.pc-actions{flex-direction:row}.pc-actions a{flex:1}}
+</style>
+
+<div class="pc-page">
+    <div class="pc-card">
+        <!-- Loading state -->
+        <div id="pcLoading">
+            <div class="pc-spinner"></div>
+            <h2 class="pc-title">Verifying Your Payment</h2>
+            <p class="pc-sub">Please wait while we confirm your payment with Paystack...</p>
+        </div>
+
+        <!-- Success state -->
+        <div id="pcSuccess" style="display:none">
+            <div class="pc-icon"><i class="bi bi-check-lg"></i></div>
+            <h2 class="pc-title">Payment Successful!</h2>
+            <p class="pc-sub">Your payment has been confirmed. Thank you for shopping with ASAH'S PRIMENEST.</p>
+            <div class="pc-detail" id="pcDetails"></div>
+            <div class="pc-actions">
+                <a href="/customer/dashboard" class="pc-btn-primary"><i class="bi bi-list-ul"></i> View My Order</a>
+                <a href="/shop" class="pc-btn-outline"><i class="bi bi-bag"></i> Continue Shopping</a>
+            </div>
+        </div>
+
+        <!-- Error state -->
+        <div id="pcError" style="display:none">
+            <div class="pc-icon-error"><i class="bi bi-x-lg"></i></div>
+            <h2 class="pc-title">Payment Verification Failed</h2>
+            <p class="pc-sub" id="pcErrorMsg">We could not verify your payment. Please try again.</p>
+            <div class="pc-detail" id="pcErrorDetails"></div>
+            <div class="pc-actions">
+                <a href="/checkout" class="pc-btn-primary"><i class="bi bi-arrow-repeat"></i> Try Again</a>
+                <a href="/shop" class="pc-btn-outline"><i class="bi bi-bag"></i> Continue Shopping</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    var params = new URLSearchParams(window.location.search);
+    var reference = params.get('reference') || params.get('trxref');
+    var orderId = params.get('order_id');
+
+    if(!reference){
+        document.getElementById('pcLoading').style.display='none';
+        document.getElementById('pcError').style.display='block';
+        document.getElementById('pcErrorMsg').textContent='No payment reference found.';
+        return;
+    }
+
+    function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+    function fmt(v){return'GHS '+parseFloat(v||0).toFixed(2)}
+
+    // Verify with backend
+    fetch('/api/payments/verify?reference='+encodeURIComponent(reference))
+    .then(function(r){return r.json()})
+    .then(function(data){
+        document.getElementById('pcLoading').style.display='none';
+        if(data.success){
+            document.getElementById('pcSuccess').style.display='block';
+            var html='<div class="pc-detail-row"><span class="label">Order Number</span><span class="value">#'+esc(data.order_number||'')+'</span></div>';
+            html+='<div class="pc-detail-row"><span class="label">Transaction Reference</span><span class="value">'+esc(data.transaction_reference||reference)+'</span></div>';
+            html+='<div class="pc-detail-row"><span class="label">Payment Status</span><span class="value" style="color:#198754">'+esc(data.payment_status||'Paid')+'</span></div>';
+            document.getElementById('pcDetails').innerHTML=html;
+        }else{
+            document.getElementById('pcError').style.display='block';
+            document.getElementById('pcErrorMsg').textContent=data.message||'Payment could not be verified.';
+            var html='<div class="pc-detail-row"><span class="label">Reference</span><span class="value">'+esc(reference)+'</span></div>';
+            document.getElementById('pcErrorDetails').innerHTML=html;
+        }
+    })
+    .catch(function(e){
+        document.getElementById('pcLoading').style.display='none';
+        document.getElementById('pcError').style.display='block';
+        document.getElementById('pcErrorMsg').textContent='Network error. Please check your order status.';
+    });
+})();
+</script>
+{% endblock %}

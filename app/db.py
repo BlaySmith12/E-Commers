@@ -1,4 +1,5 @@
 import os
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
     async_sessionmaker,
@@ -52,6 +53,52 @@ async def init_db() -> None:
     from app import models  # noqa: F401
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Run migrations for existing tables
+        await conn.execute(text("""
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) DEFAULT 'Pending';
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'GHS';
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount FLOAT DEFAULT 0.0;
+        """))
+        await conn.execute(text("""
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS provider VARCHAR(50) DEFAULT 'paystack';
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS transaction_reference VARCHAR(100);
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS paystack_reference VARCHAR(100);
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS paystack_access_code VARCHAR(200);
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS access_code VARCHAR(200);
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS channel VARCHAR(50);
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS customer_email VARCHAR(256);
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45);
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS gateway_response TEXT;
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP;
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS failure_reason TEXT;
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'GHS';
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_reference VARCHAR(100);
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_amount FLOAT DEFAULT 0.0;
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_reason TEXT;
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS metadata_json JSONB;
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
+        """))
+    # Create payment_events table if not exists
+    async with engine.begin() as conn:
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS payment_events (
+                id SERIAL PRIMARY KEY,
+                payment_id INTEGER REFERENCES payments(id) ON DELETE CASCADE,
+                event_type VARCHAR(100) NOT NULL,
+                event_reference VARCHAR(100),
+                gateway_response TEXT,
+                payload JSONB,
+                processed BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """))
+        # Add unique constraint to payments.transaction_reference if not exists
+        await conn.execute(text("""
+            DO $$ BEGIN
+                ALTER TABLE payments ADD CONSTRAINT uq_payments_transaction_reference UNIQUE (transaction_reference);
+            EXCEPTION WHEN duplicate_table THEN NULL;
+            END $$;
+        """))
 
 
 async def dispose_engine() -> None:

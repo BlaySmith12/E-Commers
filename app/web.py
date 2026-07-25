@@ -23,12 +23,13 @@ from app.api import (
     notifications, collections, audit, content, reviews,
     messages as messages_api, search as search_api, admin_profile,
     reports as reports_api, auth_extended, media as media_api,
+    payments as payments_api,
 )
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.error_handler import ErrorHandlerMiddleware, register_exception_handlers
 from app.models.catalog import (
     Category, Brand, Product, Order, OrderItem, User,
-    ProductReview, Payment, SiteSetting, ProductVariant, HeroBanner,
+    ProductReview, Payment, SiteSetting, ProductVariant, HeroBanner, PaymentEvent,
 )
 from app.security import decode_access_token
 
@@ -107,6 +108,7 @@ def render(template_name: str, request: Request, **context) -> HTMLResponse:
     # Merge site settings into context so footer can use them
     merged = dict(context)
     merged['site_settings'] = _site_settings_cache
+    merged['config'] = config
     html = template.render(
         request=request,
         url_for=url_for,
@@ -444,13 +446,21 @@ async def admin_orders(request: Request):
             orders = []
             for row in result.all():
                 o = row.Order
+                # Get payment info
+                pay_result = await db.execute(
+                    select(Payment).where(Payment.order_id == o.id).order_by(Payment.created_at.desc()).limit(1)
+                )
+                payment = pay_result.scalars().first()
                 orders.append({
                     "id": o.id,
                     "order_number": o.order_number,
                     "status": o.status,
+                    "payment_status": o.payment_status or (payment.status if payment else "N/A"),
                     "total_amount": o.total_amount,
                     "customer": row.User,
                     "created_at": o.created_at,
+                    "payment_method": payment.payment_method if payment else None,
+                    "payment_id": payment.id if payment else None,
                 })
     except Exception:
         orders = []
@@ -535,11 +545,19 @@ async def admin_payments(request: Request):
                 payments.append({
                     "id": p.id,
                     "order_number": row.Order.order_number if row.Order else "-",
+                    "order_id": p.order_id,
                     "customer_name": f"{row.User.first_name or ''} {row.User.last_name or ''}".strip() if row.User else "Guest",
+                    "customer_email": p.customer_email or (row.User.email if row.User else ""),
                     "amount": p.amount,
+                    "currency": p.currency or 'GHS',
                     "status": p.status,
                     "payment_method": p.payment_method,
-                    "created_at": p.created_at,
+                    "transaction_id": p.transaction_reference or p.paystack_reference or "-",
+                    "channel": p.channel or "",
+                    "provider": p.provider or "paystack",
+                    "paid_at": p.paid_at.isoformat() if p.paid_at else None,
+                    "failure_reason": p.failure_reason or "",
+                    "created_at": p.created_at.isoformat() if p.created_at else None,
                 })
     except Exception:
         payments = []
@@ -649,6 +667,18 @@ async def order_failure(request: Request):
 @pages.get("/order/invoice", response_class=HTMLResponse)
 async def order_invoice(request: Request):
     return render("invoice.html", request)
+
+
+@pages.get("/payment/callback", response_class=HTMLResponse)
+async def payment_callback(request: Request):
+    """Paystack redirect callback - verifies payment and shows result."""
+    return render("payment_callback.html", request)
+
+
+@pages.get("/payment/failed", response_class=HTMLResponse)
+async def payment_failed_page(request: Request):
+    """Payment failed/cancelled page."""
+    return render("order_failure.html", request)
 
 
 @pages.get("/wishlist", response_class=HTMLResponse)
@@ -976,6 +1006,7 @@ def create_app() -> FastAPI:
     app.include_router(reports_api.router, prefix=api_prefix)
     app.include_router(auth_extended.router, prefix=api_prefix)
     app.include_router(media_api.router, prefix=api_prefix)
+    app.include_router(payments_api.router, prefix=api_prefix)
 
     app.include_router(pages)
 

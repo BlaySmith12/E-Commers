@@ -288,20 +288,15 @@ textarea.ck-input{min-height:80px;resize:vertical}
                 <span class="ck-chevron"><i class="bi bi-chevron-down"></i></span>
             </div>
             <div class="ck-section-body">
-                <div class="ck-pay-card active" onclick="selectPay(this,'Mobile Money')">
+                <div class="ck-pay-card active" onclick="selectPay(this,'Paystack')">
                     <div class="ck-pay-radio"></div>
-                    <div class="ck-pay-icon"><i class="bi bi-phone"></i></div>
-                    <div class="ck-pay-info"><h6>Mobile Money</h6><p>MTN MoMo, Vodafone Cash, AirtelTigo</p></div>
-                </div>
-                <div class="ck-pay-card" onclick="selectPay(this,'Credit Card')">
-                    <div class="ck-pay-radio"></div>
-                    <div class="ck-pay-icon"><i class="bi bi-credit-card-2-front"></i></div>
-                    <div class="ck-pay-info"><h6>Credit / Debit Card</h6><p>Visa or Mastercard</p></div>
+                    <div class="ck-pay-icon"><i class="bi bi-shield-lock"></i></div>
+                    <div class="ck-pay-info"><h6>Pay with Paystack</h6><p>Card, Mobile Money, Bank Transfer, USSD — Secure & Instant</p></div>
                 </div>
                 <div class="ck-pay-card" onclick="selectPay(this,'Cash on Delivery')">
                     <div class="ck-pay-radio"></div>
                     <div class="ck-pay-icon"><i class="bi bi-cash-stack"></i></div>
-                    <div class="ck-pay-info"><h6>Cash on Delivery</h6><p>Pay when order arrives</p></div>
+                    <div class="ck-pay-info"><h6>Cash on Delivery</h6><p>Pay when order arrives (limited areas)</p></div>
                 </div>
             </div>
         </div>
@@ -331,7 +326,9 @@ textarea.ck-input{min-height:80px;resize:vertical}
 <script>
 (function(){
     var API='/api', LOGIN='/login';
-    var cart=null, selectedPay='Mobile Money', shippingFee=15, deliveryMethod='standard';
+    var cart=null, selectedPay='Paystack', shippingFee=15, deliveryMethod='standard';
+    var PAYSTACK_PUBLIC_KEY='{{ config.PAYSTACK_PUBLIC_KEY if config else "" }}';
+    var BASE_URL='{{ config.BASE_URL if config else "" }}';
 
     function tok(){return localStorage.getItem('token')}
     function hdr(){var t=tok();return t?{'Authorization':'Bearer '+t,'Content-Type':'application/json'}:{'Content-Type':'application/json'}}
@@ -444,11 +441,11 @@ textarea.ck-input{min-height:80px;resize:vertical}
         html+='<div class="ck-sum-line"><span class="label">Subtotal</span><span class="value">'+fmt(cart.subtotal)+'</span></div>';
         if(cart.discount>0) html+='<div class="ck-sum-line disc"><span class="label">Discount</span><span class="value">-'+fmt(cart.discount)+'</span></div>';
         html+='<div class="ck-sum-line"><span class="label">Shipping</span><span class="value">'+fmt(shippingFee)+'</span></div>';
-        html+='<div class="ck-sum-line"><span class="label">Tax</span><span class="value">'+fmt(cart.tax)+'</span></div>';
+        html+='<div class="ck-sum-line"><span class="label">Tax (15%)</span><span class="value">'+fmt(cart.tax)+'</span></div>';
 
-        var total=cart.total+shippingFee-(cart.subtotal>0?0:0);
-        total=Math.max(cart.subtotal-cart.discount,0)+shippingFee+cart.tax;
+        var total=Math.max(cart.subtotal-cart.discount,0)+shippingFee+cart.tax;
         html+='<div class="ck-sum-total"><span>Total</span><span class="val">'+fmt(total)+'</span></div>';
+        html+='<div style="margin-top:8px;text-align:center;font-size:.75rem;color:var(--text-secondary);"><i class="bi bi-shield-lock me-1"></i>Payments processed securely via Paystack</div>';
 
         el.innerHTML=html;
         document.getElementById('ckSumBadge').textContent=fmt(total);
@@ -492,7 +489,28 @@ textarea.ck-input{min-height:80px;resize:vertical}
     }
     function hideError(){document.getElementById('ckError').classList.remove('show')}
 
-    // Place Order
+    function setLoading(on){
+        document.getElementById('ckBtnTxt').style.display=on?'none':'';
+        document.getElementById('ckBtnSpin').style.display=on?'':'none';
+        document.getElementById('ckPlaceBtn').disabled=on;
+    }
+
+    // Get customer email from form or token
+    function getCustomerEmail(){
+        var emailField=document.getElementById('ckEmail');
+        if(emailField&&emailField.value.trim())return emailField.value.trim();
+        // Try to get from JWT token
+        try{
+            var t=tok();
+            if(t){
+                var payload=JSON.parse(atob(t.split('.')[1]));
+                return payload.email||'';
+            }
+        }catch(e){}
+        return '';
+    }
+
+    // Place Order - handles both COD and Paystack
     window.placeOrder=function(){
         hideError();
         var street=document.getElementById('ckStreet').value.trim();
@@ -514,17 +532,37 @@ textarea.ck-input{min-height:80px;resize:vertical}
         if(saved&&saved.value)payload.address_id=parseInt(saved.value,10);
 
         setLoading(true);
+
+        // Step 1: Create the order
         fetch(API+'/orders/checkout?cart_id=default',{method:'POST',headers:hdr(),body:JSON.stringify(payload)})
         .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.detail||'Checkout failed');return d})})
-        .then(function(order){window.location.href='/order/success?order_id='+order.id})
+        .then(function(order){
+            // For Paystack: initialize payment and redirect
+            if(selectedPay!=='Cash on Delivery'){
+                var email=getCustomerEmail();
+                if(!email){
+                    showError('Please enter your email address in the Contact section');
+                    setLoading(false);
+                    return;
+                }
+                // Initialize Paystack payment
+                return fetch(API+'/payments/initialize',{method:'POST',headers:hdr(),body:JSON.stringify({order_id:order.id,email:email})})
+                .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.detail||'Payment initialization failed');return d})})
+                .then(function(payData){
+                    if(payData.status&&payData.data&&payData.data.authorization_url){
+                        // Redirect to Paystack
+                        window.location.href=payData.data.authorization_url;
+                    }else{
+                        throw new Error(payData.message||'Could not initialize payment');
+                    }
+                });
+            }else{
+                // COD: redirect to success
+                window.location.href='/order/success?order_id='+order.id;
+            }
+        })
         .catch(function(e){showError(e.message);setLoading(false)});
     };
-
-    function setLoading(on){
-        document.getElementById('ckBtnTxt').style.display=on?'none':'';
-        document.getElementById('ckBtnSpin').style.display=on?'':'none';
-        document.getElementById('ckPlaceBtn').disabled=on;
-    }
 
     init();
 })();

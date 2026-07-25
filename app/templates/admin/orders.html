@@ -1098,8 +1098,11 @@
                 <button class="status-tab active" data-status="" onclick="filterByTab(this)">
                     All<span class="tab-count" id="tabCountAll">0</span>
                 </button>
-                <button class="status-tab" data-status="Pending" onclick="filterByTab(this)">
-                    Pending<span class="tab-count" id="tabCountPending">0</span>
+                <button class="status-tab" data-status="Pending Payment" onclick="filterByTab(this)">
+                    Pending Payment<span class="tab-count" id="tabCountPendingPayment">0</span>
+                </button>
+                <button class="status-tab" data-status="Paid" onclick="filterByTab(this)">
+                    Paid<span class="tab-count" id="tabCountPaid">0</span>
                 </button>
                 <button class="status-tab" data-status="Processing" onclick="filterByTab(this)">
                     Processing<span class="tab-count" id="tabCountProcessing">0</span>
@@ -1109,6 +1112,9 @@
                 </button>
                 <button class="status-tab" data-status="Delivered" onclick="filterByTab(this)">
                     Delivered<span class="tab-count" id="tabCountDelivered">0</span>
+                </button>
+                <button class="status-tab" data-status="Payment Failed" onclick="filterByTab(this)">
+                    Failed<span class="tab-count" id="tabCountFailed">0</span>
                 </button>
                 <button class="status-tab" data-status="Cancelled" onclick="filterByTab(this)">
                     Cancelled<span class="tab-count" id="tabCountCancelled">0</span>
@@ -1215,12 +1221,15 @@
                     <div class="d-flex align-items-center gap-3 flex-wrap">
                         <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">Change Status:</span>
                         <select class="form-select form-select-sm bg-dark text-light border-secondary" id="detailStatusSelect" style="width: auto; font-size: 0.8rem; border-radius: 6px;">
-                            <option value="Pending">Pending</option>
+                            <option value="Pending Payment">Pending Payment</option>
+                            <option value="Payment Processing">Payment Processing</option>
+                            <option value="Paid">Paid</option>
                             <option value="Processing">Processing</option>
                             <option value="Shipped">Shipped</option>
                             <option value="Delivered">Delivered</option>
                             <option value="Cancelled">Cancelled</option>
                             <option value="Refunded">Refunded</option>
+                            <option value="Payment Failed">Payment Failed</option>
                         </select>
                         <button class="btn btn-primary-custom btn-sm" onclick="updateDetailStatus()" style="font-size: 0.8rem;">
                             <i class="bi bi-check-lg me-1"></i>Update
@@ -1625,7 +1634,7 @@
                         <span class="badge-dot"></span>${status}
                     </span>
                     <div class="status-dropdown" id="dropdown-${id}">
-                        ${['Pending','Processing','Shipped','Delivered','Cancelled','Refunded'].map(s => {
+                        ${['Pending Payment','Payment Processing','Paid','Processing','Shipped','Delivered','Cancelled','Refunded','Payment Failed'].map(s => {
                             const cls = s === status ? 'current' : '';
                             const dotColor = getStatusDotColor(s);
                             return `<div class="status-dropdown-item ${cls}" onclick="confirmStatusChange(${id}, '${s}')">

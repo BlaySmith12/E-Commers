@@ -315,11 +315,27 @@ class OrderItemOut(BaseModel):
 class PaymentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    transaction_id: Optional[str] = None
+    provider: Optional[str] = None
+    transaction_reference: Optional[str] = None
     amount: float
+    currency: Optional[str] = 'GHS'
     status: str
-    payment_method: str
+    payment_method: Optional[str] = None
+    channel: Optional[str] = None
+    customer_email: Optional[str] = None
+    paid_at: Optional[datetime] = None
+    failure_reason: Optional[str] = None
     created_at: Optional[datetime] = None
+
+
+class PaymentInitOut(BaseModel):
+    status: bool
+    message: str
+    authorization_url: Optional[str] = None
+    access_code: Optional[str] = None
+    reference: Optional[str] = None
+    payment_id: Optional[int] = None
+    order_id: Optional[int] = None
 
 
 class OrderOut(BaseModel):
@@ -327,12 +343,16 @@ class OrderOut(BaseModel):
     id: int
     order_number: str
     status: str
+    payment_status: Optional[str] = None
+    currency: Optional[str] = 'GHS'
+    discount: float = 0.0
     subtotal: float
     shipping_fee: float
     tax: float
     total_amount: float
     notes: Optional[str] = None
     created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     items: List[OrderItemOut] = []
     payment: Optional[PaymentOut] = None
 

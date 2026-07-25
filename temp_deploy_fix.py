@@ -37,9 +37,24 @@ if not ssh:
 
 try:
     run(ssh, 'cd /root/ecommerce && git pull origin main')
+    run(ssh, 'cd /root/ecommerce && docker compose down')
     run(ssh, 'cd /root/ecommerce && docker compose up -d --build app', timeout=300)
-    time.sleep(15)
+except Exception as e:
+    print(f'Error: {e}')
+
+ssh.close()
+
+time.sleep(25)
+ssh = get_ssh()
+if not ssh:
+    print('FAILED reconnect')
+    exit(1)
+
+try:
     run(ssh, 'cd /root/ecommerce && docker compose ps')
+    run(ssh, 'curl -sf http://localhost:8000/health || echo NOT_HEALTHY')
+    run(ssh, 'curl -sf -o /dev/null -w "%{http_code}" http://162.35.186.39/ || echo FAIL')
+    run(ssh, 'cd /root/ecommerce && docker compose logs --tail=15 app 2>&1')
 except Exception as e:
     print(f'Error: {e}')
 

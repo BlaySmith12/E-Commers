@@ -291,7 +291,10 @@ class Order(Base):
 
     id = Column(Integer, primary_key=True)
     order_number = Column(String(50), nullable=False)
-    status = Column(String(50), default='Pending')  # Pending, Processing, Shipped, Delivered, Cancelled, Refunded
+    status = Column(String(50), default='Pending Payment')  # Pending Payment, Payment Processing, Paid, Processing, Shipped, Delivered, Cancelled, Refunded
+    payment_status = Column(String(50), default='Pending')  # Pending, Processing, Paid, Failed, Refunded, Abandoned
+    currency = Column(String(10), default='GHS')
+    discount = Column(Float, default=0.0)
     total_amount = Column(Float, nullable=False)
     shipping_fee = Column(Float, default=0.0)
     tax = Column(Float, default=0.0)
@@ -378,15 +381,48 @@ class Payment(Base):
     __tablename__ = 'payments'
 
     id = Column(Integer, primary_key=True)
-    transaction_id = Column(String(100))
-    amount = Column(Float, nullable=False)
-    status = Column(String(50), default='Pending')  # Pending, Completed, Failed, Refunded
-    payment_method = Column(String(50), default='Cash on Delivery')
-    created_at = Column(DateTime, default=utcnow)
+    order_id = Column(Integer, ForeignKey('orders.id'), nullable=False, index=True)
 
-    order_id = Column(Integer, ForeignKey('orders.id'))
+    # Payment provider
+    provider = Column(String(50), default='paystack')  # paystack, cod, etc.
+    transaction_reference = Column(String(100), unique=True, index=True)
+    access_code = Column(String(200))
+
+    # Amount & currency
+    amount = Column(Float, nullable=False)
+    currency = Column(String(10), default='GHS')
+
+    # Status: Pending, Processing, Completed, Failed, Refunded, Abandoned
+    status = Column(String(50), default='Pending', index=True)
+    payment_method = Column(String(50))  # card, bank, mobile_money, ussd, cod
+
+    # Paystack-specific
+    paystack_reference = Column(String(100), index=True)
+    paystack_access_code = Column(String(200))
+    channel = Column(String(50))  # card, bank, ussd, mobile_money
+    customer_email = Column(String(256))
+    ip_address = Column(String(45))
+
+    # Result data
+    gateway_response = Column(Text)
+    paid_at = Column(DateTime)
+    failure_reason = Column(Text)
+
+    # Refund
+    refund_reference = Column(String(100))
+    refund_amount = Column(Float, default=0.0)
+    refund_reason = Column(Text)
+
+    metadata = Column(JSON, default=dict)
+
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     order = relationship('Order', back_populates='payment', lazy='selectin')
+    events = relationship(
+        'PaymentEvent', back_populates='payment', lazy='selectin',
+        cascade='all, delete-orphan',
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -716,3 +752,21 @@ class SystemLog(Base):
     source = Column(String(100))
     details = Column(JSON)
     created_at = Column(DateTime, default=utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Payment Events (webhook / audit trail)
+# ---------------------------------------------------------------------------
+class PaymentEvent(Base):
+    __tablename__ = 'payment_events'
+
+    id = Column(Integer, primary_key=True)
+    payment_id = Column(Integer, ForeignKey('payments.id'), nullable=False, index=True)
+    event_type = Column(String(100), nullable=False)  # charge.success, charge.failed, etc.
+    event_reference = Column(String(100))
+    gateway_response = Column(Text)
+    payload = Column(JSON)
+    processed = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    payment = relationship('Payment', back_populates='events', lazy='selectin')

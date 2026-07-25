@@ -33,5 +33,14 @@ class Config:
     UPLOAD_FOLDER = os.path.join(basedir, 'app', 'static', 'images', 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
 
+    # Paystack
+    PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY', '')
+    PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY', '')
+    PAYSTACK_WEBHOOK_SECRET = os.environ.get('PAYSTACK_WEBHOOK_SECRET', '')
+    PAYSTACK_API_URL = 'https://api.paystack.co'
+
+    # Base URL for callbacks
+    BASE_URL = os.environ.get('BASE_URL', 'http://162.35.186.39')
+
 
 config = Config()

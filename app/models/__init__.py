@@ -23,6 +23,7 @@ from app.models.catalog import (  # noqa: F401
     Order,
     OrderItem,
     Payment,
+    PaymentEvent,
     # Settings / Audit
     SiteSetting,
     AuditLog,
