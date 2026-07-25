@@ -51,18 +51,18 @@ async def seed():
         # Seed roles
         for name, perms in [('Customer', 0), ('Admin', 31)]:
             result = await session.execute(select(Role).where(Role.name == name))
-            if not result.scalar_one_or_none():
+            if not result.scalars().first():
                 session.add(Role(name=name, permissions=perms, default=(name == 'Customer')))
                 print(f'  Created role: {name}')
 
         await session.commit()
 
         # Seed admin user (only if none exists with Admin role)
-        admin_role = (await session.execute(select(Role).where(Role.name == 'Admin'))).scalar_one_or_none()
+        admin_role = (await session.execute(select(Role).where(Role.name == 'Admin'))).scalars().first()
         if admin_role:
             existing = (await session.execute(
                 select(User).where(User.role_id == admin_role.id)
-            )).scalar_one_or_none()
+            )).scalars().first()
             if not existing:
                 admin = User(
                     email='admin@primenest.com',
