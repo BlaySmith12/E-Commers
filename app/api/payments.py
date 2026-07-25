@@ -249,7 +249,9 @@ async def verify_payment(
             payment.paystack_reference = tx_data.get('reference', reference)
             payment.channel = tx_data.get('channel', '')
             payment.payment_method = tx_data.get('channel', 'paystack')
-            payment.paid_at = datetime.fromisoformat(tx_data.get('paid_at', datetime.now(timezone.utc).replace(tzinfo=None).isoformat()).replace('Z', '+00:00'))
+            paid_at_str = tx_data.get('paid_at', datetime.utcnow().isoformat()).replace('Z', '+00:00')
+            parsed = datetime.fromisoformat(paid_at_str)
+            payment.paid_at = parsed.replace(tzinfo=None)
             payment.gateway_response = json.dumps(verify_result)
             payment.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -548,7 +550,7 @@ async def _process_successful_payment(payment: Payment, event_data: dict, db: As
     paid_at = event_data.get('paid_at', '')
     if paid_at:
         try:
-            payment.paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
+            payment.paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00')).replace(tzinfo=None)
         except (ValueError, TypeError):
             payment.paid_at = datetime.now(timezone.utc).replace(tzinfo=None)
     else:
