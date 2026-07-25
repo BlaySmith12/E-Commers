@@ -25,7 +25,8 @@ echo "PostgreSQL is ready."
 
 # ─── Run Alembic migrations ───────────────────────────────────────────────────
 echo "Running database migrations..."
-alembic -c migrations/alembic.ini upgrade head
+cd /app/migrations && alembic -c alembic.ini upgrade head
+cd /app
 echo "Migrations complete."
 
 # ─── Seed initial data (roles, admin user) ────────────────────────────────────
