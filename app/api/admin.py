@@ -471,8 +471,7 @@ async def admin_delete_product(product_id: int, db: AsyncSession = Depends(get_d
     product_sku = product.sku
     await db.execute(text("DELETE FROM inventory WHERE product_id = :pid"), {"pid": product_id})
     await db.execute(text("UPDATE order_items SET product_id = NULL WHERE product_id = :pid"), {"pid": product_id})
-    await db.execute(text("DELETE FROM cart_items WHERE product_id = :pid"), {"pid": product_id})
-    await db.execute(text("DELETE FROM wishlist_items WHERE product_id = :pid"), {"pid": product_id})
+    await db.execute(text("DELETE FROM wishlists WHERE product_id = :pid"), {"pid": product_id})
     await db.execute(text("DELETE FROM collection_products WHERE product_id = :pid"), {"pid": product_id})
     await db.delete(product)
     await db.commit()
@@ -509,8 +508,7 @@ async def bulk_delete_products(
     await db.execute(text("DELETE FROM inventory WHERE product_id = ANY(:ids)"), {"ids": product_ids})
     # Nullify FK references that don't cascade
     await db.execute(text("UPDATE order_items SET product_id = NULL WHERE product_id = ANY(:ids)"), {"ids": product_ids})
-    await db.execute(text("DELETE FROM cart_items WHERE product_id = ANY(:ids)"), {"ids": product_ids})
-    await db.execute(text("DELETE FROM wishlist_items WHERE product_id = ANY(:ids)"), {"ids": product_ids})
+    await db.execute(text("DELETE FROM wishlists WHERE product_id = ANY(:ids)"), {"ids": product_ids})
     await db.execute(text("DELETE FROM collection_products WHERE product_id = ANY(:ids)"), {"ids": product_ids})
     # Delete the products
     delete_stmt = Product.__table__.delete().where(Product.id.in_(product_ids))
