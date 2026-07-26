@@ -1910,24 +1910,29 @@
         $('#detailStatusSelect').value = o.status || 'Pending';
         updateDetailStatusBadge(o.status || 'Pending');
 
-        // Customer
         const cust = o.customer || o.user || {};
-        const fname = cust.first_name || cust.firstName || '';
-        const lname = cust.last_name || cust.lastName || '';
+        const payment = o.payment || o.payment_info || {};
+        const paymentCustomer = payment.customer || {};
+
+        const fname = cust.first_name || cust.firstName || paymentCustomer.first_name || '';
+        const lname = cust.last_name || cust.lastName || paymentCustomer.last_name || '';
         const fullName = (fname + ' ' + lname).trim() || getCustomerName(o);
+        const customerEmail = cust.email || payment.customer_email || paymentCustomer.email || getCustomerEmail(o) || '';
+        const customerPhone = cust.phone || cust.phoneNumber || paymentCustomer.phone || '';
+
         $('#detailCustomerName').textContent = fullName || '-';
-        $('#detailCustomerEmail').textContent = getCustomerEmail(o) || '-';
-        $('#detailCustomerPhone').textContent = cust.phone || cust.phoneNumber || '-';
+        $('#detailCustomerEmail').textContent = customerEmail || '-';
+        $('#detailCustomerPhone').textContent = customerPhone || '-';
         $('#detailShippingAddress').textContent = formatAddress(o.shipping_address || cust.shipping_address || o.shippingAddress || '');
 
         // Items
         const items = o.items || o.order_items || o.orderItems || [];
         $('#detailItemsBody').innerHTML = items.map(item => {
-            const productName = item.product_name || item.productName || item.name || 'Product';
-            const img = item.image || item.product_image || item.snapshot_image || item.thumbnail || '';
+            const productName = item.snapshot_name || item.product_name || item.productName || item.name || 'Product';
+            const img = item.snapshot_image || item.image || item.product_image || item.thumbnail || '';
             const qty = item.quantity || item.qty || 1;
             const price = item.unit_price || item.unitPrice || item.price || 0;
-            const total = item.total || item.line_total || (qty * price);
+            const total = item.line_total || item.total || (qty * price);
             return `<tr>
                 <td>
                     <div class="item-product">
@@ -1945,7 +1950,7 @@
 
         // Summary
         const subtotal = o.subtotal || o.sub_total || calculateSubtotal(items);
-        const shipping = o.shipping_cost || o.shipping || o.shippingCost || 0;
+        const shipping = o.shipping_fee || o.shipping_cost || o.shipping || o.shippingCost || 0;
         const tax = o.tax || o.tax_amount || 0;
         const discount = o.discount || o.discount_amount || 0;
         const total = o.total_amount || o.total || (subtotal + shipping + tax - discount);
@@ -1956,9 +1961,10 @@
         $('#detailTotal').textContent = formatCurrency(total);
 
         // Payment
-        const payment = o.payment || o.payment_info || {};
-        $('#detailPaymentMethod').textContent = o.payment_method || payment.method || payment.paymentMethod || '-';
-        $('#detailTransactionId').textContent = o.transaction_id || payment.transaction_id || payment.transactionId || '-';
+        const payMethod = o.payment_method || payment.payment_method || payment.method || payment.paymentMethod || '-';
+        const txId = payment.transaction_reference || payment.transaction_reference || payment.transactionId || payment.transaction_id || o.transaction_id || '-';
+        $('#detailPaymentMethod').textContent = payMethod;
+        $('#detailTransactionId').textContent = txId;
         const pStatus = o.payment_status || payment.status || 'Paid';
         const pBadge = getPaymentBadgeClass(pStatus);
         $('#detailPaymentStatus').innerHTML = `<span class="payment-badge ${pBadge}">${escapeHtml(pStatus)}</span>`;
