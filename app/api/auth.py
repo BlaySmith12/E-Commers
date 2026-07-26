@@ -57,10 +57,10 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
         await log_activity(
             db=db,
             activity_type="customer_registered",
-            description=f"New customer registered: {user.full_name or user.email}",
+            description=f"New customer registered: {((user.first_name or '') + ' ' + (user.last_name or '')).strip() or user.email}",
             entity_type="User",
             entity_id=user.id,
-            actor_name=user.full_name or user.email,
+            actor_name=((user.first_name or '') + ' ' + (user.last_name or '')).strip() or user.email,
             actor_id=user.id,
         )
         await db.commit()

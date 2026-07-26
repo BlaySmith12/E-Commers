@@ -785,7 +785,7 @@ async def _award_loyalty_points(order, db: AsyncSession):
     try:
         user_result = await db.execute(select(User).where(User.id == order.user_id))
         user = user_result.scalar_one_or_none()
-        actor_name = (user.full_name or user.email) if user else "Customer"
+        actor_name = (((user.first_name or '') + ' ' + (user.last_name or '')).strip() or user.email) if user else "Customer"
         await log_activity(
             db=db,
             activity_type="loyalty_points_earned",

@@ -700,7 +700,7 @@ async def update_order_status(
         entity_type="Order",
         entity_id=order.id,
         entity_number=order.order_number,
-        actor_name=admin.full_name or admin.email or "Admin",
+        actor_name=((admin.first_name or '') + ' ' + (admin.last_name or '')).strip() or admin.email or "Admin",
         actor_id=admin.id,
         extra_data={"old_status": old_status, "new_status": order.status},
     )

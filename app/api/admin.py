@@ -433,7 +433,7 @@ async def admin_create_product(payload: ProductCreate, db: AsyncSession = Depend
         entity_type="Product",
         entity_id=product.id,
         entity_number=product.sku,
-        actor_name=admin.full_name or admin.email or "Admin",
+        actor_name=((admin.first_name or '') + ' ' + (admin.last_name or '')).strip() or admin.email or "Admin",
         actor_id=admin.id,
     )
     await db.commit()
@@ -469,7 +469,7 @@ async def admin_update_product(product_id: int, payload: ProductUpdate, db: Asyn
         entity_type="Product",
         entity_id=product.id,
         entity_number=product.sku,
-        actor_name=admin.full_name or admin.email or "Admin",
+        actor_name=((admin.first_name or '') + ' ' + (admin.last_name or '')).strip() or admin.email or "Admin",
         actor_id=admin.id,
     )
     await db.commit()
@@ -505,7 +505,7 @@ async def admin_delete_product(product_id: int, db: AsyncSession = Depends(get_d
         entity_type="Product",
         entity_id=product_id,
         entity_number=product_sku,
-        actor_name=admin.full_name or admin.email or "Admin",
+        actor_name=((admin.first_name or '') + ' ' + (admin.last_name or '')).strip() or admin.email or "Admin",
         actor_id=admin.id,
     )
     await db.commit()
