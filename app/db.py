@@ -98,6 +98,40 @@ async def init_db() -> None:
             EXCEPTION WHEN duplicate_table THEN NULL;
             END $$;
         """))
+        # Store visits table
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS store_visits (
+                id SERIAL PRIMARY KEY,
+                visitor_fingerprint VARCHAR(64) NOT NULL,
+                page_url VARCHAR(500) NOT NULL,
+                referrer VARCHAR(500),
+                device_type VARCHAR(20),
+                browser VARCHAR(100),
+                os VARCHAR(100),
+                ip_hash VARCHAR(64),
+                user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                visited_at TIMESTAMP DEFAULT NOW() NOT NULL
+            )
+        """))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_store_visits_date ON store_visits (visited_at)"))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_store_visits_fp ON store_visits (visitor_fingerprint, visited_at)"))
+        # Activity logs table
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS activity_logs (
+                id SERIAL PRIMARY KEY,
+                activity_type VARCHAR(50) NOT NULL,
+                description TEXT NOT NULL,
+                entity_type VARCHAR(50),
+                entity_id INTEGER,
+                entity_number VARCHAR(100),
+                actor_name VARCHAR(200),
+                actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                metadata JSONB,
+                created_at TIMESTAMP DEFAULT NOW() NOT NULL
+            )
+        """))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_activity_logs_created ON activity_logs (created_at)"))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_activity_logs_type ON activity_logs (activity_type)"))
 
 
 async def dispose_engine() -> None:

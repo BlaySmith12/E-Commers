@@ -324,6 +324,38 @@
             if (window.scrollY > 50) nav.classList.add('nav-scrolled');
             else nav.classList.remove('nav-scrolled');
         });
+
+        // Storefront visitor tracking (privacy-conscious)
+        (function() {
+            try {
+                var fp = '';
+                var c = document.createElement('canvas');
+                if (c && c.getContext) {
+                    var ctx = c.getContext('2d');
+                    ctx.textBaseline = 'top';
+                    ctx.font = '14px Arial';
+                    ctx.fillText('visitor', 2, 2);
+                    fp = c.toDataURL().slice(-50);
+                }
+                fp += '|' + navigator.userAgent.slice(0, 80) + '|' + screen.width + 'x' + screen.height;
+                var stored = sessionStorage.getItem('_vp');
+                if (!stored) {
+                    stored = fp.split('').reduce(function(h, c) { return ((h << 5) - h) + c.charCodeAt(0) | 0; }, 0).toString(36);
+                    sessionStorage.setItem('_vp', stored);
+                }
+                if (stored) {
+                    fetch('/api/analytics/visit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            fingerprint: stored,
+                            page_url: window.location.pathname,
+                            referrer: document.referrer || ''
+                        })
+                    }).catch(function() {});
+                }
+            } catch(e) {}
+        })();
     </script>
     {% block scripts %}{% endblock %}
 </body>

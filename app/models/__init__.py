@@ -34,6 +34,7 @@ from app.models.catalog import (  # noqa: F401
     Wishlist,
     # Coupons / Promotions
     Coupon,
+    CouponUsage,
     Promotion,
     # Newsletter
     NewsletterSubscriber,
@@ -56,4 +57,8 @@ from app.models.catalog import (  # noqa: F401
     MediaLibrary,
     # System Logs
     SystemLog,
+    # Store Visitors / Analytics
+    StoreVisit,
+    # Activity Logs
+    ActivityLog,
 )

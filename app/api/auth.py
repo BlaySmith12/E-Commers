@@ -20,6 +20,7 @@ from app.security import (
     get_current_active_user,
     get_current_user,
 )
+from app.activity import log_activity
 
 router = APIRouter(prefix='/auth', tags=['Authentication'])
 
@@ -50,6 +51,21 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     db.add(user)
     await db.commit()
     await db.refresh(user)
+
+    # Log activity
+    try:
+        await log_activity(
+            db=db,
+            activity_type="customer_registered",
+            description=f"New customer registered: {user.full_name or user.email}",
+            entity_type="User",
+            entity_id=user.id,
+            actor_name=user.full_name or user.email,
+            actor_id=user.id,
+        )
+        await db.commit()
+    except Exception:
+        pass
 
     token = create_access_token(subject=user.id)
     return Token(access_token=token, user=UserOut.model_validate(user))

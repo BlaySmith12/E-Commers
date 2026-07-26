@@ -10,10 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db import get_db
-from app.models.catalog import Order, OrderItem, Address, User, AuditLog, Payment, Product
+from app.models.catalog import Order, OrderItem, Address, User, AuditLog, Payment, Product, Coupon, CouponUsage, LoyaltyAccount, LoyaltyTransaction, LoyaltySettings
 from app.schemas import OrderOut, CheckoutIn, MessageOut, OrderStatusUpdate
 from app.security import CurrentUser, RequireAdmin, RequireEditor, RequireViewer
 from app.audit import log_audit
+from app.activity import log_activity
 
 router = APIRouter(prefix='/orders', tags=['Orders'])
 
@@ -161,8 +162,8 @@ async def admin_list_orders(
                 'quantity': it.quantity,
                 'price': it.price,
                 'product_id': it.product_id,
-                'snapshot_name': it.snapshot_name,
-                'snapshot_image': it.snapshot_image,
+                'snapshot_name': it.snapshot_name or it.product_name,
+                'snapshot_image': it.snapshot_image or it.product_image,
             })
         pay_method = None
         pay_brief = None
@@ -246,8 +247,15 @@ async def get_order(order_id: int, current_user: CurrentUser, db: AsyncSession =
             'quantity': it.quantity,
             'price': it.price,
             'product_id': it.product_id,
-            'snapshot_name': it.snapshot_name,
-            'snapshot_image': it.snapshot_image,
+            'snapshot_name': it.snapshot_name or it.product_name,
+            'snapshot_image': it.snapshot_image or it.product_image,
+            'product_name': it.product_name,
+            'product_image': it.product_image,
+            'product_slug': it.product_slug,
+            'product_brand': it.product_brand,
+            'product_sku': it.product_sku,
+            'product_variant': it.product_variant,
+            'line_total': it.price * it.quantity,
         })
     pay_method = None
     pay_brief = None
@@ -373,41 +381,103 @@ async def checkout(
             'snapshot_variant': None,
         })
 
-    # Apply coupon
+    # Apply coupon (secure server-side validation)
     discount = 0.0
     coupon_code = payload.coupon_code or _cart_coupons.get(cart_id)
+    coupon_obj = None
     if coupon_code:
         coupon_result = await db.execute(
-            select(Coupon).where(Coupon.code == coupon_code, Coupon.is_active == True)
+            select(Coupon).where(Coupon.code == coupon_code.strip().upper(), Coupon.is_active == True)  # noqa: E712
         )
-        coupon = coupon_result.scalar_one_or_none()
-        if coupon:
+        coupon_obj = coupon_result.scalar_one_or_none()
+        if coupon_obj:
             from datetime import datetime as dt
             now = dt.utcnow()
             valid = True
-            if coupon.start_date and now < coupon.start_date:
+            if coupon_obj.start_date and now < coupon_obj.start_date:
                 valid = False
-            if coupon.end_date and now > coupon.end_date:
+            if coupon_obj.end_date and now > coupon_obj.end_date:
                 valid = False
-            if coupon.max_uses and coupon.used_count >= coupon.max_uses:
+            if coupon_obj.max_uses and coupon_obj.used_count >= coupon_obj.max_uses:
                 valid = False
-            if subtotal < coupon.min_order_amount:
+            if subtotal < coupon_obj.min_order_amount:
                 valid = False
+            if valid and coupon_obj.max_uses_per_customer and coupon_obj.max_uses_per_customer > 0:
+                usage_check = await db.execute(
+                    select(func.count(CouponUsage.id)).where(
+                        CouponUsage.coupon_id == coupon_obj.id,
+                        CouponUsage.user_id == current_user.id,
+                    )
+                )
+                if (usage_check.scalar() or 0) >= coupon_obj.max_uses_per_customer:
+                    valid = False
+            if valid and coupon_obj.first_order_only:
+                prev_orders = await db.execute(
+                    select(func.count(Order.id)).where(
+                        Order.user_id == current_user.id,
+                        Order.status.in_(['Paid', 'Processing', 'Shipped', 'Delivered']),
+                    )
+                )
+                if (prev_orders.scalar() or 0) > 0:
+                    valid = False
             if valid:
-                if coupon.discount_type == 'percentage':
-                    discount = subtotal * (coupon.discount_value / 100)
+                if coupon_obj.discount_type == 'percentage':
+                    discount = subtotal * (coupon_obj.discount_value / 100)
                 else:
-                    discount = min(coupon.discount_value, subtotal)
-                coupon.used_count += 1
+                    discount = min(coupon_obj.discount_value, subtotal)
+                if coupon_obj.max_discount_amount and coupon_obj.max_discount_amount > 0:
+                    discount = min(discount, coupon_obj.max_discount_amount)
+                coupon_obj.used_count += 1
                 await db.flush()
             else:
                 coupon_code = None
+                coupon_obj = None
         else:
             coupon_code = None
 
+    # Apply loyalty points redemption
+    points_discount = 0.0
+    points_used = payload.points_used if payload.points_used else 0
+    if points_used and points_used > 0:
+        loyalty_result = await db.execute(select(LoyaltyAccount).where(LoyaltyAccount.user_id == current_user.id))
+        loyalty_account = loyalty_result.scalar_one_or_none()
+        if loyalty_account and loyalty_account.points_balance >= points_used:
+            redemption_rate = 100
+            try:
+                settings_result = await db.execute(
+                    select(LoyaltySettings).where(LoyaltySettings.key == 'redemption_rate')
+                )
+                setting_row = settings_result.scalar_one_or_none()
+                if setting_row:
+                    redemption_rate = int(setting_row.value)
+            except Exception:
+                pass
+            points_discount = round(points_used / redemption_rate, 2)
+            points_discount = min(points_discount, subtotal - discount)
+            loyalty_account.points_balance -= points_used
+            loyalty_account.total_redeemed += points_used
+            await db.add(LoyaltyTransaction(
+                user_id=current_user.id, type='redeem', points=-points_used,
+                balance_after=loyalty_account.points_balance,
+                description=f'Points redeemed for order',
+            ))
+            await db.flush()
+            # Activity log for loyalty points redemption
+            await log_activity(
+                db=db,
+                activity_type="loyalty_points_redeemed",
+                description=f"{current_user.full_name or current_user.email} redeemed {points_used} loyalty points",
+                entity_type="User",
+                entity_id=current_user.id,
+                actor_name=current_user.full_name or current_user.email,
+                actor_id=current_user.id,
+                metadata={"points": points_used, "discount": points_discount},
+            )
+
     discount = round(discount, 2)
+    points_discount = round(points_discount, 2)
     shipping_fee = payload.shipping_fee if payload.shipping_fee else CART_SHIPPING_FEE
-    taxable = max(subtotal - discount, 0.0)
+    taxable = max(subtotal - discount - points_discount, 0.0)
     tax = round(taxable * CART_TAX_RATE, 2)
     total_amount = round(taxable + shipping_fee + tax, 2)
 
@@ -426,6 +496,10 @@ async def checkout(
         tax=tax,
         total_amount=total_amount,
         notes=payload.notes,
+        coupon_code=coupon_code if coupon_code else None,
+        coupon_id=coupon_obj.id if coupon_obj else None,
+        points_used=points_used,
+        points_discount=points_discount,
     )
     db.add(order)
     await db.flush()
@@ -475,6 +549,40 @@ async def checkout(
         _cart_store.pop(cart_id, None)
         _cart_coupons.pop(cart_id, None)
 
+        # Record coupon usage for COD
+        if coupon_obj:
+            try:
+                coupon_usage = CouponUsage(
+                    coupon_id=coupon_obj.id,
+                    user_id=current_user.id,
+                    order_id=order.id,
+                    discount_amount=discount,
+                )
+                db.add(coupon_usage)
+                await db.flush()
+                # Activity log for coupon usage
+                await log_activity(
+                    db=db,
+                    activity_type="coupon_used",
+                    description=f"Coupon {coupon_obj.code} was used on order #{order.order_number}",
+                    entity_type="Coupon",
+                    entity_id=coupon_obj.id,
+                    entity_number=coupon_obj.code,
+                    actor_name=current_user.full_name or current_user.email,
+                    actor_id=current_user.id,
+                    metadata={"discount": discount, "order_number": order.order_number},
+                )
+            except Exception:
+                pass
+
+        # Award loyalty points for COD (immediate since no payment verification)
+        try:
+            from app.api.payments import _award_loyalty_points
+            await _award_loyalty_points(order, db)
+            await db.commit()
+        except Exception:
+            await db.commit()
+
     # Audit log
     await log_audit(
         db=db,
@@ -484,6 +592,21 @@ async def checkout(
         user_id=current_user.id,
         details=f"Created order: {order.order_number} total={total_amount} items={len(order_items)} payment={payload.payment_method}"
     )
+
+    # Activity log
+    customer_name = current_user.full_name or current_user.email or "Customer"
+    await log_activity(
+        db=db,
+        activity_type="order_created",
+        description=f"New order #{order.order_number} was placed by {customer_name}",
+        entity_type="Order",
+        entity_id=order.id,
+        entity_number=order.order_number,
+        actor_name=customer_name,
+        actor_id=current_user.id,
+        metadata={"total": total_amount, "items": len(order_items), "payment_method": payload.payment_method},
+    )
+    await db.commit()
 
     return order
 
@@ -524,6 +647,21 @@ async def update_order_status(
         details=f"Updated order {order.order_number} status: {old_status} -> {order.status}"
     )
 
+    # Activity log
+    status_label = order.status.lower().replace("_", " ").title()
+    await log_activity(
+        db=db,
+        activity_type="order_status_changed",
+        description=f"Order #{order.order_number} was marked as {status_label}",
+        entity_type="Order",
+        entity_id=order.id,
+        entity_number=order.order_number,
+        actor_name=admin.full_name or admin.email or "Admin",
+        actor_id=admin.id,
+        metadata={"old_status": old_status, "new_status": order.status},
+    )
+    await db.commit()
+
     return order
 
 
@@ -552,4 +690,19 @@ async def cancel_order(
     order.status = 'Cancelled'
     await db.commit()
     await db.refresh(order)
+
+    # Activity log
+    customer_name = current_user.full_name or current_user.email or "Customer"
+    await log_activity(
+        db=db,
+        activity_type="order_cancelled",
+        description=f"Order #{order.order_number} was cancelled by {customer_name}",
+        entity_type="Order",
+        entity_id=order.id,
+        entity_number=order.order_number,
+        actor_name=customer_name,
+        actor_id=current_user.id,
+    )
+    await db.commit()
+
     return order

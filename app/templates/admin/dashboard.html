@@ -29,7 +29,6 @@
         height: 300px;
         width: 100%;
     }
-
     .dash-section-title { color: var(--text-primary); }
     .dash-stat-value { color: var(--text-primary); }
     .dash-stat-label { color: var(--text-muted); font-size: 0.8rem; font-weight: 500; }
@@ -40,27 +39,76 @@
     .dash-empty { color: var(--text-muted); }
     .dash-row-value { color: var(--text-primary); }
     .dash-meta-value { color: var(--text-muted); }
+    .activity-item {
+        cursor: pointer;
+        transition: background 0.2s;
+        border-radius: 8px;
+        padding: 10px 12px;
+    }
+    .activity-item:hover {
+        background: var(--hover-bg);
+    }
+    .activity-dot {
+        width: 10px; height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 5px;
+    }
+    .filter-btn {
+        font-size: 0.78rem;
+        padding: 4px 12px;
+        border-radius: 20px;
+        border: 1px solid var(--border-color);
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .filter-btn.active, .filter-btn:hover {
+        background: var(--primary-ghost);
+        color: var(--primary);
+        border-color: var(--primary);
+    }
+    .empty-state {
+        text-align: center;
+        padding: 30px 20px;
+        color: var(--text-muted);
+    }
+    .empty-state i {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        opacity: 0.5;
+    }
+    .growth-positive { color: #198754; }
+    .growth-negative { color: #dc3545; }
+    .growth-neutral { color: var(--text-muted); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div>
         <h3 class="fw-bold mb-1">Dashboard Overview</h3>
         <p class="dash-subtitle mb-0">Welcome back, Admin. Here's what's happening with your store today.</p>
     </div>
-    <div>
-        <select class="form-select bg-dark text-light border-secondary d-inline-block w-auto me-2">
-            <option>Today</option>
-            <option>Last 7 Days</option>
-            <option selected>This Month</option>
-            <option>This Year</option>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <select class="form-select bg-dark text-light border-secondary d-inline-block w-auto" id="dashDateRange" onchange="onDashRangeChange()">
+            <option value="today">Today</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="30d" selected>Last 30 Days</option>
+            <option value="month">This Month</option>
+            <option value="custom">Custom Range</option>
         </select>
+        <div id="customDateInputs" class="d-none d-flex gap-1">
+            <input type="date" id="dashDateFrom" class="form-control form-control-sm bg-dark text-light border-secondary" style="width:auto;">
+            <input type="date" id="dashDateTo" class="form-control form-control-sm bg-dark text-light border-secondary" style="width:auto;">
+            <button class="btn btn-sm btn-primary-custom" onclick="onDashRangeChange()">Apply</button>
+        </div>
         <button class="btn btn-primary-custom" onclick="openExportModal()"><i class="bi bi-cloud-download me-2"></i> Export Report</button>
     </div>
 </div>
 
-<!-- Key Metrics Row 1 -->
+<!-- Key Metrics Row -->
 <div class="row g-4 mb-4">
     <!-- Revenue Today -->
     <div class="col-12 col-sm-6 col-xl-3">
@@ -75,7 +123,12 @@
                 </div>
             </div>
             <div class="d-flex align-items-center mt-auto">
-                <span class="badge bg-success bg-opacity-25 text-success me-2"><i class="bi bi-arrow-up-right"></i> 12.5%</span>
+                {% if revenue_yesterday > 0 %}
+                {% set pct_today = ((revenue_today - revenue_yesterday) / revenue_yesterday * 100) %}
+                <span class="badge {{ 'bg-success' if pct_today >= 0 else 'bg-danger' }} bg-opacity-25 {{ 'text-success' if pct_today >= 0 else 'text-danger' }} me-2">
+                    <i class="bi bi-arrow-{{ 'up-right' if pct_today >= 0 else 'down-right' }}"></i> {{ "%.1f"|format(pct_today|abs) }}%
+                </span>
+                {% endif %}
                 <span class="dash-subtext small">vs yesterday</span>
             </div>
         </div>
@@ -94,7 +147,12 @@
                 </div>
             </div>
             <div class="d-flex align-items-center mt-auto">
-                <span class="badge bg-success bg-opacity-25 text-success me-2"><i class="bi bi-arrow-up-right"></i> 8.3%</span>
+                {% if revenue_last_month > 0 %}
+                {% set pct_month = ((revenue_month - revenue_last_month) / revenue_last_month * 100) %}
+                <span class="badge {{ 'bg-success' if pct_month >= 0 else 'bg-danger' }} bg-opacity-25 {{ 'text-success' if pct_month >= 0 else 'text-danger' }} me-2">
+                    <i class="bi bi-arrow-{{ 'up-right' if pct_month >= 0 else 'down-right' }}"></i> {{ "%.1f"|format(pct_month|abs) }}%
+                </span>
+                {% endif %}
                 <span class="dash-subtext small">vs last month</span>
             </div>
         </div>
@@ -106,59 +164,64 @@
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
                     <h6 class="dash-stat-label mb-1">Avg Order Value</h6>
-                    <h3 class="fw-bold mb-0 dash-stat-value">GHS {{ "%.2f"|format(revenue_month / 12) if revenue_month > 0 else "0.00" }}</h3>
+                    <h3 class="fw-bold mb-0 dash-stat-value">GHS {{ "%.2f"|format(revenue_month / orders_month) if orders_month > 0 else "0.00" }}</h3>
                 </div>
                 <div class="stat-icon bg-light-orange">
                     <i class="bi bi-calculator"></i>
                 </div>
             </div>
             <div class="d-flex align-items-center mt-auto">
-                <span class="badge bg-danger bg-opacity-25 text-danger me-2"><i class="bi bi-arrow-down-right"></i> 1.5%</span>
-                <span class="dash-subtext small">vs yesterday</span>
+                <span class="dash-subtext small">{{ orders_month }} orders this month</span>
             </div>
         </div>
     </div>
     
-    <!-- Conversion Rate -->
+    <!-- Delivered Orders -->
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="card card-custom stat-card p-4 h-100">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
-                    <h6 class="dash-stat-label mb-1">Conversion Rate</h6>
-                    <h3 class="fw-bold mb-0 dash-stat-value">3.4%</h3>
+                    <h6 class="dash-stat-label mb-1">Delivered Orders</h6>
+                    <h3 class="fw-bold mb-0 dash-stat-value">{{ delivered_orders }}</h3>
                 </div>
                 <div class="stat-icon bg-light-orange">
-                    <i class="bi bi-lightning-charge"></i>
+                    <i class="bi bi-check-circle"></i>
                 </div>
             </div>
             <div class="d-flex align-items-center mt-auto">
-                <span class="badge bg-success bg-opacity-25 text-success me-2"><i class="bi bi-arrow-up-right"></i> 0.2%</span>
-                <span class="dash-subtext small">vs yesterday</span>
+                <span class="dash-subtext small">{{ orders_month }} orders this month</span>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Mini Stats Row 2 -->
-<div class="row g-4 mb-4">
+<!-- Marketing Stats Row -->
+<div class="row g-4 mb-4" id="marketingStatsRow">
     <div class="col-12">
         <div class="card card-custom p-0 overflow-hidden">
-            <div class="row g-0 text-center">
+            <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom border-secondary" style="background: rgba(242,102,15,0.03);">
+                <h6 class="fw-bold mb-0 small" style="color: var(--primary-orange);"><i class="bi bi-megaphone me-2"></i>Marketing Overview</h6>
+                <div class="d-flex gap-3">
+                    <a href="/admin/coupons" class="text-muted small text-decoration-none" style="font-size:0.78rem;">Manage Coupons &rarr;</a>
+                    <a href="/admin/loyalty" class="text-muted small text-decoration-none" style="font-size:0.78rem;">Manage Loyalty &rarr;</a>
+                </div>
+            </div>
+            <div class="row g-0 text-center" id="marketingStatsContent">
                 <div class="col-6 col-md-3 border-end border-secondary p-3">
-                    <h6 class="dash-stat-label small text-uppercase mb-1">Total Products</h6>
-                    <h4 class="fw-bold mb-0 dash-stat-value">{{ product_count }}</h4>
+                    <h6 class="dash-stat-label small text-uppercase mb-1">Active Coupons</h6>
+                    <h4 class="fw-bold mb-0 dash-stat-value" id="mktActiveCoupons">-</h4>
                 </div>
                 <div class="col-6 col-md-3 border-end border-secondary p-3">
-                    <h6 class="dash-stat-label small text-uppercase mb-1">Total Customers</h6>
-                    <h4 class="fw-bold mb-0 dash-stat-value">{{ customer_count }}</h4>
+                    <h6 class="dash-stat-label small text-uppercase mb-1">Coupons Used</h6>
+                    <h4 class="fw-bold mb-0 dash-stat-value" id="mktCouponsUsed">-</h4>
                 </div>
                 <div class="col-6 col-md-3 border-end border-secondary p-3">
-                    <h6 class="dash-stat-label small text-uppercase mb-1">Pending Orders</h6>
-                    <h4 class="fw-bold mb-0" style="color:#ffc107">{{ pending_orders }}</h4>
+                    <h6 class="dash-stat-label small text-uppercase mb-1">Loyalty Members</h6>
+                    <h4 class="fw-bold mb-0 dash-stat-value" id="mktLoyaltyMembers">-</h4>
                 </div>
                 <div class="col-6 col-md-3 p-3">
-                    <h6 class="dash-stat-label small text-uppercase mb-1">Low Stock Alerts</h6>
-                    <h4 class="fw-bold mb-0" style="color:#dc3545">{{ low_stock }}</h4>
+                    <h6 class="dash-stat-label small text-uppercase mb-1">Points Outstanding</h6>
+                    <h4 class="fw-bold mb-0 dash-stat-value" id="mktPointsOutstanding">-</h4>
                 </div>
             </div>
         </div>
@@ -196,34 +259,37 @@
             <div class="chart-container d-flex justify-content-center">
                 <canvas id="categoryChart"></canvas>
             </div>
-            <div class="mt-4">
-                <div class="d-flex justify-content-between small mb-2">
-                    <span class="dash-muted"><span class="d-inline-block rounded-circle me-2" style="width:10px;height:10px;background:#F2660F;"></span>Bathroom</span>
-                    <span class="fw-bold dash-row-value">45%</span>
-                </div>
-                <div class="d-flex justify-content-between small mb-2">
-                    <span class="dash-muted"><span class="d-inline-block rounded-circle me-2" style="width:10px;height:10px;background:#DBD2CB;"></span>Kitchen</span>
-                    <span class="fw-bold dash-row-value">30%</span>
-                </div>
-                <div class="d-flex justify-content-between small mb-2">
-                    <span class="dash-muted"><span class="d-inline-block rounded-circle me-2" style="width:10px;height:10px;background:#4a4542;"></span>Plumbing</span>
-                    <span class="fw-bold dash-row-value">15%</span>
-                </div>
-                <div class="d-flex justify-content-between small">
-                    <span class="dash-muted"><span class="d-inline-block rounded-circle me-2" style="width:10px;height:10px;background:#8a827d;"></span>Lighting</span>
-                    <span class="fw-bold dash-row-value">10%</span>
-                </div>
+            <div class="mt-4" id="categoryLegend">
+                <!-- Populated dynamically -->
             </div>
         </div>
     </div>
 </div>
 
-<!-- Secondary Charts Row -->
+<!-- Secondary Charts Row: Visitors + Customer Growth -->
 <div class="row g-4 mb-4">
     <!-- Visitors Chart -->
     <div class="col-12 col-md-6">
         <div class="card card-custom p-4 h-100">
-            <h5 class="fw-bold mb-4 dash-section-title">Store Visitors</h5>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 dash-section-title">Store Visitors</h5>
+                <div class="d-flex gap-1 flex-wrap" id="visitorFilters">
+                    <button class="filter-btn" data-range="today" onclick="loadVisitors('today')">Today</button>
+                    <button class="filter-btn" data-range="7d" onclick="loadVisitors('7d')">7d</button>
+                    <button class="filter-btn active" data-range="30d" onclick="loadVisitors('30d')">30d</button>
+                    <button class="filter-btn" data-range="month" onclick="loadVisitors('month')">Month</button>
+                </div>
+            </div>
+            <div class="d-flex gap-4 mb-3">
+                <div>
+                    <small class="dash-stat-label">Total Visits</small>
+                    <h4 class="fw-bold mb-0 dash-stat-value" id="visitorTotal">-</h4>
+                </div>
+                <div>
+                    <small class="dash-stat-label">Unique Visitors</small>
+                    <h4 class="fw-bold mb-0 dash-stat-value" id="visitorUnique">-</h4>
+                </div>
+            </div>
             <div class="chart-container" style="height: 200px;">
                 <canvas id="visitorsChart"></canvas>
             </div>
@@ -232,7 +298,29 @@
     <!-- Customer Growth Chart -->
     <div class="col-12 col-md-6">
         <div class="card card-custom p-4 h-100">
-            <h5 class="fw-bold mb-4 dash-section-title">Customer Growth</h5>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 dash-section-title">Customer Growth</h5>
+                <div class="d-flex gap-1 flex-wrap" id="growthFilters">
+                    <button class="filter-btn" data-range="7d" onclick="loadGrowth('7d')">7d</button>
+                    <button class="filter-btn active" data-range="30d" onclick="loadGrowth('30d')">30d</button>
+                    <button class="filter-btn" data-range="month" onclick="loadGrowth('month')">Month</button>
+                    <button class="filter-btn" data-range="year" onclick="loadGrowth('year')">Year</button>
+                </div>
+            </div>
+            <div class="d-flex gap-4 mb-3">
+                <div>
+                    <small class="dash-stat-label">New Customers</small>
+                    <h4 class="fw-bold mb-0 dash-stat-value" id="growthNew">-</h4>
+                </div>
+                <div>
+                    <small class="dash-stat-label">Total Customers</small>
+                    <h4 class="fw-bold mb-0 dash-stat-value" id="growthTotal">-</h4>
+                </div>
+                <div>
+                    <small class="dash-stat-label">Growth</small>
+                    <h4 class="fw-bold mb-0" id="growthPct">-</h4>
+                </div>
+            </div>
             <div class="chart-container" style="height: 200px;">
                 <canvas id="customersChart"></canvas>
             </div>
@@ -267,8 +355,8 @@
                             <td class="border-secondary fw-bold dash-row-value">#{{ order.order_number or order.id }}</td>
                             <td class="border-secondary">
                                 <div class="d-flex align-items-center">
-                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width:30px;height:30px;font-size:0.8rem;">{{ (order.user.full_name[0] if order.user and order.user.full_name else 'U')|upper }}</div>
-                                    <span>{{ order.user.full_name if order.user and order.user.full_name else 'Guest' }}</span>
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width:30px;height:30px;font-size:0.8rem;">{{ (order.customer.full_name[0] if order.customer and order.customer.full_name else 'U')|upper }}</div>
+                                    <span>{{ order.customer.full_name if order.customer and order.customer.full_name else 'Guest' }}</span>
                                 </div>
                             </td>
                             <td class="border-secondary dash-meta-value">{{ order.created_at.strftime('%b %d, %Y') if order.created_at else '-' }}</td>
@@ -276,12 +364,16 @@
                             <td class="border-secondary">
                                 {% if order.status == 'delivered' %}
                                 <span class="badge bg-success px-2 py-1 rounded-pill">Delivered</span>
-                                {% elif order.status == 'processing' %}
+                                {% elif order.status == 'processing' or order.status == 'Processing' %}
                                 <span class="badge bg-info text-dark px-2 py-1 rounded-pill">Processing</span>
-                                {% elif order.status == 'pending' %}
+                                {% elif order.status == 'pending' or order.status == 'Pending Payment' %}
                                 <span class="badge bg-warning text-dark px-2 py-1 rounded-pill">Pending</span>
-                                {% elif order.status == 'cancelled' %}
+                                {% elif order.status == 'cancelled' or order.status == 'Cancelled' %}
                                 <span class="badge bg-danger px-2 py-1 rounded-pill">Cancelled</span>
+                                {% elif order.status == 'Paid' %}
+                                <span class="badge bg-primary px-2 py-1 rounded-pill">Paid</span>
+                                {% elif order.status == 'Shipped' %}
+                                <span class="badge bg-info px-2 py-1 rounded-pill">Shipped</span>
                                 {% else %}
                                 <span class="badge bg-secondary px-2 py-1 rounded-pill">{{ order.status|capitalize }}</span>
                                 {% endif %}
@@ -302,59 +394,16 @@
     <!-- Recent Activity Feed -->
     <div class="col-12 col-xl-4">
         <div class="card card-custom p-4 h-100">
-            <h5 class="fw-bold mb-4 dash-section-title">Recent Activity</h5>
-            
-            {% if recent_orders %}
-            <div class="position-relative ms-3 border-start border-secondary pb-4">
-                <div class="position-absolute top-0 start-0 translate-middle p-1 bg-primary rounded-circle border border-dark border-3"></div>
-                <div class="ps-3 pt-1">
-                    <p class="mb-1 dash-row-value"><strong>New Order placed</strong> <span class="text-primary-orange">#{{ recent_orders[0].order_number or recent_orders[0].id }}</span></p>
-                    <small class="dash-meta-value">{{ recent_orders[0].created_at.strftime('%b %d, %Y %I:%M %p') if recent_orders[0].created_at else 'Recently' }}</small>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="fw-bold mb-0 dash-section-title">Recent Activity</h5>
+                <a href="/admin/activity" class="btn btn-sm btn-outline-primary" style="font-size:0.78rem;">View All</a>
+            </div>
+            <div id="activityFeed" style="max-height: 400px; overflow-y: auto;">
+                <div class="empty-state" id="activityLoading">
+                    <div class="spinner-border spinner-border-sm text-muted mb-2" role="status"></div>
+                    <p class="small mb-0">Loading activities...</p>
                 </div>
             </div>
-            {% endif %}
-            
-            {% if recent_customers %}
-            <div class="position-relative ms-3 border-start border-secondary pb-4">
-                <div class="position-absolute top-0 start-0 translate-middle p-1 bg-success rounded-circle border border-dark border-3"></div>
-                <div class="ps-3 pt-1">
-                    <p class="mb-1 dash-row-value"><strong>New Customer Registration</strong></p>
-                    <p class="mb-1 dash-meta-value small">{{ recent_customers[0].full_name or recent_customers[0].email }} joined the platform.</p>
-                    <small class="dash-meta-value">Recently</small>
-                </div>
-            </div>
-            {% endif %}
-            
-            {% if low_stock_products %}
-            <div class="position-relative ms-3 border-start border-secondary pb-4">
-                <div class="position-absolute top-0 start-0 translate-middle p-1 bg-danger rounded-circle border border-dark border-3"></div>
-                <div class="ps-3 pt-1">
-                    <p class="mb-1 dash-row-value"><strong>Low Stock Alert</strong></p>
-                    <p class="mb-1 dash-meta-value small">{{ low_stock_products[0].name }} ({{ low_stock_products[0].stock_quantity }} left)</p>
-                    <small class="dash-meta-value">Check inventory</small>
-                </div>
-            </div>
-            {% endif %}
-            
-            {% if recent_reviews %}
-            <div class="position-relative ms-3 border-start border-secondary pb-4">
-                <div class="position-absolute top-0 start-0 translate-middle p-1 bg-warning rounded-circle border border-dark border-3"></div>
-                <div class="ps-3 pt-1">
-                    <p class="mb-1 dash-row-value"><strong>New Review</strong></p>
-                    <p class="mb-1 dash-meta-value small">{{ recent_reviews[0].rating }}-star rating on {{ recent_reviews[0].product.name if recent_reviews[0].product else 'a product' }}</p>
-                    <small class="dash-meta-value">Recently</small>
-                </div>
-            </div>
-            {% endif %}
-            
-            <div class="position-relative ms-3 border-start border-secondary pb-0">
-                <div class="position-absolute top-0 start-0 translate-middle p-1 bg-info rounded-circle border border-dark border-3"></div>
-                <div class="ps-3 pt-1">
-                    <p class="mb-1 dash-row-value"><strong>System Status</strong></p>
-                    <small class="dash-meta-value">All systems operational</small>
-                </div>
-            </div>
-            
         </div>
     </div>
 </div>
@@ -370,7 +419,6 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
-                <!-- Report Type -->
                 <div class="mb-3">
                     <label class="form-label fw-semibold" style="color:var(--text-secondary);font-size:0.85rem;">Report Type</label>
                     <select id="exportType" class="form-select" style="background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);border-radius:8px;">
@@ -383,7 +431,6 @@
                         <option value="payments">Payments Report</option>
                     </select>
                 </div>
-                <!-- Date Range -->
                 <div class="mb-3">
                     <label class="form-label fw-semibold" style="color:var(--text-secondary);font-size:0.85rem;">Date Range</label>
                     <select id="exportDateRange" class="form-select" style="background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-primary);border-radius:8px;" onchange="toggleCustomDates()">
@@ -396,7 +443,6 @@
                         <option value="custom">Custom Date Range</option>
                     </select>
                 </div>
-                <!-- Custom Date Range -->
                 <div id="customDates" class="d-none">
                     <div class="row g-3 mb-3">
                         <div class="col-6">
@@ -409,7 +455,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- Format -->
                 <div class="mb-3">
                     <label class="form-label fw-semibold" style="color:var(--text-secondary);font-size:0.85rem;">Format</label>
                     <div class="d-flex gap-2">
@@ -424,7 +469,6 @@
                         </button>
                     </div>
                 </div>
-                <!-- Export Status -->
                 <div id="exportStatus" class="d-none" style="padding:12px;border-radius:8px;margin-bottom:16px;font-size:0.85rem;"></div>
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--border-color);">
@@ -440,7 +484,41 @@
 
 {% block scripts %}
 <script>
-    // ─── Export Report Functions ─────────────────────────────────────
+    // ─── Token helper ────────────────────────────────────────────────────
+    function getToken() { return localStorage.getItem('admin_token') || ''; }
+    function authHeaders() { return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' }; }
+
+    // ─── Relative time helper ────────────────────────────────────────────
+    function timeAgo(dateStr) {
+        if (!dateStr) return '';
+        const now = new Date();
+        const d = new Date(dateStr);
+        const secs = Math.floor((now - d) / 1000);
+        if (secs < 60) return 'just now';
+        if (secs < 3600) return Math.floor(secs / 60) + 'm ago';
+        if (secs < 86400) return Math.floor(secs / 3600) + 'h ago';
+        if (secs < 604800) return Math.floor(secs / 86400) + 'd ago';
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    // ─── Activity type config ────────────────────────────────────────────
+    const ACTIVITY_CONFIG = {
+        'order_created':           { icon: 'bi-bag-check', color: '#198754', link: '/admin/orders/edit/' },
+        'payment_completed':       { icon: 'bi-credit-card', color: '#198754', link: '/admin/orders/edit/' },
+        'payment_failed':          { icon: 'bi-x-circle', color: '#dc3545', link: '/admin/orders/edit/' },
+        'customer_registered':     { icon: 'bi-person-plus', color: '#0d6efd', link: '/admin/customers/' },
+        'order_status_changed':    { icon: 'bi-arrow-repeat', color: '#0dcaf0', link: '/admin/orders/edit/' },
+        'order_cancelled':         { icon: 'bi-x-octagon', color: '#dc3545', link: '/admin/orders/edit/' },
+        'product_created':         { icon: 'bi-box-seam', color: '#198754', link: '/admin/products/edit/' },
+        'product_updated':         { icon: 'bi-pencil-square', color: '#ffc107', link: '/admin/products/edit/' },
+        'product_deleted':         { icon: 'bi-trash', color: '#dc3545', link: '/admin/products/' },
+        'coupon_used':             { icon: 'bi-ticket-perforated', color: '#6f42c1', link: '/admin/coupons' },
+        'loyalty_points_earned':   { icon: 'bi-star-fill', color: '#ffc107', link: '/admin/customers/' },
+        'loyalty_points_redeemed': { icon: 'bi-star', color: '#6f42c1', link: '/admin/customers/' },
+    };
+    const DEFAULT_ACTIVITY = { icon: 'bi-activity', color: '#6c757d', link: null };
+
+    // ─── Export Report Functions ──────────────────────────────────────
     let selectedFormat = 'csv';
     let isExporting = false;
 
@@ -468,31 +546,20 @@
 
     function toggleCustomDates() {
         const val = document.getElementById('exportDateRange').value;
-        const custom = document.getElementById('customDates');
-        if (val === 'custom') {
-            custom.classList.remove('d-none');
-        } else {
-            custom.classList.add('d-none');
-        }
+        document.getElementById('customDates').classList.toggle('d-none', val !== 'custom');
     }
 
     function showExportStatus(msg, type) {
         const el = document.getElementById('exportStatus');
         el.className = '';
         if (type === 'loading') {
-            el.style.background = 'var(--primary-ghost)';
-            el.style.border = '1px solid var(--primary)';
-            el.style.color = 'var(--primary)';
+            el.style.background = 'var(--primary-ghost)'; el.style.border = '1px solid var(--primary)'; el.style.color = 'var(--primary)';
             el.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + msg;
         } else if (type === 'success') {
-            el.style.background = 'rgba(25,135,84,0.1)';
-            el.style.border = '1px solid rgba(25,135,84,0.3)';
-            el.style.color = '#198754';
+            el.style.background = 'rgba(25,135,84,0.1)'; el.style.border = '1px solid rgba(25,135,84,0.3)'; el.style.color = '#198754';
             el.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>' + msg;
         } else if (type === 'error') {
-            el.style.background = 'rgba(220,53,69,0.1)';
-            el.style.border = '1px solid rgba(220,53,69,0.3)';
-            el.style.color = '#dc3545';
+            el.style.background = 'rgba(220,53,69,0.1)'; el.style.border = '1px solid rgba(220,53,69,0.3)'; el.style.color = '#dc3545';
             el.innerHTML = '<i class="bi bi-x-circle-fill me-2"></i>' + msg;
         }
         el.classList.remove('d-none');
@@ -501,58 +568,38 @@
     async function doExport() {
         if (isExporting) return;
         isExporting = true;
-
         const btn = document.getElementById('exportBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generating...';
+        btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generating...';
         showExportStatus('Generating report...', 'loading');
-
         const reportType = document.getElementById('exportType').value;
         const dateRange = document.getElementById('exportDateRange').value;
         const dateFrom = document.getElementById('exportDateFrom').value;
         const dateTo = document.getElementById('exportDateTo').value;
-
         let url = `/api/reports/export?report_type=${reportType}&date_range=${dateRange}&fmt=${selectedFormat}`;
-        if (dateRange === 'custom' && dateFrom && dateTo) {
-            url += `&date_from=${dateFrom}&date_to=${dateTo}`;
-        }
-
+        if (dateRange === 'custom' && dateFrom && dateTo) url += `&date_from=${dateFrom}&date_to=${dateTo}`;
         try {
-            const token = localStorage.getItem('admin_token');
-            const res = await fetch(url, {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.detail || 'Export failed');
-            }
-
-            // Download the file
+            const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + getToken() } });
+            if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Export failed'); }
             const blob = await res.blob();
-            const disposition = res.headers.get('Content-Disposition') || '';
             let filename = `report.${selectedFormat}`;
-            const match = disposition.match(/filename="?([^"]+)"?/);
+            const match = (res.headers.get('Content-Disposition') || '').match(/filename="?([^"]+)"?/);
             if (match) filename = match[1];
-
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 100);
-
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+            document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 100);
             showExportStatus('Report exported successfully!', 'success');
-        } catch (err) {
-            showExportStatus(err.message || 'Unable to generate report. Please try again.', 'error');
-        }
-
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-download me-1"></i> Generate Report';
-        isExporting = false;
+        } catch (err) { showExportStatus(err.message || 'Export failed', 'error'); }
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-download me-1"></i> Generate Report'; isExporting = false;
     }
-    // ─── End Export Functions ────────────────────────────────────────
-    // Global Chart Configuration — uses theme tokens
+
+    // ─── Dashboard Date Range ─────────────────────────────────────────
+    function onDashRangeChange() {
+        const val = document.getElementById('dashDateRange').value;
+        document.getElementById('customDateInputs').classList.toggle('d-none', val !== 'custom');
+        loadVisitors(val === 'custom' ? null : val);
+        loadGrowth(val === 'custom' ? null : val);
+    }
+
+    // ─── Global Chart Configuration ──────────────────────────────────
     const cs = getComputedStyle(document.documentElement);
     Chart.defaults.color = cs.getPropertyValue('--text-secondary').trim();
     Chart.defaults.font.family = "'Inter', sans-serif";
@@ -562,131 +609,263 @@
     Chart.defaults.plugins.tooltip.padding = 10;
     Chart.defaults.plugins.tooltip.cornerRadius = 8;
 
-    // Revenue data from server
     const revenueData = {{ revenue_data | tojson }};
     const categoryData = {{ category_data | tojson }};
 
     // 1. Revenue Chart (Line)
     const revCtx = document.getElementById('revenueChart').getContext('2d');
-    
-    // Create gradient
     let gradient = revCtx.createLinearGradient(0, 0, 0, 300);
     gradient.addColorStop(0, 'rgba(242, 102, 15, 0.5)');
     gradient.addColorStop(1, 'rgba(242, 102, 15, 0.0)');
-
     new Chart(revCtx, {
         type: 'line',
         data: {
             labels: revenueData.map(d => d.label),
             datasets: [{
-                label: 'Revenue (GHS)',
-                data: revenueData.map(d => d.value),
-                borderColor: '#F2660F',
-                backgroundColor: gradient,
-                borderWidth: 3,
+                label: 'Revenue (GHS)', data: revenueData.map(d => d.value),
+                borderColor: '#F2660F', backgroundColor: gradient, borderWidth: 3,
                 pointBackgroundColor: cs.getPropertyValue('--bg-body').trim(),
-                pointBorderColor: '#F2660F',
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                fill: true,
-                tension: 0.4
+                pointBorderColor: '#F2660F', pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+                fill: true, tension: 0.4
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
             scales: {
-                x: {
-                    grid: { display: false, drawBorder: false }
-                },
-                y: {
-                    grid: { color: cs.getPropertyValue('--border-color').trim(), drawBorder: false },
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) { return 'GHS ' + (value/1000) + 'k'; }
-                    }
-                }
+                x: { grid: { display: false, drawBorder: false } },
+                y: { grid: { color: cs.getPropertyValue('--border-color').trim(), drawBorder: false }, beginAtZero: true,
+                     ticks: { callback: v => 'GHS ' + (v / 1000) + 'k' } }
             }
         }
     });
 
     // 2. Category Chart (Doughnut)
     const catCtx = document.getElementById('categoryChart').getContext('2d');
+    const catColors = ['#F2660F', '#DBD2CB', '#4a4542', '#8a827d', '#6c757d'];
+    const catTotal = categoryData.reduce((s, d) => s + d.value, 0);
     new Chart(catCtx, {
         type: 'doughnut',
         data: {
             labels: categoryData.map(d => d.name),
-            datasets: [{
-                data: categoryData.map(d => d.value),
-                backgroundColor: ['#F2660F', '#DBD2CB', '#4a4542', '#8a827d', '#6c757d'],
-                borderWidth: 0,
-                hoverOffset: 4
-            }]
+            datasets: [{ data: categoryData.map(d => d.value), backgroundColor: catColors, borderWidth: 0, hoverOffset: 4 }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '75%',
-            plugins: {
-                legend: { display: false }
-            }
-        }
+        options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } }
     });
+    // Build legend
+    const legendEl = document.getElementById('categoryLegend');
+    if (categoryData.length > 0) {
+        categoryData.forEach((d, i) => {
+            const pct = catTotal > 0 ? ((d.value / catTotal) * 100).toFixed(0) : 0;
+            legendEl.innerHTML += `<div class="d-flex justify-content-between small mb-2"><span class="dash-muted"><span class="d-inline-block rounded-circle me-2" style="width:10px;height:10px;background:${catColors[i % catColors.length]};"></span>${d.name}</span><span class="fw-bold dash-row-value">${pct}%</span></div>`;
+        });
+    }
 
-    // 3. Visitors Chart (Bar)
-    const visCtx = document.getElementById('visitorsChart').getContext('2d');
-    new Chart(visCtx, {
-        type: 'bar',
-        data: {
-            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-            datasets: [{
-                label: 'Visitors',
-                data: [1200, 1500, 1100, 1800, 2200, 2800, 2600],
-                backgroundColor: 'rgba(219, 210, 203, 0.7)',
-                hoverBackgroundColor: '#F2660F',
-                borderRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { grid: { display: false, drawBorder: false } },
-                y: { grid: { color: cs.getPropertyValue('--border-color').trim(), drawBorder: false }, beginAtZero: true }
+    // 3. Visitors Chart (Bar) - loaded dynamically
+    let visitorsChart = null;
+    function renderVisitorsChart(labels, data) {
+        const ctx = document.getElementById('visitorsChart').getContext('2d');
+        if (visitorsChart) visitorsChart.destroy();
+        visitorsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Visitors', data: data,
+                    backgroundColor: 'rgba(219, 210, 203, 0.7)', hoverBackgroundColor: '#F2660F', borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false, drawBorder: false } },
+                    y: { grid: { color: cs.getPropertyValue('--border-color').trim(), drawBorder: false }, beginAtZero: true }
+                }
             }
-        }
-    });
+        });
+    }
 
-    // 4. Customers Chart (Line)
-    const custCtx = document.getElementById('customersChart').getContext('2d');
-    new Chart(custCtx, {
-        type: 'line',
-        data: {
-            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-            datasets: [{
-                label: 'New Customers',
-                data: [120, 150, 180, 250],
-                borderColor: '#198754',
-                backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { grid: { display: false, drawBorder: false } },
-                y: { grid: { color: cs.getPropertyValue('--border-color').trim(), drawBorder: false }, beginAtZero: true }
+    // 4. Customers Chart (Line) - loaded dynamically
+    let customersChart = null;
+    function renderCustomersChart(labels, data) {
+        const ctx = document.getElementById('customersChart').getContext('2d');
+        if (customersChart) customersChart.destroy();
+        customersChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'New Customers', data: data,
+                    borderColor: '#198754', backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                    borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false, drawBorder: false } },
+                    y: { grid: { color: cs.getPropertyValue('--border-color').trim(), drawBorder: false }, beginAtZero: true, ticks: { stepSize: 1 } }
+                }
             }
+        });
+    }
+
+    // ─── Load Visitor Analytics ──────────────────────────────────────
+    async function loadVisitors(range) {
+        if (!range) {
+            const from = document.getElementById('dashDateFrom')?.value;
+            const to = document.getElementById('dashDateTo')?.value;
+            range = (from && to) ? 'custom' : '30d';
         }
+        // Update filter buttons
+        document.querySelectorAll('#visitorFilters .filter-btn').forEach(b => b.classList.toggle('active', b.dataset.range === range));
+        try {
+            let url = `/api/analytics/visitors?range=${range}`;
+            if (range === 'custom') {
+                url += `&date_from=${document.getElementById('dashDateFrom').value}&date_to=${document.getElementById('dashDateTo').value}`;
+            }
+            const res = await fetch(url, { headers: authHeaders() });
+            if (!res.ok) throw new Error('Failed');
+            const data = await res.json();
+            document.getElementById('visitorTotal').textContent = (data.total_visits || 0).toLocaleString();
+            document.getElementById('visitorUnique').textContent = (data.unique_visitors || 0).toLocaleString();
+            if (data.daily && data.daily.length > 0) {
+                renderVisitorsChart(
+                    data.daily.map(d => { const dt = new Date(d.date); return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }),
+                    data.daily.map(d => d.total_visits)
+                );
+            } else {
+                renderVisitorsChart(['No Data'], [0]);
+            }
+        } catch (e) {
+            document.getElementById('visitorTotal').textContent = '0';
+            document.getElementById('visitorUnique').textContent = '0';
+            renderVisitorsChart(['No Data'], [0]);
+        }
+    }
+
+    // ─── Load Customer Growth ────────────────────────────────────────
+    async function loadGrowth(range) {
+        if (!range) {
+            const from = document.getElementById('dashDateFrom')?.value;
+            const to = document.getElementById('dashDateTo')?.value;
+            range = (from && to) ? 'custom' : '30d';
+        }
+        document.querySelectorAll('#growthFilters .filter-btn').forEach(b => b.classList.toggle('active', b.dataset.range === range));
+        try {
+            let url = `/api/analytics/customer-growth?range=${range}`;
+            if (range === 'custom') {
+                url += `&date_from=${document.getElementById('dashDateFrom').value}&date_to=${document.getElementById('dashDateTo').value}`;
+            }
+            const res = await fetch(url, { headers: authHeaders() });
+            if (!res.ok) throw new Error('Failed');
+            const data = await res.json();
+            document.getElementById('growthNew').textContent = (data.new_customers || 0).toLocaleString();
+            document.getElementById('growthTotal').textContent = (data.total_customers || 0).toLocaleString();
+            const pctEl = document.getElementById('growthPct');
+            if (data.growth_pct > 0) {
+                pctEl.textContent = '+' + data.growth_pct + '%';
+                pctEl.className = 'fw-bold mb-0 growth-positive';
+            } else if (data.growth_pct < 0) {
+                pctEl.textContent = data.growth_pct + '%';
+                pctEl.className = 'fw-bold mb-0 growth-negative';
+            } else {
+                pctEl.textContent = '0%';
+                pctEl.className = 'fw-bold mb-0 growth-neutral';
+            }
+            if (data.daily && data.daily.length > 0) {
+                renderCustomersChart(
+                    data.daily.map(d => { const dt = new Date(d.date); return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }),
+                    data.daily.map(d => d.count)
+                );
+            } else {
+                renderCustomersChart(['No Data'], [0]);
+            }
+        } catch (e) {
+            document.getElementById('growthNew').textContent = '0';
+            document.getElementById('growthTotal').textContent = '0';
+            document.getElementById('growthPct').textContent = '0%';
+            renderCustomersChart(['No Data'], [0]);
+        }
+    }
+
+    // ─── Load Recent Activity ────────────────────────────────────────
+    async function loadActivity() {
+        const feedEl = document.getElementById('activityFeed');
+        try {
+            const res = await fetch('/api/analytics/activity?limit=15', { headers: authHeaders() });
+            if (!res.ok) throw new Error('Failed');
+            const data = await res.json();
+            const activities = data.activities || [];
+            if (activities.length === 0) {
+                feedEl.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-activity d-block"></i>
+                        <p class="small mb-0">No recent activity yet.</p>
+                        <p class="small text-muted">Activities will appear here as events occur.</p>
+                    </div>`;
+                return;
+            }
+            let html = '<div class="position-relative ms-3">';
+            activities.forEach((a, i) => {
+                const cfg = ACTIVITY_CONFIG[a.activity_type] || DEFAULT_ACTIVITY;
+                const link = cfg.link && a.entity_id ? cfg.link + a.entity_id : (cfg.link || '#');
+                const isLast = i === activities.length - 1;
+                html += `
+                    <div class="position-relative border-start border-secondary ${isLast ? 'pb-0' : 'pb-3'}">
+                        <div class="position-absolute top-0 start-0 translate-middle p-1 rounded-circle border border-dark border-3" style="background:${cfg.color};"></div>
+                        <div class="ps-3 pt-1">
+                            <a href="${link}" class="text-decoration-none activity-item d-block" style="color:inherit;">
+                                <p class="mb-1 dash-row-value"><i class="bi ${cfg.icon} me-1" style="color:${cfg.color};"></i><strong>${a.description}</strong></p>
+                                <small class="dash-meta-value">${timeAgo(a.created_at)}</small>
+                            </a>
+                        </div>
+                    </div>`;
+            });
+            html += '</div>';
+            feedEl.innerHTML = html;
+        } catch (e) {
+            feedEl.innerHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-exclamation-triangle d-block"></i>
+                    <p class="small mb-0">Unable to load activity.</p>
+                </div>`;
+        }
+    }
+
+    // ─── Load Marketing Stats ─────────────────────────────────────────
+    async function loadMarketingStats() {
+        try {
+            const tok = localStorage.getItem('admin_token') || '';
+            const h = { 'Authorization': 'Bearer ' + tok };
+            const [couponsResp, loyaltyResp] = await Promise.all([
+                fetch('/api/coupons', { headers: h }),
+                fetch('/api/loyalty/admin/stats', { headers: h })
+            ]);
+            if (couponsResp.ok) {
+                const cData = await couponsResp.json();
+                const coupons = cData.coupons || cData || [];
+                const active = coupons.filter(c => c.is_active !== false).length;
+                const used = coupons.reduce((s, c) => s + (c.used_count || 0), 0);
+                document.getElementById('mktActiveCoupons').textContent = active;
+                document.getElementById('mktCouponsUsed').textContent = used;
+            }
+            if (loyaltyResp.ok) {
+                const lData = await loyaltyResp.json();
+                document.getElementById('mktLoyaltyMembers').textContent = (lData.total_members || 0).toLocaleString();
+                document.getElementById('mktPointsOutstanding').textContent = (lData.total_points_outstanding || 0).toLocaleString();
+            }
+        } catch (e) { console.error('Marketing stats load failed', e); }
+    }
+
+    // ─── Initialize ──────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+        loadVisitors('30d');
+        loadGrowth('30d');
+        loadActivity();
+        loadMarketingStats();
     });
 </script>
 {% endblock %}

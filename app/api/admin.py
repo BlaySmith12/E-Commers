@@ -22,6 +22,7 @@ from app.schemas import (
 )
 from app.security import RequireAdmin, RequireCreator, RequireEditor, RequireViewer, RequireDeleter
 from app.audit import log_audit
+from app.activity import log_activity
 
 router = APIRouter(prefix='/admin', tags=['Admin'])
 
@@ -44,14 +45,10 @@ async def admin_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depe
     revenue_today = (await db.execute(select(func.coalesce(func.sum(Order.total_amount), 0)).where(Order.created_at >= start_of_today))).scalar_one()
     revenue_month = (await db.execute(select(func.coalesce(func.sum(Order.total_amount), 0)).where(Order.created_at >= start_of_month))).scalar_one()
 
-    product_count = (await db.execute(select(func.count()).select_from(Product))).scalar_one()
-    customer_count = (await db.execute(select(func.count()).select_from(User).where(User.is_active == True, _non_admin_filter))).scalar_one()
-    pending_orders = (await db.execute(select(func.count()).select_from(Order).where(Order.status == 'Pending Payment'))).scalar_one()
     processing_orders = (await db.execute(select(func.count()).select_from(Order).where(Order.status == 'Processing'))).scalar_one()
     shipped_orders = (await db.execute(select(func.count()).select_from(Order).where(Order.status == 'Shipped'))).scalar_one()
     delivered_orders = (await db.execute(select(func.count()).select_from(Order).where(Order.status == 'Delivered'))).scalar_one()
     cancelled_orders = (await db.execute(select(func.count()).select_from(Order).where(Order.status == 'Cancelled'))).scalar_one()
-    low_stock = (await db.execute(select(func.count()).select_from(Product).where(Product.stock < 5))).scalar_one()
     total_orders = (await db.execute(select(func.count()).select_from(Order))).scalar_one()
 
     return {
@@ -59,14 +56,10 @@ async def admin_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depe
         'revenue_month': round(revenue_month, 2),
         'orders_today': orders_today,
         'orders_month': orders_month,
-        'product_count': product_count,
-        'customer_count': customer_count,
-        'pending_orders': pending_orders,
         'processing_orders': processing_orders,
         'shipped_orders': shipped_orders,
         'delivered_orders': delivered_orders,
         'cancelled_orders': cancelled_orders,
-        'low_stock_alerts': low_stock,
         'total_orders': total_orders,
     }
 
@@ -433,6 +426,17 @@ async def admin_create_product(payload: ProductCreate, db: AsyncSession = Depend
         user_id=admin.id,
         details=f"Created product: {product.name} (SKU: {product.sku})"
     )
+    await log_activity(
+        db=db,
+        activity_type="product_created",
+        description=f"New product added: {product.name} (SKU: {product.sku})",
+        entity_type="Product",
+        entity_id=product.id,
+        entity_number=product.sku,
+        actor_name=admin.full_name or admin.email or "Admin",
+        actor_id=admin.id,
+    )
+    await db.commit()
     return product
 
 
@@ -458,6 +462,17 @@ async def admin_update_product(product_id: int, payload: ProductUpdate, db: Asyn
         user_id=admin.id,
         details=f"Updated product: {product.name} (SKU: {product.sku}). Changes: {', '.join(f'{k}: {v}' for k, v in changes.items())}"
     )
+    await log_activity(
+        db=db,
+        activity_type="product_updated",
+        description=f"Product {product.name} was updated",
+        entity_type="Product",
+        entity_id=product.id,
+        entity_number=product.sku,
+        actor_name=admin.full_name or admin.email or "Admin",
+        actor_id=admin.id,
+    )
+    await db.commit()
     return product
 
 
@@ -483,6 +498,17 @@ async def admin_delete_product(product_id: int, db: AsyncSession = Depends(get_d
         user_id=admin.id,
         details=f"Deleted product: {product_name} (SKU: {product_sku})"
     )
+    await log_activity(
+        db=db,
+        activity_type="product_deleted",
+        description=f"Product {product_name} was deleted",
+        entity_type="Product",
+        entity_id=product_id,
+        entity_number=product_sku,
+        actor_name=admin.full_name or admin.email or "Admin",
+        actor_id=admin.id,
+    )
+    await db.commit()
     return MessageOut(detail='Product deleted')
 
 
@@ -573,91 +599,311 @@ async def bulk_update_product_status(
 
 
 # ------------------------------- Customers -------------------------------
-@router.get('/customers', response_model=List[UserOut])
-async def admin_list_customers(db: AsyncSession = Depends(get_db), admin: User = Depends(RequireViewer), skip: int = 0, limit: int = 50):
-    result = await db.execute(select(User).where(_non_admin_filter).order_by(User.created_at.desc()).offset(skip).limit(limit))
-    users = result.scalars().all()
+@router.get('/customers')
+async def admin_list_customers(
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(RequireViewer),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=500),
+    search: str = Query(None),
+    status_filter: str = Query(None, alias='status'),
+    sort_by: str = Query('created_at'),
+    sort_dir: str = Query('desc'),
+):
+    stmt = (
+        select(User)
+        .where(_non_admin_filter)
+        .options(selectinload(User.role))
+    )
+    if search:
+        like = f"%{search}%"
+        stmt = stmt.where(or_(
+            User.first_name.ilike(like),
+            User.last_name.ilike(like),
+            User.email.ilike(like),
+            User.phone.ilike(like),
+            User.username.ilike(like),
+        ))
+    if status_filter == 'active':
+        stmt = stmt.where(User.is_active == True)
+    elif status_filter == 'inactive':
+        stmt = stmt.where(User.is_active == False)
+
+    sort_col = getattr(User, sort_by, User.created_at)
+    if sort_dir == 'asc':
+        stmt = stmt.order_by(sort_col.asc())
+    else:
+        stmt = stmt.order_by(sort_col.desc())
+
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    users = result.scalars().unique().all()
+
+    user_ids = [u.id for u in users]
+    order_stats = {}
+    if user_ids:
+        os_result = await db.execute(
+            select(
+                Order.user_id,
+                func.count(Order.id).label('order_count'),
+                func.coalesce(func.sum(Order.total_amount), 0).label('total_spent'),
+                func.max(Order.created_at).label('last_order_at'),
+            )
+            .where(Order.user_id.in_(user_ids))
+            .group_by(Order.user_id)
+        )
+        for row in os_result.all():
+            order_stats[row.user_id] = {
+                'order_count': row.order_count,
+                'total_spent': float(row.total_spent or 0),
+                'last_order_at': row.last_order_at.isoformat() if row.last_order_at else None,
+            }
+
     out = []
     for u in users:
-        out.append(UserOut.model_validate(u))
+        stats = order_stats.get(u.id, {'order_count': 0, 'total_spent': 0, 'last_order_at': None})
+        out.append({
+            'id': u.id,
+            'email': u.email,
+            'username': u.username,
+            'first_name': u.first_name,
+            'last_name': u.last_name,
+            'phone': u.phone,
+            'is_active': u.is_active,
+            'is_admin': u.is_admin,
+            'role': {'id': u.role.id, 'name': u.role.name, 'permissions': u.role.permissions} if u.role else None,
+            'created_at': u.created_at.isoformat() if u.created_at else None,
+            'updated_at': u.updated_at.isoformat() if getattr(u, 'updated_at', None) else None,
+            'order_count': stats['order_count'],
+            'total_spent': stats['total_spent'],
+            'last_order_at': stats['last_order_at'],
+            'last_login_at': getattr(u, 'last_login_at', None),
+        })
     return out
+
+
+@router.get('/customers/{user_id}')
+async def admin_get_customer(user_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(RequireViewer)):
+    result = await db.execute(select(User).where(User.id == user_id).options(selectinload(User.role)))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail='Customer not found')
+
+    orders_result = await db.execute(
+        select(Order)
+        .where(Order.user_id == user_id)
+        .options(selectinload(Order.items), selectinload(Order.payment))
+        .order_by(Order.created_at.desc())
+    )
+    orders = orders_result.scalars().unique().all()
+
+    orders_list = []
+    for o in orders:
+        orders_list.append({
+            'id': o.id,
+            'order_number': o.order_number,
+            'status': o.status,
+            'total_amount': o.total_amount,
+            'created_at': o.created_at.isoformat() if o.created_at else None,
+            'payment_status': o.payment_status,
+            'items_count': len(o.items) if o.items else 0,
+        })
+
+    total_spent = sum(o.total_amount for o in orders)
+    last_order = orders[0].created_at.isoformat() if orders else None
+
+    return {
+        'id': user.id,
+        'email': user.email,
+        'username': user.username,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'phone': user.phone,
+        'is_active': user.is_active,
+        'is_admin': user.is_admin,
+        'role': {'id': user.role.id, 'name': user.role.name} if user.role else None,
+        'created_at': user.created_at.isoformat() if user.created_at else None,
+        'order_count': len(orders),
+        'total_spent': float(total_spent),
+        'last_order_at': last_order,
+        'last_login_at': getattr(user, 'last_login_at', None),
+        'orders': orders_list,
+    }
+
+
+@router.post('/customers', response_model=UserOut, status_code=status.HTTP_201_CREATED)
+async def admin_create_customer(payload: dict, db: AsyncSession = Depends(get_db), admin: User = Depends(RequireCreator)):
+    from app.security import hash_password
+    email = (payload.get('email') or '').strip()
+    password = payload.get('password') or ''
+    if not email or not password:
+        raise HTTPException(status_code=400, detail='Email and password are required')
+    existing = await db.execute(select(User).where(User.email == email))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail='A customer with this email already exists')
+
+    role_name = (payload.get('role') or 'customer').strip().lower()
+    role_result = await db.execute(select(Role).where(Role.name == role_name))
+    role = role_result.scalar_one_or_none()
+    if not role:
+        role_result = await db.execute(select(Role).where(Role.name == 'customer'))
+        role = role_result.scalar_one_or_none()
+
+    user = User(
+        email=email,
+        username=email.split('@')[0],
+        password_hash=hash_password(password),
+        first_name=payload.get('first_name'),
+        last_name=payload.get('last_name'),
+        phone=payload.get('phone'),
+        role_id=role.id if role else None,
+        is_active=True,
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return UserOut.model_validate(user)
+
+
+from pydantic import BaseModel as _PydanticBaseModel
+
+
+class BulkDeleteIn(_PydanticBaseModel):
+    user_ids: List[int]
+
+
+class BulkStatusUpdateIn(_PydanticBaseModel):
+    user_ids: List[int]
+    is_active: bool
 
 
 # ------------------------------- Bulk Operations -------------------------------
 @router.post('/customers/bulk-delete', response_model=MessageOut)
 async def bulk_delete_customers(
-    user_ids: List[int],
+    payload: BulkDeleteIn,
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(RequireDeleter),
 ):
-    """Bulk delete multiple customers (non-admin users only)."""
+    user_ids = payload.user_ids
     if not user_ids:
         raise HTTPException(status_code=400, detail='No user IDs provided')
-    
-    # Get the users to delete for logging (ensure they're not admins)
+
+    if admin.id in user_ids:
+        raise HTTPException(status_code=400, detail='Cannot delete your own account')
+
     result = await db.execute(select(User).where(User.id.in_(user_ids), _non_admin_filter))
     users_to_delete = result.scalars().all()
-    
+
     if not users_to_delete:
         raise HTTPException(status_code=404, detail='No non-admin users found with provided IDs')
-    
-    # Delete the users
-    delete_stmt = User.__table__.delete().where(User.id.in_(user_ids), _non_admin_filter)
+
+    actual_ids = [u.id for u in users_to_delete]
+
+    try:
+        async with db.begin_nested():
+            await db.execute(text("UPDATE orders SET user_id = NULL WHERE user_id = ANY(:ids)"), {'ids': actual_ids})
+    except Exception:
+        pass
+
+    try:
+        async with db.begin_nested():
+            await db.execute(text("UPDATE orders SET shipping_address_id = NULL WHERE shipping_address_id IN (SELECT id FROM addresses WHERE user_id = ANY(:ids))"), {'ids': actual_ids})
+    except Exception:
+        pass
+
+    try:
+        async with db.begin_nested():
+            await db.execute(text("UPDATE orders SET billing_address_id = NULL WHERE billing_address_id IN (SELECT id FROM addresses WHERE user_id = ANY(:ids))"), {'ids': actual_ids})
+    except Exception:
+        pass
+
+    for tbl_name in ['wishlists', 'notifications', 'login_sessions', 'audit_logs', 'product_reviews']:
+        try:
+            async with db.begin_nested():
+                await db.execute(text(f"DELETE FROM {tbl_name} WHERE user_id = ANY(:ids)"), {'ids': actual_ids})
+        except Exception:
+            pass
+
+    for col_name in ['user_id', 'recipient_id']:
+        try:
+            async with db.begin_nested():
+                await db.execute(text(f"DELETE FROM messages WHERE {col_name} = ANY(:ids)"), {'ids': actual_ids})
+        except Exception:
+            pass
+
+    try:
+        async with db.begin_nested():
+            await db.execute(text("DELETE FROM addresses WHERE user_id = ANY(:ids)"), {'ids': actual_ids})
+    except Exception:
+        pass
+
+    try:
+        async with db.begin_nested():
+            await db.execute(text("UPDATE blog_posts SET author_id = NULL WHERE author_id = ANY(:ids)"), {'ids': actual_ids})
+    except Exception:
+        pass
+
+    try:
+        async with db.begin_nested():
+            await db.execute(text("UPDATE media_library SET uploaded_by = NULL WHERE uploaded_by = ANY(:ids)"), {'ids': actual_ids})
+    except Exception:
+        pass
+
+    try:
+        async with db.begin_nested():
+            await db.execute(text("UPDATE loyalty_transactions SET admin_user_id = NULL WHERE admin_user_id = ANY(:ids)"), {'ids': actual_ids})
+    except Exception:
+        pass
+
+    delete_stmt = User.__table__.delete().where(User.id.in_(actual_ids), _non_admin_filter)
     await db.execute(delete_stmt)
     await db.commit()
-    
-    # Log the bulk deletion
+
     usernames = [u.username for u in users_to_delete]
     await log_audit(
-        db=db,
-        action="DELETE",
-        entity_type="User",
-        entity_id=0,  # Bulk operation
+        db=db, action="DELETE", entity_type="User", entity_id=0,
         user_id=admin.id,
-        details=f"Bulk deleted {len(users_to_delete)} customers: {', '.join(usernames[:5])}{'...' if len(usernames) > 5 else ''}"
+        details=f"Deleted {len(users_to_delete)} customers: {', '.join(usernames[:5])}{'...' if len(usernames) > 5 else ''}"
     )
-    
     return MessageOut(detail=f'Successfully deleted {len(users_to_delete)} customers')
 
 
 @router.post('/customers/bulk-status-update', response_model=MessageOut)
 async def bulk_update_customer_status(
-    user_ids: List[int],
-    is_active: bool,
+    payload: BulkStatusUpdateIn,
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(RequireEditor),
 ):
-    """Bulk update active status for multiple customers."""
+    user_ids = payload.user_ids
+    is_active = payload.is_active
     if not user_ids:
         raise HTTPException(status_code=400, detail='No user IDs provided')
-    
-    # Get the users to update for logging (ensure they're not admins)
+
+    if not is_active and admin.id in user_ids:
+        raise HTTPException(status_code=400, detail='Cannot deactivate your own account')
+
     result = await db.execute(select(User).where(User.id.in_(user_ids), _non_admin_filter))
     users_to_update = result.scalars().all()
-    
+
     if not users_to_update:
         raise HTTPException(status_code=404, detail='No non-admin users found with provided IDs')
-    
-    # Update the users
+
+    actual_ids = [u.id for u in users_to_update]
     update_stmt = (
         User.__table__.update()
-        .where(User.id.in_(user_ids), _non_admin_filter)
+        .where(User.id.in_(actual_ids), _non_admin_filter)
         .values(is_active=is_active)
     )
     await db.execute(update_stmt)
     await db.commit()
-    
-    # Log the bulk update
+
     usernames = [u.username for u in users_to_update]
     status_text = 'activated' if is_active else 'deactivated'
     await log_audit(
-        db=db,
-        action="UPDATE",
-        entity_type="User",
-        entity_id=0,  # Bulk operation
+        db=db, action="UPDATE", entity_type="User", entity_id=0,
         user_id=admin.id,
-        details=f"Bulk {status_text} {len(users_to_update)} customers: {', '.join(usernames[:5])}{'...' if len(usernames) > 5 else ''}"
+        details=f"{'Activated' if is_active else 'Deactivated'} {len(users_to_update)} customers: {', '.join(usernames[:5])}"
     )
+    return MessageOut(detail=f'Successfully {status_text} {len(users_to_update)} customers')
     
     return MessageOut(detail=f'Successfully {status_text} status for {len(users_to_update)} customers')
 
@@ -1035,32 +1281,49 @@ async def admin_update_user_role(user_id: int, payload: dict, db: AsyncSession =
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail='User not found')
-    old_role_id = user.role_id
-    old_is_active = user.is_active
-    role_id = payload.get('role_id')
-    if role_id is not None:
-        user.role_id = role_id
+
+    old_vals = {'role_id': user.role_id, 'is_active': user.is_active, 'first_name': user.first_name, 'last_name': user.last_name, 'email': user.email, 'phone': user.phone}
+
+    if 'first_name' in payload:
+        user.first_name = payload['first_name']
+    if 'last_name' in payload:
+        user.last_name = payload['last_name']
+    if 'email' in payload and payload['email']:
+        existing = await db.execute(select(User).where(User.email == payload['email'], User.id != user_id))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail='Email already in use')
+        user.email = payload['email']
+    if 'phone' in payload:
+        user.phone = payload['phone']
+    if 'role_id' in payload and payload['role_id'] is not None:
+        user.role_id = payload['role_id']
+    elif 'role' in payload:
+        role_name = payload['role']
+        role_result = await db.execute(select(Role).where(Role.name == role_name))
+        role = role_result.scalar_one_or_none()
+        if role:
+            user.role_id = role.id
     if 'is_active' in payload:
+        if not payload['is_active'] and admin.id == user_id:
+            raise HTTPException(status_code=400, detail='Cannot deactivate your own account')
         user.is_active = payload['is_active']
+
     await db.commit()
     await db.refresh(user)
+
     changes = []
-    if old_role_id != user.role_id:
-        from app.models.catalog import Role
-        old_role = await db.get(Role, old_role_id) if old_role_id else None
-        new_role = await db.get(Role, user.role_id) if user.role_id else None
-        changes.append(f"role: {(old_role.name if old_role else 'None')} -> {(new_role.name if new_role else 'None')}")
-    if old_is_active != user.is_active:
-        changes.append(f"status: {'active' if old_is_active else 'inactive'} -> {'active' if user.is_active else 'inactive'}")
-    await log_audit(
-        db=db,
-        action="UPDATE",
-        entity_type="User",
-        entity_id=user.id,
-        user_id=admin.id,
-        details=f"Updated user: {user.username}. Changes: {', '.join(changes)}"
-    )
-    return {"id": user.id, "role_id": user.role_id, "is_active": user.is_active}
+    for key in ['role_id', 'is_active', 'first_name', 'last_name', 'email', 'phone']:
+        if old_vals.get(key) != getattr(user, key):
+            changes.append(f"{key}: {old_vals.get(key)} -> {getattr(user, key)}")
+
+    if changes:
+        await log_audit(
+            db=db, action="UPDATE", entity_type="User", entity_id=user.id,
+            user_id=admin.id,
+            details=f"Updated customer {user.username}: {', '.join(changes)}"
+        )
+
+    return {"id": user.id, "email": user.email, "first_name": user.first_name, "last_name": user.last_name, "phone": user.phone, "role_id": user.role_id, "is_active": user.is_active}
 
 
 # ------------------------------- Inventory -------------------------------

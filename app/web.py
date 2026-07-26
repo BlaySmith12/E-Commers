@@ -23,7 +23,7 @@ from app.api import (
     notifications, collections, audit, content, reviews,
     messages as messages_api, search as search_api, admin_profile,
     reports as reports_api, auth_extended, media as media_api,
-    payments as payments_api,
+    payments as payments_api, loyalty, analytics,
 )
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.error_handler import ErrorHandlerMiddleware, register_exception_handlers
@@ -31,7 +31,12 @@ from app.models.catalog import (
     Category, Brand, Product, Order, OrderItem, User,
     ProductReview, Payment, SiteSetting, ProductVariant, HeroBanner, PaymentEvent,
 )
+from app.models.catalog import Role, Permission
 from app.security import decode_access_token
+
+_non_admin_filter = or_(User.role_id.is_(None), User.role_id.notin_(
+    select(Role.id).where(Role.permissions.op('&')(Permission.ADMIN) > 0).scalar_subquery()
+))
 
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = BASE_DIR / "templates"
@@ -311,15 +316,28 @@ async def customer_dashboard(request: Request):
 async def admin_dashboard(request: Request):
     try:
         async with async_session_maker() as db:
-            # Revenue stats
-            revenue_today = (await db.execute(select(func.coalesce(func.sum(Order.total_amount), 0)).where(Order.created_at >= func.date(Order.created_at)))).scalar_one()
-            revenue_month = (await db.execute(select(func.coalesce(func.sum(Order.total_amount), 0)).where(Order.created_at >= func.date_trunc('month', Order.created_at)))).scalar_one()
+            from datetime import datetime as _dt
+            today = _dt.utcnow().date()
+            start_of_today = _dt(today.year, today.month, today.day)
+            start_of_month = _dt(today.year, today.month, 1)
 
-            # Counts
-            product_count = (await db.execute(select(func.count()).select_from(Product))).scalar_one()
-            customer_count = (await db.execute(select(func.count()).select_from(User).where(User.is_admin == False))).scalar_one()
-            pending_orders = (await db.execute(select(func.count()).select_from(Order).where(Order.status == 'Pending'))).scalar_one()
-            low_stock = (await db.execute(select(func.count()).select_from(Product).where(Product.stock < 5))).scalar_one()
+            revenue_today = (await db.execute(select(func.coalesce(func.sum(Order.total_amount), 0)).where(Order.created_at >= start_of_today))).scalar_one()
+            revenue_month = (await db.execute(select(func.coalesce(func.sum(Order.total_amount), 0)).where(Order.created_at >= start_of_month))).scalar_one()
+            orders_today = (await db.execute(select(func.count()).select_from(Order).where(Order.created_at >= start_of_today))).scalar_one()
+            orders_month = (await db.execute(select(func.count()).select_from(Order).where(Order.created_at >= start_of_month))).scalar_one()
+
+            yesterday = today - timedelta(days=1)
+            start_of_yesterday = _dt(yesterday.year, yesterday.month, yesterday.day)
+            revenue_yesterday = (await db.execute(select(func.coalesce(func.sum(Order.total_amount), 0)).where(Order.created_at >= start_of_yesterday, Order.created_at < start_of_today))).scalar_one()
+
+            if today.month == 1:
+                last_month_start = _dt(today.year - 1, 12, 1)
+            else:
+                last_month_start = _dt(today.year, today.month - 1, 1)
+            revenue_last_month = (await db.execute(select(func.coalesce(func.sum(Order.total_amount), 0)).where(Order.created_at >= last_month_start, Order.created_at < start_of_month))).scalar_one()
+
+            # Order status counts
+            delivered_orders = (await db.execute(select(func.count()).select_from(Order).where(Order.status == 'Delivered'))).scalar_one()
 
             # Recent orders
             recent_orders = (await db.execute(
@@ -357,15 +375,22 @@ async def admin_dashboard(request: Request):
                 revenue_data.append({"label": month_start.strftime("%b %Y"), "value": value})
             
             # Category sales data
-            category_stmt = select(Category.name, func.sum(OrderItem.quantity * OrderItem.unit_price).label("total")).join(
-                OrderItem, Category.id == OrderItem.product_id
-            ).group_by(Category.name).order_by(text("total DESC")).limit(5)
+            category_stmt = (
+                select(Category.name, func.sum(OrderItem.quantity * OrderItem.price).label("total"))
+                .join(Product, OrderItem.product_id == Product.id)
+                .join(Category, Product.category_id == Category.id, isouter=True)
+                .group_by(Category.name)
+                .order_by(text("total DESC"))
+                .limit(5)
+            )
             category_result = await db.execute(category_stmt)
             category_rows = category_result.fetchall()
             category_data = [{"name": row[0] or "Unknown", "value": float(row[1])} for row in category_rows]
     except Exception:
         revenue_today, revenue_month = 0, 0
-        product_count, customer_count, pending_orders, low_stock = 0, 0, 0, 0
+        revenue_yesterday, revenue_last_month = 0, 0
+        orders_today, orders_month = 0, 0
+        delivered_orders = 0
         recent_orders_data, top_products = [], []
         revenue_data = [{"label": f"Month {i}", "value": 0} for i in range(12)]
         category_data = []
@@ -373,10 +398,11 @@ async def admin_dashboard(request: Request):
     return render("admin/dashboard.html", request,
         revenue_today=round(revenue_today, 2),
         revenue_month=round(revenue_month, 2),
-        product_count=product_count,
-        customer_count=customer_count,
-        pending_orders=pending_orders,
-        low_stock=low_stock,
+        revenue_yesterday=round(revenue_yesterday, 2),
+        revenue_last_month=round(revenue_last_month, 2),
+        orders_today=orders_today,
+        orders_month=orders_month,
+        delivered_orders=delivered_orders,
         recent_orders=recent_orders_data,
         top_products=top_products,
         revenue_data=revenue_data,
@@ -605,6 +631,11 @@ async def admin_homepage(request: Request):
 @pages.get("/admin/coupons", response_class=HTMLResponse)
 async def admin_coupons(request: Request):
     return render("admin/coupons.html", request)
+
+
+@pages.get("/admin/loyalty", response_class=HTMLResponse)
+async def admin_loyalty(request: Request):
+    return render("admin/loyalty.html", request)
 
 
 @pages.get("/admin/promotions", response_class=HTMLResponse)
@@ -1007,6 +1038,8 @@ def create_app() -> FastAPI:
     app.include_router(auth_extended.router, prefix=api_prefix)
     app.include_router(media_api.router, prefix=api_prefix)
     app.include_router(payments_api.router, prefix=api_prefix)
+    app.include_router(loyalty.router, prefix=api_prefix)
+    app.include_router(analytics.router, prefix=api_prefix)
 
     app.include_router(pages)
 

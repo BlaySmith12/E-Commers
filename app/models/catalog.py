@@ -299,6 +299,10 @@ class Order(Base):
     shipping_fee = Column(Float, default=0.0)
     tax = Column(Float, default=0.0)
     subtotal = Column(Float, default=0.0)
+    coupon_code = Column(String(50), nullable=True)
+    coupon_id = Column(Integer, ForeignKey('coupons.id'), nullable=True)
+    points_used = Column(Integer, default=0)
+    points_discount = Column(Float, default=0.0)
     notes = Column(Text)
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
@@ -525,12 +529,21 @@ class Coupon(Base):
     discount_type = Column(String(20), nullable=False, default='percentage')  # percentage, fixed
     discount_value = Column(Float, nullable=False)
     min_order_amount = Column(Float, default=0.0)
+    max_discount_amount = Column(Float, default=0.0)
     max_uses = Column(Integer, default=0)  # 0 = unlimited
     used_count = Column(Integer, default=0)
+    max_uses_per_customer = Column(Integer, default=0)  # 0 = unlimited
+    first_order_only = Column(Boolean, default=False)
+    applicable_product_ids = Column(JSON, nullable=True)  # list of product IDs or null = all
+    applicable_category_ids = Column(JSON, nullable=True)  # list of category IDs or null = all
+    applicable_brand_ids = Column(JSON, nullable=True)  # list of brand IDs or null = all
+    customer_eligibility = Column(String(50), default='all')  # all, new, returning
     is_active = Column(Boolean, default=True)
     start_date = Column(DateTime)
     end_date = Column(DateTime)
     created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, onupdate=utcnow)
+    updated_at = Column(DateTime, onupdate=utcnow)
 
 
 class Promotion(Base):
@@ -550,6 +563,72 @@ class Promotion(Base):
 
     product = relationship('Product', lazy='selectin')
     category = relationship('Category', lazy='selectin')
+
+
+# ---------------------------------------------------------------------------
+# Coupon Usage tracking
+# ---------------------------------------------------------------------------
+class CouponUsage(Base):
+    __tablename__ = 'coupon_usage'
+    __table_args__ = (UniqueConstraint('coupon_id', 'order_id', name='uq_coupon_order'),)
+
+    id = Column(Integer, primary_key=True)
+    coupon_id = Column(Integer, ForeignKey('coupons.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    order_id = Column(Integer, ForeignKey('orders.id', ondelete='SET NULL'), nullable=True)
+    discount_amount = Column(Float, default=0.0)
+    used_at = Column(DateTime, default=utcnow)
+
+    coupon = relationship('Coupon', lazy='selectin')
+    user = relationship('User', lazy='selectin')
+    order = relationship('Order', lazy='selectin')
+
+
+# ---------------------------------------------------------------------------
+# Loyalty / Points System
+# ---------------------------------------------------------------------------
+class LoyaltyAccount(Base):
+    __tablename__ = 'loyalty_accounts'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), unique=True, nullable=False, index=True)
+    points_balance = Column(Integer, default=0)
+    total_earned = Column(Integer, default=0)
+    total_redeemed = Column(Integer, default=0)
+    total_expired = Column(Integer, default=0)
+    tier = Column(String(50), default='Bronze')
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    user = relationship('User', backref='loyalty_account', lazy='selectin')
+
+
+class LoyaltyTransaction(Base):
+    __tablename__ = 'loyalty_transactions'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    type = Column(String(30), nullable=False)  # earn, redeem, expire, adjust, bonus
+    points = Column(Integer, nullable=False)
+    balance_after = Column(Integer, default=0)
+    order_id = Column(Integer, ForeignKey('orders.id', ondelete='SET NULL'), nullable=True)
+    description = Column(Text)
+    admin_user_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+    user = relationship('User', foreign_keys=[user_id], lazy='selectin')
+    admin_user = relationship('User', foreign_keys=[admin_user_id], lazy='selectin')
+    order = relationship('Order', lazy='selectin')
+
+
+class LoyaltySettings(Base):
+    __tablename__ = 'loyalty_settings'
+
+    id = Column(Integer, primary_key=True)
+    key = Column(String(100), unique=True, nullable=False)
+    value = Column(Text, nullable=False)
+    description = Column(Text)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
 
 # ---------------------------------------------------------------------------
@@ -770,3 +849,53 @@ class PaymentEvent(Base):
     created_at = Column(DateTime, default=utcnow)
 
     payment = relationship('Payment', back_populates='events', lazy='selectin')
+
+
+# ---------------------------------------------------------------------------
+# Store Visitors (privacy-conscious storefront tracking)
+# ---------------------------------------------------------------------------
+class StoreVisit(Base):
+    __tablename__ = 'store_visits'
+    __table_args__ = (
+        Index('ix_store_visits_date', 'visited_at'),
+        Index('ix_store_visits_fingerprint', 'visitor_fingerprint', 'visited_at'),
+    )
+
+    id = Column(Integer, primary_key=True)
+    visitor_fingerprint = Column(String(64), nullable=False)  # hashed browser fingerprint
+    page_url = Column(String(500), nullable=False)
+    referrer = Column(String(500), nullable=True)
+    device_type = Column(String(20), nullable=True)   # desktop, mobile, tablet
+    browser = Column(String(100), nullable=True)
+    os = Column(String(100), nullable=True)
+    ip_hash = Column(String(64), nullable=True)  # hashed IP (not stored raw for privacy)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    visited_at = Column(DateTime, default=utcnow, nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# Activity Log (real-time dashboard activity feed)
+# ---------------------------------------------------------------------------
+class ActivityLog(Base):
+    __tablename__ = 'activity_logs'
+    __table_args__ = (
+        Index('ix_activity_logs_created_at', 'created_at'),
+        Index('ix_activity_logs_activity_type', 'activity_type'),
+    )
+
+    id = Column(Integer, primary_key=True)
+    activity_type = Column(String(50), nullable=False, index=True)
+    # e.g. order_created, payment_completed, payment_failed, customer_registered,
+    # order_status_changed, product_created, product_updated, product_deleted,
+    # coupon_created, coupon_used, loyalty_points_earned, loyalty_points_redeemed,
+    # customer_account_updated, refund_processed, review_created
+    description = Column(Text, nullable=False)
+    entity_type = Column(String(50), nullable=True)   # Order, Product, User, Coupon, etc.
+    entity_id = Column(Integer, nullable=True)
+    entity_number = Column(String(100), nullable=True)  # order number, product SKU etc.
+    actor_name = Column(String(200), nullable=True)    # who did it
+    actor_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+
+    actor = relationship('User', foreign_keys=[actor_id], lazy='select')

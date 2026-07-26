@@ -19,10 +19,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
-from app.models.catalog import Order, OrderItem, Payment, PaymentEvent, Product, User, Coupon
+from app.models.catalog import Order, OrderItem, Payment, PaymentEvent, Product, User, Coupon, CouponUsage, LoyaltyAccount, LoyaltyTransaction, LoyaltySettings
 from app.services.paystack import paystack
 from app.security import CurrentUser, decode_access_token
 from app.audit import log_audit
+from app.activity import log_activity
 from config import config
 
 logger = logging.getLogger(__name__)
@@ -259,6 +260,19 @@ async def verify_payment(
             order.status = 'Paid'
             order.payment_status = 'Paid'
 
+            # Record coupon usage
+            if order.coupon_id:
+                try:
+                    coupon_usage = CouponUsage(
+                        coupon_id=order.coupon_id,
+                        user_id=order.user_id,
+                        order_id=order.id,
+                        discount_amount=order.discount,
+                    )
+                    db.add(coupon_usage)
+                except Exception:
+                    pass
+
             # Clear cart, update inventory only after successful payment
             for item in order.items:
                 product = (await db.execute(
@@ -267,7 +281,28 @@ async def verify_payment(
                 if product:
                     product.stock = max(0, product.stock - item.quantity)
 
+            # Award loyalty points
+            try:
+                await _award_loyalty_points(order, db)
+            except Exception:
+                logger.exception(f"Failed to award loyalty points for order {order.order_number}")
+
         await db.commit()
+
+        # Activity log for successful payment
+        try:
+            await log_activity(
+                db=db,
+                activity_type="payment_completed",
+                description=f"Payment for order #{order.order_number} was successfully completed",
+                entity_type="Order",
+                entity_id=order.id,
+                entity_number=order.order_number,
+                metadata={"amount": order.total_amount, "reference": reference},
+            )
+            await db.commit()
+        except Exception:
+            pass
 
         return PaymentVerifyOut(
             success=True,
@@ -289,6 +324,21 @@ async def verify_payment(
             order.status = 'Payment Failed'
 
         await db.commit()
+
+        # Activity log for failed payment
+        try:
+            await log_activity(
+                db=db,
+                activity_type="payment_failed",
+                description=f"Payment for order #{order.order_number} failed",
+                entity_type="Order",
+                entity_id=order.id if order else None,
+                entity_number=order.order_number if order else None,
+                metadata={"reference": reference, "reason": tx_data.get('gateway_response', '')},
+            )
+            await db.commit()
+        except Exception:
+            pass
 
         return PaymentVerifyOut(
             success=False,
@@ -562,6 +612,19 @@ async def _process_successful_payment(payment: Payment, event_data: dict, db: As
     order.status = 'Paid'
     order.payment_status = 'Paid'
 
+    # Record coupon usage
+    if order.coupon_id:
+        try:
+            coupon_usage = CouponUsage(
+                coupon_id=order.coupon_id,
+                user_id=order.user_id,
+                order_id=order.id,
+                discount_amount=order.discount,
+            )
+            db.add(coupon_usage)
+        except Exception:
+            pass
+
     # Decrement inventory (only after verified payment)
     for item in order.items:
         product = (await db.execute(
@@ -570,7 +633,27 @@ async def _process_successful_payment(payment: Payment, event_data: dict, db: As
         if product:
             product.stock = max(0, product.stock - item.quantity)
 
+    # Award loyalty points
+    try:
+        await _award_loyalty_points(order, db)
+    except Exception:
+        logger.exception(f"Failed to award loyalty points via webhook for order {order.order_number}")
+
     logger.info(f"Webhook: Payment {payment.id} marked as Completed via webhook")
+
+    # Activity log for webhook payment success
+    try:
+        await log_activity(
+            db=db,
+            activity_type="payment_completed",
+            description=f"Payment for order #{order.order_number} was successfully completed",
+            entity_type="Order",
+            entity_id=order.id,
+            entity_number=order.order_number,
+            metadata={"amount": order.total_amount, "via": "webhook"},
+        )
+    except Exception:
+        pass
 
 
 async def _process_failed_payment(payment: Payment, event_data: dict, db: AsyncSession):
@@ -603,3 +686,116 @@ async def _process_pending_payment(payment: Payment, event_data: dict, db: Async
     payment.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     logger.info(f"Webhook: Payment {payment.id} status updated to Pending via webhook")
+
+
+async def _award_loyalty_points(order, db: AsyncSession):
+    """Award loyalty points for a paid order. Idempotent."""
+    if not order.user_id or order.total_amount <= 0:
+        return
+
+    # Check if points already awarded for this order
+    existing = await db.execute(
+        select(LoyaltyTransaction).where(
+            LoyaltyTransaction.order_id == order.id,
+            LoyaltyTransaction.type == 'earn',
+        )
+    )
+    if existing.scalar_one_or_none():
+        return  # Already awarded
+
+    # Get loyalty settings
+    points_per_currency = 10
+    try:
+        settings_result = await db.execute(
+            select(LoyaltySettings).where(LoyaltySettings.key == 'points_per_currency')
+        )
+        setting_row = settings_result.scalar_one_or_none()
+        if setting_row:
+            points_per_currency = int(setting_row.value)
+    except Exception:
+        pass
+
+    # Get tier multiplier
+    multiplier = 1.0
+    tier = 'Bronze'
+    try:
+        acct_result = await db.execute(
+            select(LoyaltyAccount).where(LoyaltyAccount.user_id == order.user_id)
+        )
+        account = acct_result.scalar_one_or_none()
+        if account:
+            tier = account.tier or 'Bronze'
+    except Exception:
+        account = None
+
+    try:
+        tier_key = f'tier_{tier.lower()}_multiplier'
+        settings_result = await db.execute(
+            select(LoyaltySettings).where(LoyaltySettings.key == tier_key)
+        )
+        setting_row = settings_result.scalar_one_or_none()
+        if setting_row:
+            multiplier = float(setting_row.value)
+    except Exception:
+        pass
+
+    # Calculate points
+    base_points = int(order.total_amount * points_per_currency)
+    earned_points = int(base_points * multiplier)
+    if earned_points <= 0:
+        return
+
+    # Get or create loyalty account
+    if not account:
+        account = LoyaltyAccount(user_id=order.user_id, points_balance=0, total_earned=0, total_redeemed=0, total_expired=0, tier='Bronze')
+        db.add(account)
+        await db.flush()
+
+    account.points_balance += earned_points
+    account.total_earned += earned_points
+
+    # Determine tier
+    try:
+        tier_thresholds = {
+            'Platinum': 10000,
+            'Gold': 5000,
+            'Silver': 1000,
+        }
+        for t_name, t_min in tier_thresholds.items():
+            sr = await db.execute(select(LoyaltySettings).where(LoyaltySettings.key == f'tier_{t_name.lower()}_min'))
+            sr_row = sr.scalar_one_or_none()
+            if sr_row:
+                t_min = int(sr_row.value)
+            if account.total_earned >= t_min:
+                account.tier = t_name
+                break
+    except Exception:
+        pass
+
+    await db.add(LoyaltyTransaction(
+        user_id=order.user_id,
+        type='earn',
+        points=earned_points,
+        balance_after=account.points_balance,
+        order_id=order.id,
+        description=f'Earned {earned_points} points for order {order.order_number} (GHS {order.total_amount:.2f})',
+    ))
+    await db.flush()
+    # Activity log for loyalty points earned
+    try:
+        user_result = await db.execute(select(User).where(User.id == order.user_id))
+        user = user_result.scalar_one_or_none()
+        actor_name = (user.full_name or user.email) if user else "Customer"
+        await log_activity(
+            db=db,
+            activity_type="loyalty_points_earned",
+            description=f"{actor_name} earned {earned_points} loyalty points for order #{order.order_number}",
+            entity_type="User",
+            entity_id=order.user_id,
+            entity_number=order.order_number,
+            actor_name=actor_name,
+            actor_id=order.user_id,
+            metadata={"points": earned_points, "order_total": order.total_amount},
+        )
+    except Exception:
+        pass
