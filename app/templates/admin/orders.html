@@ -1420,6 +1420,11 @@
                 const resp = await fetch(`/api/orders/admin?${params}`, {
                     headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') }
                 });
+                if (resp.status === 401) {
+                    localStorage.removeItem('admin_token');
+                    window.location.href = '/admin/login';
+                    return;
+                }
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const data = await resp.json();
                 const batch = Array.isArray(data) ? data : (data.orders || data.items || []);
@@ -1448,21 +1453,23 @@
 
     // ─── Counts ──────────────────────────────────────────────────────────
     function computeCounts() {
-        const c = { Pending: 0, Processing: 0, Shipped: 0, Delivered: 0, Cancelled: 0, Refunded: 0 };
+        const c = { 'Pending Payment': 0, Paid: 0, Processing: 0, Shipped: 0, Delivered: 0, 'Payment Failed': 0, Cancelled: 0, Refunded: 0 };
         state.orders.forEach(o => { if (c[o.status] !== undefined) c[o.status]++; });
         state.counts = c;
         $('#statTotal').textContent = state.orders.length;
-        $('#statPending').textContent = c.Pending;
+        $('#statPending').textContent = c['Pending Payment'];
         $('#statProcessing').textContent = c.Processing;
         $('#statShipped').textContent = c.Shipped;
         $('#statDelivered').textContent = c.Delivered;
         $('#statCancelled').textContent = c.Cancelled;
         $('#tabCountAll').textContent = state.orders.length;
-        $('#tabCountPending').textContent = c.Pending;
-        $('#tabCountProcessing').textContent = c.Processing;
-        $('#tabCountShipped').textContent = c.Shipped;
-        $('#tabCountDelivered').textContent = c.Delivered;
-        $('#tabCountCancelled').textContent = c.Cancelled;
+        if ($('#tabCountPendingPayment')) $('#tabCountPendingPayment').textContent = c['Pending Payment'];
+        if ($('#tabCountPaid')) $('#tabCountPaid').textContent = c.Paid;
+        if ($('#tabCountProcessing')) $('#tabCountProcessing').textContent = c.Processing;
+        if ($('#tabCountShipped')) $('#tabCountShipped').textContent = c.Shipped;
+        if ($('#tabCountDelivered')) $('#tabCountDelivered').textContent = c.Delivered;
+        if ($('#tabCountFailed')) $('#tabCountFailed').textContent = c['Payment Failed'];
+        if ($('#tabCountCancelled')) $('#tabCountCancelled').textContent = c.Cancelled;
         $('#totalOrdersLabel').textContent = `${state.orders.length} order${state.orders.length !== 1 ? 's' : ''}`;
     }
 
@@ -1917,7 +1924,7 @@
         const items = o.items || o.order_items || o.orderItems || [];
         $('#detailItemsBody').innerHTML = items.map(item => {
             const productName = item.product_name || item.productName || item.name || 'Product';
-            const img = item.image || item.product_image || item.thumbnail || '';
+            const img = item.image || item.product_image || item.snapshot_image || item.thumbnail || '';
             const qty = item.quantity || item.qty || 1;
             const price = item.unit_price || item.unitPrice || item.price || 0;
             const total = item.total || item.line_total || (qty * price);
