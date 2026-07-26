@@ -13,19 +13,14 @@
         </nav>
 
         <div class="category-hero mb-5" style="border-radius:16px;overflow:hidden;position:relative;min-height:260px">
-            <img src="{{ category.image }}" style="width:100%;height:260px;object-fit:cover;display:block;filter:brightness(.45)">
+            {% if category.image_url %}
+            <img src="{{ category.image_url }}" style="width:100%;height:260px;object-fit:cover;display:block;filter:brightness(.45)">
+            {% else %}
+            <div style="width:100%;height:260px;background:var(--accent-orange);display:flex;align-items:center;justify-content:center;font-size:3rem;color:white;font-weight:bold;filter:brightness(.45)">{{ category.name[:2] }}</div>
+            {% endif %}
             <div style="position:absolute;bottom:0;left:0;right:0;padding:2rem">
                 <h1 style="font-size:2rem;font-weight:800;margin-bottom:.3rem">{{ category.name }}</h1>
-                <p style="color:var(--warm-gray);margin:0;font-size:1rem;max-width:500px">{{ category.description }}</p>
-            </div>
-        </div>
-
-        <div class="mb-4">
-            <h5 class="mb-3" style="font-size:.95rem;color:var(--warm-gray)">Subcategories</h5>
-            <div class="d-flex flex-wrap gap-2">
-                {% for sub in category.subcategories %}
-                <span class="category-tag">{{ sub }}</span>
-                {% endfor %}
+                <p style="color:var(--warm-gray);margin:0;font-size:1rem;max-width:500px">{{ category.description or '' }}</p>
             </div>
         </div>
 
@@ -99,7 +94,11 @@
                 <div class="col-6 col-md-3">
                     <a href="/categories/{{ c.slug }}" class="text-decoration-none">
                         <div class="category-card" style="min-height:160px">
-                            <img src="{{ c.image }}" class="category-card-img" alt="{{ c.name }}">
+                            {% if c.image_url %}
+                            <img src="{{ c.image_url }}" class="category-card-img" alt="{{ c.name }}">
+                            {% else %}
+                            <div class="category-card-img d-flex align-items-center justify-content-center" style="background:var(--accent-orange);font-size:1.2rem;color:white;font-weight:bold">{{ c.name[:2] }}</div>
+                            {% endif %}
                             <div class="category-card-overlay" style="justify-content:flex-end;padding:1rem">
                                 <div class="category-card-title text-white" style="font-size:.9rem">{{ c.name }}</div>
                             </div>

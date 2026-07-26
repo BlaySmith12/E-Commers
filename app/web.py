@@ -719,7 +719,15 @@ async def wishlist_page(request: Request):
 
 @pages.get("/categories", response_class=HTMLResponse)
 async def all_categories(request: Request):
-    return render("categories.html", request, categories=ALL_CATEGORIES)
+    try:
+        async with async_session_maker() as db:
+            from sqlalchemy import select as sa_select
+            from app.models.catalog import Category
+            result = await db.execute(sa_select(Category).order_by(Category.name))
+            categories = result.scalars().all()
+    except Exception:
+        categories = []
+    return render("categories.html", request, categories=categories)
 
 
 ALL_CATEGORIES = [
@@ -788,35 +796,37 @@ ALL_CATEGORIES = [
 
 @pages.get("/categories/{slug}", response_class=HTMLResponse)
 async def category_detail(request: Request, slug: str):
-    cat = next((c for c in ALL_CATEGORIES if c["slug"] == slug), None)
-    if not cat:
-        return render("404.html", request)
+    cat = None
     products = []
+    all_cats = []
     try:
         async with async_session_maker() as db:
-            cat_names = [cat["name"].lower().split(" & ")[0].strip()]
+            cat_result = await db.execute(select(Category).where(Category.slug == slug))
+            cat = cat_result.scalars().first()
+            if not cat:
+                return render("404.html", request)
+            all_cats_result = await db.execute(select(Category).order_by(Category.name))
+            all_cats = all_cats_result.scalars().all()
             prods = await db.execute(
                 select(Product, Category, Brand)
                 .join(Category, Product.category_id == Category.id, isouter=True)
                 .join(Brand, Product.brand_id == Brand.id, isouter=True)
-                .where(Product.status == 'active')
+                .where(Product.status == 'active', Product.category_id == cat.id)
                 .order_by(Product.created_at.desc()).limit(50)
             )
             for row in prods.all():
                 p = row.Product
-                cn = (row.Category.name if row.Category else "").lower()
-                if any(n in cn for n in cat_names):
-                    imgs = [img.image_url for img in (p.images or [])]
-                    products.append({
-                        "id": p.id, "name": p.name, "slug": p.slug,
-                        "price": p.price, "discount_price": p.discount_price,
-                        "stock": p.stock, "image": imgs[0] if imgs else "",
-                        "category": row.Category.name if row.Category else "",
-                        "brand": row.Brand.name if row.Brand else "",
-                    })
+                imgs = [img.image_url for img in (p.images or [])]
+                products.append({
+                    "id": p.id, "name": p.name, "slug": p.slug,
+                    "price": p.price, "discount_price": p.discount_price,
+                    "stock": p.stock, "image": imgs[0] if imgs else "",
+                    "category": row.Category.name if row.Category else "",
+                    "brand": row.Brand.name if row.Brand else "",
+                })
     except Exception:
         pass
-    return render("category_detail.html", request, category=cat, products=products, all_categories=ALL_CATEGORIES)
+    return render("category_detail.html", request, category=cat, products=products, all_categories=all_cats)
 
 
 @pages.get("/compare", response_class=HTMLResponse)

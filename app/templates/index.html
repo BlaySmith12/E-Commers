@@ -86,72 +86,22 @@
         </div>
 
         <div class="row g-3 g-md-4" id="categoriesGrid">
-            <div class="col-6 col-md-4 col-lg-3">
-                <a href="/categories/bathroom-sanitary" class="text-decoration-none">
+            {% for c in categories[:6] %}
+            <div class="col-6 col-md-4 col-lg-3{% if loop.index > 2 %} d-none d-md-block{% endif %}{% if loop.index > 4 %} d-lg-block{% endif %}">
+                <a href="/categories/{{ c.slug }}" class="text-decoration-none">
                     <div class="category-card">
-                        <img src="/static/images/cat_bathroom.png" class="category-card-img" alt="Bathroom">
+                        {% if c.image_url %}
+                        <img src="{{ c.image_url }}" class="category-card-img" alt="{{ c.name }}">
+                        {% else %}
+                        <div class="category-card-img d-flex align-items-center justify-content-center" style="background:var(--accent-orange);font-size:1.5rem;color:white;font-weight:bold">{{ c.name[:2] }}</div>
+                        {% endif %}
                         <div class="category-card-overlay">
-                            <div class="category-card-title text-white">Bathroom & Sanitary</div>
-                            <div class="category-card-count">Showers, faucets & accessories</div>
+                            <div class="category-card-title text-white">{{ c.name }}</div>
                         </div>
                     </div>
                 </a>
             </div>
-            <div class="col-6 col-md-4 col-lg-3">
-                <a href="/categories/kitchen-appliances" class="text-decoration-none">
-                    <div class="category-card">
-                        <img src="/static/images/cat_kitchen.png" class="category-card-img" alt="Kitchen">
-                        <div class="category-card-overlay">
-                            <div class="category-card-title text-white">Kitchen & Appliances</div>
-                            <div class="category-card-count">Sinks, faucets & appliances</div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-6 col-md-4 col-lg-3 d-none d-md-block">
-                <a href="/categories/plumbing-fittings" class="text-decoration-none">
-                    <div class="category-card">
-                        <img src="/static/images/cat_plumbing.jpg" class="category-card-img" alt="Plumbing">
-                        <div class="category-card-overlay">
-                            <div class="category-card-title text-white">Plumbing & Fittings</div>
-                            <div class="category-card-count">Pipes, valves & connectors</div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-6 col-md-4 col-lg-3 d-none d-md-block">
-                <a href="/categories/tools-equipment" class="text-decoration-none">
-                    <div class="category-card">
-                        <img src="/static/images/cat_tools.jpg" class="category-card-img" alt="Tools">
-                        <div class="category-card-overlay">
-                            <div class="category-card-title text-white">Tools & Equipment</div>
-                            <div class="category-card-count">Power tools & hand tools</div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-6 col-md-4 col-lg-3 d-none d-lg-block">
-                <a href="/categories/home-appliances" class="text-decoration-none">
-                    <div class="category-card">
-                        <img src="/static/images/cat_home_appliances.jpg" class="category-card-img" alt="Home Appliances">
-                        <div class="category-card-overlay">
-                            <div class="category-card-title text-white">Home Appliances</div>
-                            <div class="category-card-count">Fans, heaters & more</div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-6 col-md-4 col-lg-3 d-none d-lg-block">
-                <a href="/categories/electrical-lighting" class="text-decoration-none">
-                    <div class="category-card">
-                        <img src="/static/images/cat_electrical.jpg" class="category-card-img" alt="Electrical">
-                        <div class="category-card-overlay">
-                            <div class="category-card-title text-white">Electrical & Lighting</div>
-                            <div class="category-card-count">Wiring, switches & fixtures</div>
-                        </div>
-                    </div>
-                </a>
-            </div>
+            {% endfor %}
         </div>
     </div>
 </section>

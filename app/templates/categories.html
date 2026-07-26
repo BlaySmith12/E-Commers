@@ -15,11 +15,14 @@
             <div class="col-4 col-md-3 col-lg-3">
                 <a href="/categories/{{ c.slug }}" class="text-decoration-none">
                     <div class="category-card" style="min-height:280px">
-                        <img src="{{ c.image }}" class="category-card-img" alt="{{ c.name }}">
+                        {% if c.image_url %}
+                        <img src="{{ c.image_url }}" class="category-card-img" alt="{{ c.name }}">
+                        {% else %}
+                        <div class="category-card-img d-flex align-items-center justify-content-center" style="background:var(--accent-orange);font-size:2rem;color:white;font-weight:bold">{{ c.name[:2] }}</div>
+                        {% endif %}
                         <div class="category-card-overlay" style="justify-content:flex-end;padding:1.2rem">
                             <div>
                                 <div class="category-card-title text-white" style="font-size:1.05rem">{{ c.name }}</div>
-                                <div class="category-card-count" style="opacity:.85;font-size:.78rem">{{ c.subcategories|length }} products</div>
                             </div>
                         </div>
                     </div>
