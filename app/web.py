@@ -493,6 +493,12 @@ async def admin_orders(request: Request):
     return render("admin/orders.html", request, orders=orders)
 
 
+@pages.get("/admin/orders/edit/{order_id}", response_class=HTMLResponse)
+async def admin_order_edit(request: Request, order_id: int):
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"/admin/orders?detail={order_id}", status_code=302)
+
+
 @pages.get("/admin/customers", response_class=HTMLResponse)
 async def admin_customers(request: Request):
     try:

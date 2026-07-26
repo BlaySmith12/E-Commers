@@ -2212,6 +2212,10 @@
 
     // ─── Init ────────────────────────────────────────────────────────────
     fetchAllOrders();
+    var detailId = new URLSearchParams(window.location.search).get('detail');
+    if (detailId) {
+        setTimeout(function() { openDetail(parseInt(detailId, 10)); }, 800);
+    }
 })();
 </script>
 {% endblock %}
