@@ -345,7 +345,7 @@ async def admin_dashboard(request: Request):
                 .order_by(Order.created_at.desc()).limit(5)
             )).all()
             recent_orders_data = [
-                {"order_number": o.Order.order_number, "status": o.Order.status,
+                {"id": o.Order.id, "order_number": o.Order.order_number, "status": o.Order.status,
                  "total_amount": o.Order.total_amount, "customer": o.User, "created_at": o.Order.created_at}
                 for o in recent_orders
             ]
