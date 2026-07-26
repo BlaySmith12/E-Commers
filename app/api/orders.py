@@ -501,10 +501,10 @@ async def checkout(
             await log_activity(
                 db=db,
                 activity_type="loyalty_points_redeemed",
-                description=f"{current_user.full_name or current_user.email} redeemed {points_used} loyalty points",
+                description=f"{((current_user.first_name or '') + ' ' + (current_user.last_name or '')).strip() or current_user.email} redeemed {points_used} loyalty points",
                 entity_type="User",
                 entity_id=current_user.id,
-                actor_name=current_user.full_name or current_user.email,
+                actor_name=((current_user.first_name or '') + ' ' + (current_user.last_name or '')).strip() or current_user.email,
                 actor_id=current_user.id,
                 extra_data={"points": points_used, "discount": points_discount},
             )
@@ -520,7 +520,7 @@ async def checkout(
     is_paystack = payload.payment_method in ('Paystack', 'Credit Card', 'Mobile Money', 'Bank Transfer')
     cust_name = ((payload.first_name or '') + ' ' + (payload.last_name or '')).strip()
     if not cust_name and current_user:
-        cust_name = current_user.full_name or ((current_user.first_name or '') + ' ' + (current_user.last_name or '')).strip() or None
+        cust_name = ((current_user.first_name or '') + ' ' + (current_user.last_name or '')).strip() or None
     cust_email = payload.email or (current_user.email if current_user else None)
     cust_phone = payload.phone or (current_user.phone if current_user else None)
 
@@ -612,7 +612,7 @@ async def checkout(
                     entity_type="Coupon",
                     entity_id=coupon_obj.id,
                     entity_number=coupon_obj.code,
-                    actor_name=current_user.full_name or current_user.email,
+                    actor_name=((current_user.first_name or '') + ' ' + (current_user.last_name or '')).strip() or current_user.email,
                     actor_id=current_user.id,
                     extra_data={"discount": discount, "order_number": order.order_number},
                 )
@@ -638,7 +638,7 @@ async def checkout(
     )
 
     # Activity log
-    customer_name = current_user.full_name or current_user.email or "Customer"
+    customer_name = ((current_user.first_name or '') + ' ' + (current_user.last_name or '')).strip() or current_user.email or "Customer"
     await log_activity(
         db=db,
         activity_type="order_created",
@@ -736,7 +736,7 @@ async def cancel_order(
     await db.refresh(order)
 
     # Activity log
-    customer_name = current_user.full_name or current_user.email or "Customer"
+    customer_name = ((current_user.first_name or '') + ' ' + (current_user.last_name or '')).strip() or current_user.email or "Customer"
     await log_activity(
         db=db,
         activity_type="order_cancelled",
