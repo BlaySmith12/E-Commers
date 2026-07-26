@@ -856,10 +856,6 @@ class PaymentEvent(Base):
 # ---------------------------------------------------------------------------
 class StoreVisit(Base):
     __tablename__ = 'store_visits'
-    __table_args__ = (
-        Index('ix_store_visits_date', 'visited_at'),
-        Index('ix_store_visits_fingerprint', 'visitor_fingerprint', 'visited_at'),
-    )
 
     id = Column(Integer, primary_key=True)
     visitor_fingerprint = Column(String(64), nullable=False)  # hashed browser fingerprint
@@ -878,10 +874,6 @@ class StoreVisit(Base):
 # ---------------------------------------------------------------------------
 class ActivityLog(Base):
     __tablename__ = 'activity_logs'
-    __table_args__ = (
-        Index('ix_activity_logs_created_at', 'created_at'),
-        Index('ix_activity_logs_activity_type', 'activity_type'),
-    )
 
     id = Column(Integer, primary_key=True)
     activity_type = Column(String(50), nullable=False, index=True)
