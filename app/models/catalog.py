@@ -895,7 +895,7 @@ class ActivityLog(Base):
     entity_number = Column(String(100), nullable=True)  # order number, product SKU etc.
     actor_name = Column(String(200), nullable=True)    # who did it
     actor_id = Column(Integer, ForeignKey('users.id'), nullable=True)
-    metadata = Column(JSON, nullable=True)
+    extra_data = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=utcnow, nullable=False)
 
     actor = relationship('User', foreign_keys=[actor_id], lazy='select')

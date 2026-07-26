@@ -298,7 +298,7 @@ async def verify_payment(
                 entity_type="Order",
                 entity_id=order.id,
                 entity_number=order.order_number,
-                metadata={"amount": order.total_amount, "reference": reference},
+                extra_data={"amount": order.total_amount, "reference": reference},
             )
             await db.commit()
         except Exception:
@@ -334,7 +334,7 @@ async def verify_payment(
                 entity_type="Order",
                 entity_id=order.id if order else None,
                 entity_number=order.order_number if order else None,
-                metadata={"reference": reference, "reason": tx_data.get('gateway_response', '')},
+                extra_data={"reference": reference, "reason": tx_data.get('gateway_response', '')},
             )
             await db.commit()
         except Exception:
@@ -650,7 +650,7 @@ async def _process_successful_payment(payment: Payment, event_data: dict, db: As
             entity_type="Order",
             entity_id=order.id,
             entity_number=order.order_number,
-            metadata={"amount": order.total_amount, "via": "webhook"},
+            extra_data={"amount": order.total_amount, "via": "webhook"},
         )
     except Exception:
         pass
@@ -795,7 +795,7 @@ async def _award_loyalty_points(order, db: AsyncSession):
             entity_number=order.order_number,
             actor_name=actor_name,
             actor_id=order.user_id,
-            metadata={"points": earned_points, "order_total": order.total_amount},
+            extra_data={"points": earned_points, "order_total": order.total_amount},
         )
     except Exception:
         pass

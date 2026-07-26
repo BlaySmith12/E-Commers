@@ -25,7 +25,7 @@ async def log_activity(
     entity_number: Optional[str] = None,
     actor_name: Optional[str] = None,
     actor_id: Optional[int] = None,
-    metadata: Optional[dict] = None,
+    extra_data: Optional[dict] = None,
 ) -> ActivityLog:
     """Create an activity log entry. Returns the created entry."""
     entry = ActivityLog(
@@ -36,7 +36,7 @@ async def log_activity(
         entity_number=entity_number,
         actor_name=actor_name,
         actor_id=actor_id,
-        metadata=metadata,
+        extra_data=extra_data,
         created_at=datetime.utcnow(),
     )
     db.add(entry)

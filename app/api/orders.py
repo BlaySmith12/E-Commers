@@ -471,7 +471,7 @@ async def checkout(
                 entity_id=current_user.id,
                 actor_name=current_user.full_name or current_user.email,
                 actor_id=current_user.id,
-                metadata={"points": points_used, "discount": points_discount},
+                extra_data={"points": points_used, "discount": points_discount},
             )
 
     discount = round(discount, 2)
@@ -570,7 +570,7 @@ async def checkout(
                     entity_number=coupon_obj.code,
                     actor_name=current_user.full_name or current_user.email,
                     actor_id=current_user.id,
-                    metadata={"discount": discount, "order_number": order.order_number},
+                    extra_data={"discount": discount, "order_number": order.order_number},
                 )
             except Exception:
                 pass
@@ -604,7 +604,7 @@ async def checkout(
         entity_number=order.order_number,
         actor_name=customer_name,
         actor_id=current_user.id,
-        metadata={"total": total_amount, "items": len(order_items), "payment_method": payload.payment_method},
+        extra_data={"total": total_amount, "items": len(order_items), "payment_method": payload.payment_method},
     )
     await db.commit()
 
@@ -658,7 +658,7 @@ async def update_order_status(
         entity_number=order.order_number,
         actor_name=admin.full_name or admin.email or "Admin",
         actor_id=admin.id,
-        metadata={"old_status": old_status, "new_status": order.status},
+        extra_data={"old_status": old_status, "new_status": order.status},
     )
     await db.commit()
 

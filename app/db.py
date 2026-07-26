@@ -126,7 +126,7 @@ async def init_db() -> None:
                 entity_number VARCHAR(100),
                 actor_name VARCHAR(200),
                 actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-                metadata JSONB,
+                extra_data JSONB,
                 created_at TIMESTAMP DEFAULT NOW() NOT NULL
             )
         """))
