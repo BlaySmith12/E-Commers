@@ -1,0 +1,606 @@
+{% extends "admin_base.html" %}
+
+{% block head %}
+<style>
+    .stat-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px 20px; min-width: 160px; }
+    .stat-card .stat-value { font-size: 1.6rem; font-weight: 800; color: var(--text-light); }
+    .stat-card .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+    .tier-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+    .tier-bronze { background: rgba(205,127,50,0.15); color: #cd7f32; border: 1px solid rgba(205,127,50,0.3); }
+    .tier-silver { background: rgba(192,192,192,0.15); color: #c0c0c0; border: 1px solid rgba(192,192,192,0.3); }
+    .tier-gold { background: rgba(255,215,0,0.15); color: #ffd700; border: 1px solid rgba(255,215,0,0.3); }
+    .tier-platinum { background: rgba(229,228,226,0.15); color: #e5e4e2; border: 1px solid rgba(229,228,226,0.3); }
+    .settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    .setting-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; }
+    .setting-item label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 600; }
+    .filter-btn { padding: 5px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 500; border: 1px solid var(--border-color); background: transparent; color: var(--text-muted); transition: all 0.2s; }
+    .filter-btn:hover { border-color: rgba(242,102,15,0.4); color: var(--text-light); }
+    .filter-btn.active { background: var(--primary-orange); border-color: var(--primary-orange); color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h3 class="fw-bold mb-1">Loyalty & Points</h3>
+        <p class="text-muted mb-0">Manage customer loyalty program, points, and tiers.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" onclick="exportLoyaltyCSV()" title="Export CSV">
+            <i class="bi bi-download me-1"></i> Export CSV
+        </button>
+        <button class="btn btn-primary-custom btn-sm" onclick="openAdjustModal()">
+            <i class="bi bi-plus-lg me-1"></i> Adjust Points
+        </button>
+    </div>
+</div>
+
+<div id="statsRow" class="d-flex flex-wrap gap-3 mb-4">
+    <div class="stat-card flex-fill">
+        <div class="stat-value" id="statTotalMembers">-</div>
+        <div class="stat-label">Total Members</div>
+    </div>
+    <div class="stat-card flex-fill">
+        <div class="stat-value text-success" id="statTotalPoints">-</div>
+        <div class="stat-label">Points Outstanding</div>
+    </div>
+    <div class="stat-card flex-fill">
+        <div class="stat-value text-warning" id="statTotalEarned">-</div>
+        <div class="stat-label">Total Earned</div>
+    </div>
+    <div class="stat-card flex-fill">
+        <div class="stat-value text-info" id="statTotalRedeemed">-</div>
+        <div class="stat-label">Total Redeemed</div>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-3" id="loyaltyTabs">
+    <li class="nav-item">
+        <button class="nav-link active" data-tab="accounts" onclick="switchTab('accounts', this)">
+            <i class="bi bi-people me-1"></i> Accounts
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-tab="transactions" onclick="switchTab('transactions', this)">
+            <i class="bi bi-clock-history me-1"></i> Transaction History
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-tab="settings" onclick="switchTab('settings', this)">
+            <i class="bi bi-gear me-1"></i> Settings
+        </button>
+    </li>
+</ul>
+
+<div id="tabAccounts">
+    <div class="card card-custom p-0 overflow-hidden">
+        <div class="p-3 border-bottom d-flex flex-wrap gap-2 align-items-center" style="border-color: var(--border-color) !important;">
+            <div class="position-relative flex-grow-1" style="min-width: 200px; max-width: 320px;">
+                <i class="bi bi-search position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem;"></i>
+                <input type="text" id="searchAccounts" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Search by name or email..." style="padding-left: 34px;" oninput="debounceSearchAccounts()">
+            </div>
+            <select id="filterTier" class="form-select form-select-sm bg-dark text-light border-secondary" style="width: 140px;" onchange="loadAccounts()">
+                <option value="">All Tiers</option>
+                <option value="Bronze">Bronze</option>
+                <option value="Silver">Silver</option>
+                <option value="Gold">Gold</option>
+                <option value="Platinum">Platinum</option>
+            </select>
+            <button class="filter-btn" id="clearAccountsBtn" onclick="clearAccountFilters()" style="display:none;">
+                <i class="bi bi-x-lg me-1"></i> Clear
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0 align-middle" style="--bs-table-bg: transparent;">
+                <thead>
+                    <tr>
+                        <th class="text-muted fw-normal border-secondary">Customer</th>
+                        <th class="text-muted fw-normal border-secondary">Email</th>
+                        <th class="text-muted fw-normal border-secondary">Tier</th>
+                        <th class="text-muted fw-normal border-secondary">Balance</th>
+                        <th class="text-muted fw-normal border-secondary">Earned</th>
+                        <th class="text-muted fw-normal border-secondary">Redeemed</th>
+                        <th class="text-muted fw-normal border-secondary">Joined</th>
+                        <th class="text-muted fw-normal border-secondary text-end pe-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="accountsTable">
+                    <tr>
+                        <td colspan="8" class="text-center py-5 border-secondary">
+                            <div class="spinner-border text-warning" role="status"><span class="visually-hidden">Loading...</span></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="p-3 d-flex justify-content-between align-items-center border-top" style="border-color: var(--border-color) !important;" id="accountsPaginationRow">
+            <span class="text-muted small" id="accountsPaginationInfo">Showing 0 members</span>
+            <nav>
+                <ul class="pagination pagination-sm mb-0" id="accountsPaginationControls"></ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<div id="tabTransactions" class="d-none">
+    <div class="card card-custom p-0 overflow-hidden">
+        <div class="p-3 border-bottom d-flex flex-wrap gap-2 align-items-center" style="border-color: var(--border-color) !important;">
+            <select id="filterTxType" class="form-select form-select-sm bg-dark text-light border-secondary" style="width: 140px;" onchange="loadTransactions()">
+                <option value="">All Types</option>
+                <option value="earn">Earn</option>
+                <option value="redeem">Redeem</option>
+                <option value="expire">Expire</option>
+                <option value="adjust">Adjust</option>
+                <option value="bonus">Bonus</option>
+            </select>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0 align-middle" style="--bs-table-bg: transparent;">
+                <thead>
+                    <tr>
+                        <th class="text-muted fw-normal border-secondary">Customer</th>
+                        <th class="text-muted fw-normal border-secondary">Type</th>
+                        <th class="text-muted fw-normal border-secondary">Points</th>
+                        <th class="text-muted fw-normal border-secondary">Balance After</th>
+                        <th class="text-muted fw-normal border-secondary">Description</th>
+                        <th class="text-muted fw-normal border-secondary">Date</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionsTable">
+                    <tr>
+                        <td colspan="6" class="text-center py-5 border-secondary">
+                            <div class="spinner-border text-warning" role="status"><span class="visually-hidden">Loading...</span></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="p-3 d-flex justify-content-between align-items-center border-top" style="border-color: var(--border-color) !important;" id="txPaginationRow">
+            <span class="text-muted small" id="txPaginationInfo">Showing 0 transactions</span>
+            <nav>
+                <ul class="pagination pagination-sm mb-0" id="txPaginationControls"></ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<div id="tabSettings" class="d-none">
+    <div class="card card-custom p-4">
+        <h5 class="fw-bold text-light mb-3">Loyalty Program Settings</h5>
+        <form id="settingsForm" onsubmit="saveSettings(event)">
+            <div class="settings-grid" id="settingsGrid">
+                <div class="text-center py-4"><div class="spinner-border text-warning" role="status"></div></div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary-custom btn-sm" id="settingsSaveBtn">
+                    <i class="bi bi-check-lg me-1"></i> Save Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="adjustModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white fw-bold">Adjust Points</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="submitAdjust(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-light small fw-semibold">Customer Email *</label>
+                        <input type="email" class="form-control bg-dark text-light border-secondary" id="adjustEmail" required placeholder="customer@email.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light small fw-semibold">Points (positive to add, negative to remove) *</label>
+                        <input type="number" class="form-control bg-dark text-light border-secondary" id="adjustPoints" required placeholder="e.g. 500 or -100">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-light small fw-semibold">Reason *</label>
+                        <input type="text" class="form-control bg-dark text-light border-secondary" id="adjustReason" required placeholder="e.g. Bonus for referral">
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom" id="adjustSubmitBtn">
+                        <i class="bi bi-check-lg me-1"></i> Apply
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="txHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white fw-bold" id="txHistoryTitle">Transaction History</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="txHistoryBody"></div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const LOYALTY_API = '/api/loyalty';
+let allAccounts = [];
+let allTransactions = [];
+let allSettings = {};
+let accountsPage = 1;
+let txPage = 1;
+const perPage = 20;
+let searchTimer = null;
+
+function showToast(message, type = 'success') {
+    const icons = { success: 'check-circle-fill', error: 'exclamation-triangle-fill', info: 'info-circle-fill' };
+    const colors = { success: 'text-success', error: 'text-danger', info: 'text-info' };
+    const id = 'toast-' + Date.now();
+    const html = `<div id="${id}" class="toast align-items-center border-secondary" role="alert" style="background: var(--bg-darker); border-color: var(--border-color) !important;">
+        <div class="d-flex"><div class="toast-body ${colors[type] || colors.info}"><i class="bi ${icons[type] || icons.info} me-2"></i>${message}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+    document.getElementById('toastContainer').insertAdjacentHTML('beforeend', html);
+    const el = document.getElementById(id);
+    const toast = new bootstrap.Toast(el, { delay: 3500 });
+    toast.show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
+}
+
+function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+function authHeaders() {
+    return { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') };
+}
+
+function switchTab(tab, btn) {
+    document.querySelectorAll('#loyaltyTabs .nav-link').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tabAccounts').classList.toggle('d-none', tab !== 'accounts');
+    document.getElementById('tabTransactions').classList.toggle('d-none', tab !== 'transactions');
+    document.getElementById('tabSettings').classList.toggle('d-none', tab !== 'settings');
+    if (tab === 'accounts') loadAccounts();
+    else if (tab === 'transactions') loadTransactions();
+    else if (tab === 'settings') loadSettings();
+}
+
+function debounceSearchAccounts() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => { accountsPage = 1; loadAccounts(); }, 300);
+}
+
+function clearAccountFilters() {
+    document.getElementById('searchAccounts').value = '';
+    document.getElementById('filterTier').value = '';
+    accountsPage = 1;
+    loadAccounts();
+    document.getElementById('clearAccountsBtn').style.display = 'none';
+}
+
+function tierBadge(tier) {
+    const cls = { Bronze: 'tier-bronze', Silver: 'tier-silver', Gold: 'tier-gold', Platinum: 'tier-platinum' };
+    return `<span class="tier-badge ${cls[tier] || cls.Bronze}"><i class="bi bi-${tier === 'Gold' ? 'star-fill' : tier === 'Platinum' ? 'diamond-fill' : tier === 'Silver' ? 'moon-stars-fill' : 'circle-fill'}" style="font-size:0.65rem;"></i> ${escapeHtml(tier || 'Bronze')}</span>`;
+}
+
+function typeBadge(type) {
+    const colors = { earn: 'success', redeem: 'danger', expire: 'warning', adjust: 'info', bonus: 'primary' };
+    return `<span class="badge bg-${colors[type] || 'secondary'} bg-opacity-10 text-${colors[type] || 'secondary'} border border-${colors[type] || 'secondary'} border-opacity-25 rounded-pill px-3 py-1">${type}</span>`;
+}
+
+function renderPagination(total, page, containerId, infoId, goFn) {
+    const pages = Math.ceil(total / perPage);
+    document.getElementById(infoId).textContent = `Showing ${(page - 1) * perPage + 1}–${Math.min(page * perPage, total)} of ${total}`;
+    let html = `<li class="page-item ${page === 1 ? 'disabled' : ''}"><a class="page-link bg-dark border-secondary text-muted" href="#" onclick="${goFn}(${page - 1}); return false;"><i class="bi bi-chevron-left"></i></a></li>`;
+    for (let i = 1; i <= pages; i++) {
+        if (i === 1 || i === pages || Math.abs(i - page) <= 1) {
+            html += `<li class="page-item ${i === page ? 'active' : ''}"><a class="page-link ${i === page ? 'bg-warning text-dark border-warning' : 'bg-dark border-secondary text-muted'}" href="#" onclick="${goFn}(${i}); return false;">${i}</a></li>`;
+        } else if (Math.abs(i - page) === 2) {
+            html += `<li class="page-item disabled"><span class="page-link bg-dark border-secondary text-muted">...</span></li>`;
+        }
+    }
+    html += `<li class="page-item ${page === pages || pages === 0 ? 'disabled' : ''}"><a class="page-link bg-dark border-secondary text-muted" href="#" onclick="${goFn}(${page + 1}); return false;"><i class="bi bi-chevron-right"></i></a></li>`;
+    document.getElementById(containerId).innerHTML = html;
+}
+
+async function loadStats() {
+    try {
+        const resp = await fetch(`${LOYALTY_API}/admin/stats`, { headers: authHeaders() });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        document.getElementById('statTotalMembers').textContent = (data.total_members || 0).toLocaleString();
+        document.getElementById('statTotalPoints').textContent = (data.total_points_outstanding || 0).toLocaleString();
+        document.getElementById('statTotalEarned').textContent = (data.total_points_earned || 0).toLocaleString();
+        document.getElementById('statTotalRedeemed').textContent = (data.total_points_redeemed || 0).toLocaleString();
+    } catch (e) { console.error(e); }
+}
+
+async function loadAccounts() {
+    const search = (document.getElementById('searchAccounts').value || '').toLowerCase();
+    const tier = document.getElementById('filterTier').value;
+    document.getElementById('clearAccountsBtn').style.display = (search || tier) ? '' : 'none';
+
+    try {
+        const params = new URLSearchParams({ skip: (accountsPage - 1) * perPage, limit: perPage });
+        if (tier) params.set('tier', tier);
+        const resp = await fetch(`${LOYALTY_API}/admin/accounts?${params}`, { headers: authHeaders() });
+        if (!resp.ok) throw new Error('Failed');
+        const data = await resp.json();
+        allAccounts = data.accounts || data || [];
+        let total = data.total || allAccounts.length;
+
+        if (search) {
+            allAccounts = allAccounts.filter(a => {
+                const name = ((a.customer && a.customer.first_name) || '') + ' ' + ((a.customer && a.customer.last_name) || '');
+                const email = (a.customer && a.customer.email) || '';
+                return name.toLowerCase().includes(search) || email.toLowerCase().includes(search);
+            });
+        }
+
+        const tbody = document.getElementById('accountsTable');
+        if (allAccounts.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-5 border-secondary">
+                <div style="opacity:0.6;"><i class="bi bi-award" style="font-size:3rem;"></i></div>
+                <p class="text-muted mt-3 mb-2 fw-semibold">No loyalty accounts found</p>
+            </td></tr>`;
+            document.getElementById('accountsPaginationRow').style.display = 'none';
+            return;
+        }
+
+        tbody.innerHTML = allAccounts.map(a => {
+            const cust = a.customer || {};
+            const name = ((cust.first_name || '') + ' ' + (cust.last_name || '')).trim() || 'N/A';
+            const joined = a.created_at ? new Date(a.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '-';
+            return `<tr>
+                <td class="border-secondary text-light">${escapeHtml(name)}</td>
+                <td class="border-secondary text-muted small">${escapeHtml(cust.email || '')}</td>
+                <td class="border-secondary">${tierBadge(a.tier)}</td>
+                <td class="border-secondary text-warning fw-semibold">${(a.points_balance || 0).toLocaleString()}</td>
+                <td class="border-secondary text-success">${(a.total_earned || 0).toLocaleString()}</td>
+                <td class="border-secondary text-danger">${(a.total_redeemed || 0).toLocaleString()}</td>
+                <td class="border-secondary text-muted small">${joined}</td>
+                <td class="border-secondary text-end pe-3">
+                    <div class="d-flex gap-1 justify-content-end">
+                        <button class="btn btn-sm btn-outline-success rounded-circle" style="width:32px;height:32px;padding:0;" title="View History" onclick="viewUserHistory(${a.user_id}, '${escapeHtml(name)}')"><i class="bi bi-clock-history"></i></button>
+                        <button class="btn btn-sm btn-outline-primary rounded-circle" style="width:32px;height:32px;padding:0;" title="Adjust Points" onclick="openAdjustModalFor(${a.user_id})"><i class="bi bi-pencil"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
+        document.getElementById('accountsPaginationRow').style.display = '';
+        renderPagination(total, accountsPage, 'accountsPaginationControls', 'accountsPaginationInfo', 'goAccountsPage');
+    } catch (e) {
+        showToast('Failed to load loyalty accounts', 'error');
+    }
+}
+
+function goAccountsPage(p) { accountsPage = p; loadAccounts(); }
+
+async function loadTransactions() {
+    const txType = document.getElementById('filterTxType').value;
+    try {
+        const params = new URLSearchParams({ skip: (txPage - 1) * perPage, limit: perPage });
+        if (txType) params.set('type', txType);
+        const resp = await fetch(`${LOYALTY_API}/admin/transactions?${params}`, { headers: authHeaders() });
+        if (!resp.ok) throw new Error('Failed');
+        const data = await resp.json();
+        allTransactions = data.transactions || data || [];
+        const total = data.total || allTransactions.length;
+
+        const tbody = document.getElementById('transactionsTable');
+        if (allTransactions.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 border-secondary">
+                <div style="opacity:0.6;"><i class="bi bi-clock-history" style="font-size:3rem;"></i></div>
+                <p class="text-muted mt-3 mb-2 fw-semibold">No transactions found</p>
+            </td></tr>`;
+            document.getElementById('txPaginationRow').style.display = 'none';
+            return;
+        }
+
+        tbody.innerHTML = allTransactions.map(t => {
+            const name = (t.customer_name || 'N/A');
+            const date = t.created_at ? new Date(t.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '-';
+            return `<tr>
+                <td class="border-secondary text-light">${escapeHtml(name)}</td>
+                <td class="border-secondary">${typeBadge(t.type)}</td>
+                <td class="border-secondary fw-semibold ${t.points >= 0 ? 'text-success' : 'text-danger'}">${t.points >= 0 ? '+' : ''}${(t.points || 0).toLocaleString()}</td>
+                <td class="border-secondary text-muted">${(t.balance_after || 0).toLocaleString()}</td>
+                <td class="border-secondary text-muted small">${escapeHtml(t.description || '-')}</td>
+                <td class="border-secondary text-muted small">${date}</td>
+            </tr>`;
+        }).join('');
+
+        document.getElementById('txPaginationRow').style.display = '';
+        renderPagination(total, txPage, 'txPaginationControls', 'txPaginationInfo', 'goTxPage');
+    } catch (e) {
+        showToast('Failed to load transactions', 'error');
+    }
+}
+
+function goTxPage(p) { txPage = p; loadTransactions(); }
+
+async function loadSettings() {
+    try {
+        const resp = await fetch(`${LOYALTY_API}/admin/settings`, { headers: authHeaders() });
+        if (!resp.ok) throw new Error('Failed');
+        const data = await resp.json();
+        allSettings = {};
+        const settings = data.settings || data || [];
+        settings.forEach(s => { allSettings[s.key] = s; });
+
+        const settingDefs = [
+            { key: 'points_per_currency', label: 'Points per GHS spent', desc: 'How many points per 1 GHS spent' },
+            { key: 'redemption_rate', label: 'Redemption rate', desc: 'Points needed to redeem 1 GHS' },
+            { key: 'min_redemption_points', label: 'Minimum redemption points', desc: 'Minimum points to redeem' },
+            { key: 'max_redemption_per_order', label: 'Max points per order', desc: 'Max redeemable per order' },
+            { key: 'min_order_for_redemption', label: 'Min order for redemption', desc: 'Minimum order amount (GHS) to use points' },
+            { key: 'max_discount_percent', label: 'Max discount %', desc: 'Max percentage of order points can cover' },
+            { key: 'points_expiry_days', label: 'Points expiry (days)', desc: 'Days before points expire (0 = never)' },
+            { key: 'signup_bonus_points', label: 'Signup bonus', desc: 'Points awarded on signup' },
+            { key: 'first_order_bonus_points', label: 'First order bonus', desc: 'Bonus points on first order' },
+            { key: 'review_points', label: 'Review points', desc: 'Points for leaving a product review' },
+        ];
+
+        const tierDefs = [
+            { key: 'tier_bronze_min', label: 'Bronze min points' },
+            { key: 'tier_silver_min', label: 'Silver min points' },
+            { key: 'tier_gold_min', label: 'Gold min points' },
+            { key: 'tier_platinum_min', label: 'Platinum min points' },
+            { key: 'tier_bronze_multiplier', label: 'Bronze multiplier' },
+            { key: 'tier_silver_multiplier', label: 'Silver multiplier' },
+            { key: 'tier_gold_multiplier', label: 'Gold multiplier' },
+            { key: 'tier_platinum_multiplier', label: 'Platinum multiplier' },
+            { key: 'allow_points_with_coupon', label: 'Allow points with coupon', desc: 'Allow using points and coupons together' },
+        ];
+
+        let html = '<div class="form-section-title">Earning & Redemption</div><div class="settings-grid mb-4">';
+        settingDefs.forEach(s => {
+            const val = allSettings[s.key] ? allSettings[s.key].value : '';
+            html += `<div class="setting-item"><label>${s.label}</label><input type="${s.key.includes('allow') ? 'text' : 'number'}" class="form-control form-control-sm bg-dark text-light border-secondary mt-2" value="${escapeHtml(val)}" data-key="${s.key}" ${s.key.includes('allow') ? '' : 'step="any"'}><small class="text-muted">${s.desc || ''}</small></div>`;
+        });
+        html += '</div><div class="form-section-title">Tier Thresholds & Multipliers</div><div class="settings-grid">';
+        tierDefs.forEach(s => {
+            const val = allSettings[s.key] ? allSettings[s.key].value : '';
+            html += `<div class="setting-item"><label>${s.label}</label><input type="number" class="form-control form-control-sm bg-dark text-light border-secondary mt-2" value="${escapeHtml(val)}" data-key="${s.key}" step="any"></div>`;
+        });
+        html += '</div>';
+
+        document.getElementById('settingsGrid').innerHTML = html;
+    } catch (e) {
+        document.getElementById('settingsGrid').innerHTML = '<p class="text-danger">Failed to load settings</p>';
+    }
+}
+
+async function saveSettings(e) {
+    e.preventDefault();
+    const btn = document.getElementById('settingsSaveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+    try {
+        const inputs = document.querySelectorAll('#settingsGrid input[data-key]');
+        for (const input of inputs) {
+            const key = input.dataset.key;
+            const value = input.value;
+            await fetch(`${LOYALTY_API}/admin/settings`, {
+                method: 'PUT',
+                headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key, value })
+            });
+        }
+        showToast('Settings saved successfully.');
+    } catch (e) {
+        showToast('Failed to save settings', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save Settings';
+    }
+}
+
+function openAdjustModal() {
+    document.getElementById('adjustEmail').value = '';
+    document.getElementById('adjustPoints').value = '';
+    document.getElementById('adjustReason').value = '';
+    new bootstrap.Modal(document.getElementById('adjustModal')).show();
+}
+
+function openAdjustModalFor(userId) {
+    openAdjustModal();
+}
+
+async function submitAdjust(e) {
+    e.preventDefault();
+    const btn = document.getElementById('adjustSubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Adjusting...';
+    try {
+        const payload = {
+            email: document.getElementById('adjustEmail').value.trim(),
+            points: parseInt(document.getElementById('adjustPoints').value),
+            reason: document.getElementById('adjustReason').value.trim()
+        };
+        const resp = await fetch(`${LOYALTY_API}/admin/adjust`, {
+            method: 'POST',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.detail || err.message || 'Failed');
+        }
+        bootstrap.Modal.getInstance(document.getElementById('adjustModal')).hide();
+        showToast('Points adjusted successfully.');
+        loadAccounts();
+        loadStats();
+    } catch (e) {
+        showToast(e.message || 'Failed to adjust points', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Apply';
+    }
+}
+
+async function viewUserHistory(userId, name) {
+    document.getElementById('txHistoryTitle').textContent = `History: ${name}`;
+    document.getElementById('txHistoryBody').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-warning" role="status"></div></div>';
+    new bootstrap.Modal(document.getElementById('txHistoryModal')).show();
+    try {
+        const resp = await fetch(`${LOYALTY_API}/admin/transactions?user_id=${userId}`, { headers: authHeaders() });
+        if (!resp.ok) throw new Error('Failed');
+        const data = await resp.json();
+        const txList = data.transactions || data || [];
+        if (txList.length === 0) {
+            document.getElementById('txHistoryBody').innerHTML = '<div class="text-center py-4 text-muted"><i class="bi bi-inbox" style="font-size:2rem;"></i><p class="mt-2 mb-0">No transactions yet</p></div>';
+            return;
+        }
+        document.getElementById('txHistoryBody').innerHTML = `<div class="table-responsive"><table class="table table-dark table-sm table-hover mb-0" style="--bs-table-bg: transparent;">
+            <thead><tr><th class="text-muted fw-normal border-secondary">Type</th><th class="text-muted fw-normal border-secondary">Points</th><th class="text-muted fw-normal border-secondary">Balance</th><th class="text-muted fw-normal border-secondary">Description</th><th class="text-muted fw-normal border-secondary">Date</th></tr></thead>
+            <tbody>${txList.map(t => `<tr>
+                <td class="border-secondary">${typeBadge(t.type)}</td>
+                <td class="border-secondary fw-semibold ${t.points >= 0 ? 'text-success' : 'text-danger'}">${t.points >= 0 ? '+' : ''}${(t.points || 0).toLocaleString()}</td>
+                <td class="border-secondary text-muted">${(t.balance_after || 0).toLocaleString()}</td>
+                <td class="border-secondary text-muted small">${escapeHtml(t.description || '-')}</td>
+                <td class="border-secondary text-muted small">${t.created_at ? new Date(t.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '-'}</td>
+            </tr>`).join('')}</tbody></table></div>`;
+    } catch (e) {
+        document.getElementById('txHistoryBody').innerHTML = '<div class="text-center py-4 text-danger">Failed to load history</div>';
+    }
+}
+
+function exportLoyaltyCSV() {
+    if (!allAccounts.length) { showToast('No accounts to export.', 'info'); return; }
+    const rows = [['Customer', 'Email', 'Tier', 'Balance', 'Earned', 'Redeemed', 'Joined']];
+    allAccounts.forEach(a => {
+        const cust = a.customer || {};
+        rows.push([
+            ((cust.first_name || '') + ' ' + (cust.last_name || '')).trim(),
+            cust.email || '',
+            a.tier || 'Bronze',
+            a.points_balance || 0,
+            a.total_earned || 0,
+            a.total_redeemed || 0,
+            a.created_at ? new Date(a.created_at).toLocaleDateString() : ''
+        ]);
+    });
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `loyalty_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('CSV exported.', 'info');
+}
+
+loadStats();
+loadAccounts();
+</script>
+{% endblock %}
