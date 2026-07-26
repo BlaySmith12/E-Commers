@@ -281,6 +281,10 @@ class CartOut(BaseModel):
 
 
 class CheckoutIn(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
     address_id: Optional[int] = None
     street: Optional[str] = None
     city: Optional[str] = None
@@ -291,6 +295,7 @@ class CheckoutIn(BaseModel):
     shipping_fee: float = 0.0
     tax: float = 0.0
     coupon_code: Optional[str] = None
+    points_used: int = 0
     notes: Optional[str] = None
 
 
@@ -356,6 +361,11 @@ class OrderItemOut(BaseModel):
     product_id: Optional[int] = None
     snapshot_name: Optional[str] = None
     snapshot_image: Optional[str] = None
+    product_name: Optional[str] = None
+    product_image: Optional[str] = None
+    product_slug: Optional[str] = None
+    product_brand: Optional[str] = None
+    product_sku: Optional[str] = None
 
 
 class PaymentBriefOut(BaseModel):

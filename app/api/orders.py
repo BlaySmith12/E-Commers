@@ -134,6 +134,9 @@ async def admin_list_orders(
         stmt = stmt.join(User, Order.user_id == User.id, isouter=True).where(
             or_(
                 Order.order_number.ilike(like),
+                Order.customer_name.ilike(like),
+                Order.customer_email.ilike(like),
+                Order.customer_phone.ilike(like),
                 User.first_name.ilike(like),
                 User.last_name.ilike(like),
                 User.email.ilike(like),
@@ -154,6 +157,15 @@ async def admin_list_orders(
                 'last_name': o.customer.last_name,
                 'email': o.customer.email,
                 'phone': o.customer.phone,
+            }
+        elif o.customer_name or o.customer_email:
+            name_parts = (o.customer_name or '').strip().split(' ', 1)
+            cust = {
+                'id': None,
+                'first_name': name_parts[0] if name_parts else None,
+                'last_name': name_parts[1] if len(name_parts) > 1 else None,
+                'email': o.customer_email,
+                'phone': o.customer_phone,
             }
         items_out = []
         for it in (o.items or []):
@@ -181,6 +193,8 @@ async def admin_list_orders(
         if o.shipping_address:
             addr = {
                 'id': o.shipping_address.id,
+                'full_name': getattr(o.shipping_address, 'full_name', None),
+                'phone': getattr(o.shipping_address, 'phone', None),
                 'street': getattr(o.shipping_address, 'street', None),
                 'city': getattr(o.shipping_address, 'city', None),
                 'state': getattr(o.shipping_address, 'state', None),
@@ -203,6 +217,9 @@ async def admin_list_orders(
             'updated_at': o.updated_at.isoformat() if o.updated_at else None,
             'user_id': o.user_id,
             'customer': cust,
+            'customer_name': o.customer_name,
+            'customer_email': o.customer_email,
+            'customer_phone': o.customer_phone,
             'items': items_out,
             'payment': pay_brief,
             'payment_method': pay_method,
@@ -239,6 +256,15 @@ async def get_order(order_id: int, current_user: CurrentUser, db: AsyncSession =
             'last_name': order.customer.last_name,
             'email': order.customer.email,
             'phone': order.customer.phone,
+        }
+    elif order.customer_name or order.customer_email:
+        name_parts = (order.customer_name or '').strip().split(' ', 1)
+        cust = {
+            'id': None,
+            'first_name': name_parts[0] if name_parts else None,
+            'last_name': name_parts[1] if len(name_parts) > 1 else None,
+            'email': order.customer_email,
+            'phone': order.customer_phone,
         }
     items_out = []
     for it in (order.items or []):
@@ -303,6 +329,9 @@ async def get_order(order_id: int, current_user: CurrentUser, db: AsyncSession =
         'updated_at': order.updated_at.isoformat() if order.updated_at else None,
         'user_id': order.user_id,
         'customer': cust,
+        'customer_name': order.customer_name,
+        'customer_email': order.customer_email,
+        'customer_phone': order.customer_phone,
         'items': items_out,
         'payment': pay_brief,
         'payment_method': pay_method,
@@ -328,8 +357,14 @@ async def checkout(
         address = result.scalar_one_or_none()
         if not address or address.user_id != current_user.id:
             raise HTTPException(status_code=400, detail='Invalid address')
+        if payload.first_name or payload.last_name:
+            address.full_name = ((payload.first_name or '') + ' ' + (payload.last_name or '')).strip()
+        if payload.phone:
+            address.phone = payload.phone
     elif payload.street and payload.city:
         address = Address(
+            full_name=(payload.first_name or '') + ' ' + (payload.last_name or ''),
+            phone=payload.phone,
             street=payload.street, city=payload.city, state=payload.state,
             country=payload.country, zip_code=payload.zip_code, user_id=current_user.id,
         )
@@ -483,10 +518,19 @@ async def checkout(
 
     # Create order
     is_paystack = payload.payment_method in ('Paystack', 'Credit Card', 'Mobile Money', 'Bank Transfer')
+    cust_name = ((payload.first_name or '') + ' ' + (payload.last_name or '')).strip()
+    if not cust_name and current_user:
+        cust_name = current_user.full_name or ((current_user.first_name or '') + ' ' + (current_user.last_name or '')).strip() or None
+    cust_email = payload.email or (current_user.email if current_user else None)
+    cust_phone = payload.phone or (current_user.phone if current_user else None)
+
     order = Order(
         order_number=_gen_order_number(),
         user_id=current_user.id,
         shipping_address_id=address.id,
+        customer_name=cust_name or None,
+        customer_email=cust_email,
+        customer_phone=cust_phone,
         status='Pending Payment' if is_paystack else 'Pending',
         payment_status='Pending' if is_paystack else 'Pending',
         currency='GHS',

@@ -521,6 +521,10 @@ textarea.ck-input{min-height:80px;resize:vertical}
         if(!state){showError('Select a region');return}
 
         var payload={
+            first_name:document.getElementById('ckFirst').value.trim(),
+            last_name:document.getElementById('ckLast').value.trim(),
+            email:document.getElementById('ckEmail').value.trim(),
+            phone:document.getElementById('ckPhone').value.trim(),
             address_id:null,street:street,city:city,state:state,country:'Ghana',
             zip_code:document.getElementById('ckZip').value.trim(),
             payment_method:selectedPay,shipping_fee:shippingFee,tax:cart.tax,

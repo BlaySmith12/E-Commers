@@ -57,6 +57,13 @@ async def init_db() -> None:
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) DEFAULT 'Pending'",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'GHS'",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount FLOAT DEFAULT 0.0",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name VARCHAR(200)",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email VARCHAR(200)",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(30)",
+    ]
+    address_columns = [
+        "ALTER TABLE addresses ADD COLUMN IF NOT EXISTS full_name VARCHAR(200)",
+        "ALTER TABLE addresses ADD COLUMN IF NOT EXISTS phone VARCHAR(30)",
     ]
     payment_columns = [
         "ALTER TABLE payments ADD COLUMN IF NOT EXISTS provider VARCHAR(50) DEFAULT 'paystack'",
@@ -78,7 +85,7 @@ async def init_db() -> None:
         "ALTER TABLE payments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
     ]
     async with engine.begin() as conn:
-        for stmt in order_columns + payment_columns:
+        for stmt in order_columns + payment_columns + address_columns:
             await conn.execute(text(stmt))
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS payment_events (

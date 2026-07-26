@@ -115,6 +115,8 @@ class Address(Base):
     __tablename__ = 'addresses'
 
     id = Column(Integer, primary_key=True)
+    full_name = Column(String(200))
+    phone = Column(String(30))
     street = Column(String(255), nullable=False)
     city = Column(String(100), nullable=False)
     state = Column(String(100))
@@ -309,6 +311,10 @@ class Order(Base):
 
     user_id = Column(Integer, ForeignKey('users.id'))
     shipping_address_id = Column(Integer, ForeignKey('addresses.id'))
+
+    customer_name = Column(String(200))
+    customer_email = Column(String(200))
+    customer_phone = Column(String(30))
 
     customer = relationship('User', back_populates='orders', lazy='selectin')
     shipping_address = relationship('Address', lazy='selectin')

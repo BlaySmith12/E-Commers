@@ -1918,7 +1918,7 @@
         const lname = cust.last_name || cust.lastName || paymentCustomer.last_name || '';
         const fullName = (fname + ' ' + lname).trim() || getCustomerName(o);
         const customerEmail = cust.email || payment.customer_email || paymentCustomer.email || getCustomerEmail(o) || '';
-        const customerPhone = cust.phone || cust.phoneNumber || paymentCustomer.phone || '';
+        const customerPhone = cust.phone || cust.phoneNumber || paymentCustomer.phone || o.customer_phone || '';
 
         $('#detailCustomerName').textContent = fullName || '-';
         $('#detailCustomerEmail').textContent = customerEmail || '-';
@@ -2136,12 +2136,14 @@
         if (parts.length) return parts.join(' ');
         if (c.username) return c.username;
         if (c.email) return c.email.split('@')[0];
-        return 'Customer';
+        if (o.customer_name) return o.customer_name;
+        if (o.customer_email) return o.customer_email.split('@')[0];
+        return 'Guest';
     }
 
     function getCustomerEmail(o) {
         const c = o.customer || o.user || {};
-        return c.email || '';
+        return c.email || o.customer_email || '';
     }
 
     function getItemCount(o) {
@@ -2159,7 +2161,10 @@
     function formatAddress(addr) {
         if (typeof addr === 'string') return addr || '-';
         if (typeof addr === 'object' && addr) {
-            const parts = [addr.street || addr.line1 || addr.address_line_1 || addr.address1, addr.city, addr.state, addr.zip || addr.postal_code, addr.country].filter(Boolean);
+            const name = addr.full_name || '';
+            const phone = addr.phone || '';
+            const street = addr.street || addr.line1 || addr.address_line_1 || addr.address1 || '';
+            const parts = [name, phone, street, addr.city, addr.state, addr.zip || addr.postal_code, addr.country].filter(Boolean);
             return parts.join(', ') || '-';
         }
         return '-';
