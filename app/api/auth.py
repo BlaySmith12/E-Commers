@@ -67,6 +67,14 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     except Exception:
         pass
 
+    # Send welcome email (fire-and-forget)
+    try:
+        from app.services.email_service import send_welcome_email
+        await send_welcome_email(db, user)
+        await db.commit()
+    except Exception:
+        pass
+
     token = create_access_token(subject=user.id)
     return Token(access_token=token, user=UserOut.model_validate(user))
 

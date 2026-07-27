@@ -140,6 +140,46 @@ async def init_db() -> None:
         await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_activity_logs_created ON activity_logs (created_at)"))
         await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_activity_logs_type ON activity_logs (activity_type)"))
 
+        # Email logs table
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS email_logs (
+                id SERIAL PRIMARY KEY,
+                recipient_email VARCHAR(256) NOT NULL,
+                recipient_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                email_type VARCHAR(50) NOT NULL,
+                entity_type VARCHAR(50),
+                entity_id INTEGER,
+                subject VARCHAR(300) NOT NULL,
+                status VARCHAR(20) DEFAULT 'queued' NOT NULL,
+                failure_reason TEXT,
+                retry_count INTEGER DEFAULT 0,
+                sent_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_logs_recipient ON email_logs (recipient_email)"))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_logs_type ON email_logs (email_type)"))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_logs_status ON email_logs (status)"))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_logs_created ON email_logs (created_at)"))
+
+        # Email preferences table
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS email_preferences (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+                promotional_emails BOOLEAN DEFAULT TRUE,
+                newsletter BOOLEAN DEFAULT TRUE,
+                product_promotions BOOLEAN DEFAULT TRUE,
+                price_drop_alerts BOOLEAN DEFAULT TRUE,
+                back_in_stock_alerts BOOLEAN DEFAULT TRUE,
+                review_requests BOOLEAN DEFAULT TRUE,
+                loyalty_updates BOOLEAN DEFAULT TRUE,
+                coupon_notifications BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+
 
 async def dispose_engine() -> None:
     await engine.dispose()

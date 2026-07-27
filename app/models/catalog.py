@@ -897,3 +897,60 @@ class ActivityLog(Base):
     created_at = Column(DateTime, default=utcnow, nullable=False)
 
     actor = relationship('User', foreign_keys=[actor_id], lazy='select')
+
+
+# ---------------------------------------------------------------------------
+# Email Logs & Preferences
+# ---------------------------------------------------------------------------
+class EmailLog(Base):
+    __tablename__ = 'email_logs'
+
+    id = Column(Integer, primary_key=True)
+    recipient_email = Column(String(256), nullable=False, index=True)
+    recipient_user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    email_type = Column(String(50), nullable=False, index=True)
+    # Types: welcome, password_reset, order_confirmation, payment_success,
+    # payment_failed, order_status_changed, order_cancelled, refund,
+    # loyalty_points_earned, loyalty_points_redeemed, coupon_used,
+    # review_request, newsletter_welcome, stock_alert, promotional
+    entity_type = Column(String(50), nullable=True)   # Order, Payment, User, etc.
+    entity_id = Column(Integer, nullable=True)
+    subject = Column(String(300), nullable=False)
+    status = Column(String(20), default='queued', nullable=False, index=True)
+    # Statuses: queued, sending, sent, delivered, failed, bounced
+    failure_reason = Column(Text, nullable=True)
+    retry_count = Column(Integer, default=0)
+    sent_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utcnow, index=True)
+
+    user = relationship('User', foreign_keys=[recipient_user_id], lazy='select')
+
+    def __repr__(self) -> str:
+        return f'<EmailLog {self.email_type} -> {self.recipient_email} [{self.status}]>'
+
+
+class EmailPreference(Base):
+    __tablename__ = 'email_preferences'
+    __table_args__ = (UniqueConstraint('user_id', name='uq_email_preferences_user'),)
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True)
+
+    # Promotional / optional (can be disabled)
+    promotional_emails = Column(Boolean, default=True)
+    newsletter = Column(Boolean, default=True)
+    product_promotions = Column(Boolean, default=True)
+    price_drop_alerts = Column(Boolean, default=True)
+    back_in_stock_alerts = Column(Boolean, default=True)
+    review_requests = Column(Boolean, default=True)
+    loyalty_updates = Column(Boolean, default=True)
+    coupon_notifications = Column(Boolean, default=True)
+
+    # Timestamps
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    user = relationship('User', backref='email_preferences', lazy='select')
+
+    def __repr__(self) -> str:
+        return f'<EmailPreference user_id={self.user_id}>'

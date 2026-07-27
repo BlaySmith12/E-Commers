@@ -9,7 +9,7 @@ from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db import get_db
+from app.db import get_db, async_session_maker
 from app.models.catalog import Order, OrderItem, Address, User, AuditLog, Payment, Product, Coupon, CouponUsage, LoyaltyAccount, LoyaltyTransaction, LoyaltySettings
 from app.schemas import OrderOut, CheckoutIn, MessageOut, OrderStatusUpdate
 from app.security import CurrentUser, RequireAdmin, RequireEditor, RequireViewer
@@ -616,6 +616,14 @@ async def checkout(
                     actor_id=current_user.id,
                     extra_data={"discount": discount, "order_number": order.order_number},
                 )
+                # Send coupon used email (fire-and-forget)
+                try:
+                    from app.services.email_service import send_coupon_used_email
+                    async with async_session_maker() as email_db:
+                        await send_coupon_used_email(email_db, current_user, coupon_obj.code, discount, order.order_number)
+                        await email_db.commit()
+                except Exception:
+                    pass
             except Exception:
                 pass
 
@@ -651,6 +659,16 @@ async def checkout(
         extra_data={"total": total_amount, "items": len(order_items), "payment_method": payload.payment_method},
     )
     await db.commit()
+
+    # Send order confirmation email (fire-and-forget)
+    try:
+        from app.services.email_service import send_order_confirmation_email
+        async with async_session_maker() as email_db:
+            await send_order_confirmation_email(email_db, order)
+            await email_db.commit()
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Failed to send order confirmation email")
 
     return order
 
@@ -706,6 +724,27 @@ async def update_order_status(
     )
     await db.commit()
 
+    # Send order status email (fire-and-forget)
+    try:
+        from app.services.email_service import send_order_status_email
+        async with async_session_maker() as email_db:
+            await send_order_status_email(email_db, order, old_status, order.status)
+            await email_db.commit()
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Failed to send order status email")
+
+    # If delivered, send review request (fire-and-forget)
+    if order.status == 'Delivered':
+        try:
+            from app.services.email_service import send_review_request_email
+            async with async_session_maker() as email_db:
+                await send_review_request_email(email_db, order)
+                await email_db.commit()
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception("Failed to send review request email")
+
     return order
 
 
@@ -748,5 +787,15 @@ async def cancel_order(
         actor_id=current_user.id,
     )
     await db.commit()
+
+    # Send order cancelled email (fire-and-forget)
+    try:
+        from app.services.email_service import send_order_cancelled_email
+        async with async_session_maker() as email_db:
+            await send_order_cancelled_email(email_db, order)
+            await email_db.commit()
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Failed to send order cancelled email")
 
     return order

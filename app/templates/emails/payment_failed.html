@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Payment Failed</title></head>
+<body style="margin:0;padding:0;background-color:#F6F9F9;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#F6F9F9;">
+<tr><td align="center" style="padding:30px 15px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+<tr><td style="background-color:#121010;padding:25px 40px;text-align:center;border-radius:8px 8px 0 0;">
+<h1 style="color:#ffffff;margin:0;font-size:22px;letter-spacing:1px;">{{ store_name }}</h1>
+</td></tr>
+
+<tr><td style="background-color:#ffffff;padding:40px;">
+<div style="text-align:center;margin:0 0 25px;">
+<div style="width:60px;height:60px;border-radius:50%;background-color:#dc3545;margin:0 auto 15px;line-height:60px;font-size:30px;color:#ffffff;">&#10007;</div>
+<h2 style="color:#121010;margin:0 0 10px;font-size:24px;">Payment Failed</h2>
+</div>
+<p style="color:#555;font-size:15px;margin:0 0 20px;text-align:center;">Hi {{{{ customer_name }}}}, we were unable to process your payment for order <strong>#{{{{ order_number }}}}</strong>.</p>
+<table width="100%" cellpadding="8" cellspacing="0" style="margin:0 0 25px;border:1px solid #DBD2CB;border-radius:6px;">
+<tr><td style="font-size:13px;color:#555;">Amount</td><td style="font-size:13px;color:#121010;">{{{{ currency }}}} {{{{ amount }}}}</td></tr>
+<tr><td style="font-size:13px;color:#555;">Reason</td><td style="font-size:13px;color:#dc3545;">{{{{ reason }}}}</td></tr>
+</table>
+<p style="color:#555;font-size:14px;margin:0 0 20px;">Don't worry — your order is still saved. You can try paying again using the button below.</p>
+<table cellpadding="0" cellspacing="0" style="margin:20px 0;"><tr><td style="background-color:#F2660F;border-radius:6px;"><a href="{{{{ retry_url }}}}" style="display:inline-block;padding:14px 40px;color:#ffffff;text-decoration:none;font-weight:bold;font-size:16px;">Retry Payment</a></td></tr></table>
+</td></tr>
+
+<tr><td style="background-color:#F6F9F9;padding:30px 40px;text-align:center;border-top:1px solid #DBD2CB;border-radius:0 0 8px 8px;">
+<p style="color:#999;font-size:12px;margin:0 0 5px;">&copy; {{{{ year }}}} {{{{ store_name }}}}. All rights reserved.</p>
+<p style="color:#999;font-size:12px;margin:0;">This is a transactional email regarding your account.</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>

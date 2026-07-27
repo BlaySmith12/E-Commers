@@ -45,9 +45,15 @@ async def forgot_password(payload: ForgotPasswordRequest, db: AsyncSession = Dep
             'user_id': user.id,
             'expires': datetime.now(timezone.utc) + timedelta(hours=1),
         }
-        # In production: send email with reset link
-        # For now, log it so admin can use it
-        print(f"\n{'='*60}\nPASSWORD RESET TOKEN for {user.email}:\n{token}\nExpires in 1 hour\n{'='*60}\n")
+        # Send password reset email (fire-and-forget)
+        try:
+            from app.services.email_service import send_password_reset_email
+            async with async_session_maker() as email_db:
+                await send_password_reset_email(email_db, user, token)
+                await email_db.commit()
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception("Failed to send password reset email")
 
     return {"detail": "If an account with that email exists, a reset link has been sent."}
 

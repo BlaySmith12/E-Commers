@@ -23,7 +23,7 @@ from app.api import (
     notifications, collections, audit, content, reviews,
     messages as messages_api, search as search_api, admin_profile,
     reports as reports_api, auth_extended, media as media_api,
-    payments as payments_api, loyalty, analytics,
+    payments as payments_api, loyalty, analytics, email_admin,
 )
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.error_handler import ErrorHandlerMiddleware, register_exception_handlers
@@ -1056,6 +1056,7 @@ def create_app() -> FastAPI:
     app.include_router(payments_api.router, prefix=api_prefix)
     app.include_router(loyalty.router, prefix=api_prefix)
     app.include_router(analytics.router, prefix=api_prefix)
+    app.include_router(email_admin.router, prefix=api_prefix)
 
     app.include_router(pages)
 
@@ -1069,9 +1070,21 @@ def create_app() -> FastAPI:
             await _get_site_settings()
         except Exception:
             pass
+        # Start email background worker
+        try:
+            from app.services.email_service import start_email_worker, retry_failed_emails
+            await start_email_worker()
+            await retry_failed_emails()
+        except Exception:
+            pass
 
     @app.on_event("shutdown")
     async def _shutdown():
+        try:
+            from app.services.email_service import stop_email_worker
+            await stop_email_worker()
+        except Exception:
+            pass
         try:
             await dispose_engine()
         except Exception:

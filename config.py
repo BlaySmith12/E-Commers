@@ -42,5 +42,15 @@ class Config:
     # Base URL for callbacks
     BASE_URL = os.environ.get('BASE_URL', 'http://162.35.186.39')
 
+    # Email / SMTP
+    SMTP_HOST = os.environ.get('SMTP_HOST', '')
+    SMTP_PORT = int(os.environ.get('SMTP_PORT') or 587)
+    SMTP_USER = os.environ.get('SMTP_USER', '')
+    SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+    SMTP_USE_TLS = os.environ.get('SMTP_USE_TLS', 'true').lower() == 'true'
+    EMAIL_FROM_NAME = os.environ.get('EMAIL_FROM_NAME', "ASAH'S PRIMENEST")
+    EMAIL_FROM_ADDRESS = os.environ.get('EMAIL_FROM_ADDRESS', '')
+    EMAIL_REPLY_TO = os.environ.get('EMAIL_REPLY_TO', '')
+
 
 config = Config()

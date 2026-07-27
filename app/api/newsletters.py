@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_db
+from app.db import get_db, async_session_maker
 from app.models.catalog import NewsletterSubscriber
 from app.schemas import MessageOut
 from app.security import AdminUser
@@ -44,6 +44,17 @@ async def subscribe(payload: SubscribeIn, db: AsyncSession = Depends(get_db)):
     sub = NewsletterSubscriber(email=payload.email)
     db.add(sub)
     await db.commit()
+
+    # Send newsletter welcome email (fire-and-forget)
+    try:
+        from app.services.email_service import send_newsletter_welcome_email
+        async with async_session_maker() as email_db:
+            await send_newsletter_welcome_email(email_db, payload.email)
+            await email_db.commit()
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Failed to send newsletter welcome email")
+
     return MessageOut(detail='Subscribed successfully')
 
 

@@ -18,7 +18,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_db
+from app.db import get_db, async_session_maker
 from app.models.catalog import Order, OrderItem, Payment, PaymentEvent, Product, User, Coupon, CouponUsage, LoyaltyAccount, LoyaltyTransaction, LoyaltySettings
 from app.services.paystack import paystack
 from app.security import CurrentUser, decode_access_token
@@ -304,6 +304,15 @@ async def verify_payment(
         except Exception:
             pass
 
+        # Send payment success email (fire-and-forget)
+        try:
+            from app.services.email_service import send_payment_success_email
+            async with async_session_maker() as email_db:
+                await send_payment_success_email(email_db, order, payment)
+                await email_db.commit()
+        except Exception:
+            logger.exception("Failed to send payment success email")
+
         return PaymentVerifyOut(
             success=True,
             message='Payment verified successfully',
@@ -339,6 +348,15 @@ async def verify_payment(
             await db.commit()
         except Exception:
             pass
+
+        # Send payment failed email (fire-and-forget)
+        try:
+            from app.services.email_service import send_payment_failed_email
+            async with async_session_maker() as email_db:
+                await send_payment_failed_email(email_db, order, payment, reason=tx_data.get('gateway_response', ''))
+                await email_db.commit()
+        except Exception:
+            logger.exception("Failed to send payment failed email")
 
         return PaymentVerifyOut(
             success=False,
@@ -641,6 +659,15 @@ async def _process_successful_payment(payment: Payment, event_data: dict, db: As
 
     logger.info(f"Webhook: Payment {payment.id} marked as Completed via webhook")
 
+    # Send payment success email (fire-and-forget)
+    try:
+        from app.services.email_service import send_payment_success_email
+        async with async_session_maker() as email_db:
+            await send_payment_success_email(email_db, order, payment)
+            await email_db.commit()
+    except Exception:
+        logger.exception("Failed to send payment success email via webhook")
+
     # Activity log for webhook payment success
     try:
         await log_activity(
@@ -672,6 +699,15 @@ async def _process_failed_payment(payment: Payment, event_data: dict, db: AsyncS
     if order:
         order.payment_status = 'Failed'
         order.status = 'Payment Failed'
+
+        # Send payment failed email (fire-and-forget)
+        try:
+            from app.services.email_service import send_payment_failed_email
+            async with async_session_maker() as email_db:
+                await send_payment_failed_email(email_db, order, payment, reason=payment.failure_reason or "")
+                await email_db.commit()
+        except Exception:
+            logger.exception("Failed to send payment failed email via webhook")
 
     logger.info(f"Webhook: Payment {payment.id} marked as Failed via webhook")
 
@@ -781,6 +817,19 @@ async def _award_loyalty_points(order, db: AsyncSession):
         description=f'Earned {earned_points} points for order {order.order_number} (GHS {order.total_amount:.2f})',
     ))
     await db.flush()
+
+    # Send loyalty points earned email (fire-and-forget)
+    try:
+        from app.services.email_service import send_loyalty_points_email
+        user_result = await db.execute(select(User).where(User.id == order.user_id))
+        user = user_result.scalar_one_or_none()
+        if user:
+            async with async_session_maker() as email_db:
+                await send_loyalty_points_email(email_db, user, 'earn', earned_points, account.points_balance, description=f'Earned for order {order.order_number}', order_number=order.order_number)
+                await email_db.commit()
+    except Exception:
+        logger.exception("Failed to send loyalty points earned email")
+
     # Activity log for loyalty points earned
     try:
         user_result = await db.execute(select(User).where(User.id == order.user_id))

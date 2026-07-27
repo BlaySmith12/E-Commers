@@ -61,4 +61,7 @@ from app.models.catalog import (  # noqa: F401
     StoreVisit,
     # Activity Logs
     ActivityLog,
+    # Email System
+    EmailLog,
+    EmailPreference,
 )
