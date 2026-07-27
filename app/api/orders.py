@@ -114,7 +114,7 @@ async def admin_list_orders(
     user_id: int = Query(None),
     search: str = Query(None),
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=2000),
 ):
     stmt = (
         select(Order)

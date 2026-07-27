@@ -374,7 +374,7 @@ async def admin_list_products(
     db: AsyncSession = Depends(get_db), admin: User = Depends(RequireViewer),
     category_id: int = Query(None), brand_id: int = Query(None),
     search: str = Query(None), status: str = Query(None),
-    skip: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=200),
+    skip: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=2000),
 ):
     stmt = select(Product)
     if category_id:
@@ -610,7 +610,7 @@ async def admin_list_customers(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(RequireViewer),
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=500),
+    limit: int = Query(50, ge=1, le=2000),
     search: str = Query(None),
     status_filter: str = Query(None, alias='status'),
     sort_by: str = Query('created_at'),
@@ -1393,7 +1393,7 @@ async def admin_update_inventory(variant_id: int, payload: dict, db: AsyncSessio
 
 # ------------------------------- Payments -------------------------------
 @router.get('/payments')
-async def admin_list_payments(db: AsyncSession = Depends(get_db), admin: User = Depends(RequireViewer), skip: int = 0, limit: int = 50):
+async def admin_list_payments(db: AsyncSession = Depends(get_db), admin: User = Depends(RequireViewer), skip: int = 0, limit: int = Query(50, ge=1, le=2000)):
     result = await db.execute(
         select(Payment, Order, User)
         .join(Order, Payment.order_id == Order.id)
