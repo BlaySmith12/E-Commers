@@ -12,20 +12,20 @@
 <tr><td style="background-color:#ffffff;padding:40px;">
 <div style="text-align:center;margin:0 0 25px;">
 <div style="width:60px;height:60px;border-radius:50%;background-color:#F2660F;margin:0 auto 15px;line-height:60px;font-size:28px;color:#ffffff;">&#9733;</div>
-<h2 style="color:#121010;margin:0 0 10px;font-size:24px;">You Earned {{{{ points }}}} Points!</h2>
+<h2 style="color:#121010;margin:0 0 10px;font-size:24px;">You Earned {{ points }} Points!</h2>
 </div>
-<p style="color:#555;font-size:15px;margin:0 0 20px;text-align:center;">Hi {{{{ customer_name }}}},</p>
-<p style="color:#555;font-size:15px;margin:0 0 25px;text-align:center;">You've earned <strong>{{{{ points }}}} loyalty points</strong>! {% if description %}{{{{ description }}}}{% endif %}</p>
+<p style="color:#555;font-size:15px;margin:0 0 20px;text-align:center;">Hi {{ customer_name }},</p>
+<p style="color:#555;font-size:15px;margin:0 0 25px;text-align:center;">You've earned <strong>{{ points }} loyalty points</strong>! {% if description %}{{ description }}{% endif %}</p>
 <table width="100%" cellpadding="8" cellspacing="0" style="margin:0 0 25px;border:1px solid #DBD2CB;border-radius:6px;">
-<tr><td style="font-size:13px;color:#555;">Points Earned</td><td style="font-size:16px;color:#F2660F;font-weight:bold;">+{{{{ points }}}}</td></tr>
-<tr><td style="font-size:13px;color:#555;">New Balance</td><td style="font-size:14px;color:#121010;font-weight:bold;">{{{{ balance_after }}}} points</td></tr>
-{% if order_number %}<tr><td style="font-size:13px;color:#555;">Order</td><td style="font-size:13px;color:#121010;">#{{{{ order_number }}}}</td></tr>{% endif %}
+<tr><td style="font-size:13px;color:#555;">Points Earned</td><td style="font-size:16px;color:#F2660F;font-weight:bold;">+{{ points }}</td></tr>
+<tr><td style="font-size:13px;color:#555;">New Balance</td><td style="font-size:14px;color:#121010;font-weight:bold;">{{ balance_after }} points</td></tr>
+{% if order_number %}<tr><td style="font-size:13px;color:#555;">Order</td><td style="font-size:13px;color:#121010;">#{{ order_number }}</td></tr>{% endif %}
 </table>
-<table cellpadding="0" cellspacing="0" style="margin:20px 0;"><tr><td style="background-color:#F2660F;border-radius:6px;"><a href="{{{{ loyalty_url }}}}" style="display:inline-block;padding:14px 40px;color:#ffffff;text-decoration:none;font-weight:bold;font-size:16px;">View My Loyalty Points</a></td></tr></table>
+<table cellpadding="0" cellspacing="0" style="margin:20px 0;"><tr><td style="background-color:#F2660F;border-radius:6px;"><a href="{{ loyalty_url }}" style="display:inline-block;padding:14px 40px;color:#ffffff;text-decoration:none;font-weight:bold;font-size:16px;">View My Loyalty Points</a></td></tr></table>
 </td></tr>
 
 <tr><td style="background-color:#F6F9F9;padding:30px 40px;text-align:center;border-top:1px solid #DBD2CB;border-radius:0 0 8px 8px;">
-<p style="color:#999;font-size:12px;margin:0 0 5px;">&copy; {{{{ year }}}} {{{{ store_name }}}}. All rights reserved.</p>
+<p style="color:#999;font-size:12px;margin:0 0 5px;">&copy; {{ year }} {{ store_name }}. All rights reserved.</p>
 <p style="color:#999;font-size:12px;margin:0;">This is a transactional email regarding your account.</p>
 </td></tr>
 </table>

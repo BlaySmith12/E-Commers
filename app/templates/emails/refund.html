@@ -10,21 +10,21 @@
 </td></tr>
 
 <tr><td style="background-color:#ffffff;padding:40px;">
-<h2 style="color:#121010;margin:0 0 15px;font-size:24px;">Refund {{{{ refund_status }}}}</h2>
-<p style="color:#555;font-size:15px;margin:0 0 20px;">Hi {{{{ customer_name }}}},</p>
-<p style="color:#555;font-size:15px;margin:0 0 20px;">A refund for order <strong>#{{{{ order_number }}}}</strong> has been processed.</p>
+<h2 style="color:#121010;margin:0 0 15px;font-size:24px;">Refund {{ refund_status }}</h2>
+<p style="color:#555;font-size:15px;margin:0 0 20px;">Hi {{ customer_name }},</p>
+<p style="color:#555;font-size:15px;margin:0 0 20px;">A refund for order <strong>#{{ order_number }}</strong> has been processed.</p>
 <table width="100%" cellpadding="8" cellspacing="0" style="margin:0 0 25px;border:1px solid #DBD2CB;border-radius:6px;">
-<tr><td style="font-size:13px;color:#555;">Refund Amount</td><td style="font-size:16px;color:#198754;font-weight:bold;">{{{{ currency }}}} {{{{ refund_amount }}}}</td></tr>
-<tr><td style="font-size:13px;color:#555;">Status</td><td style="font-size:13px;color:#121010;">{{{{ refund_status }}}}</td></tr>
-{% if refund_reason %}<tr><td style="font-size:13px;color:#555;">Reason</td><td style="font-size:13px;color:#121010;">{{{{ refund_reason }}}}</td></tr>{% endif %}
-{% if refund_reference %}<tr><td style="font-size:13px;color:#555;">Reference</td><td style="font-size:13px;color:#121010;font-family:monospace;">{{{{ refund_reference }}}}</td></tr>{% endif %}
+<tr><td style="font-size:13px;color:#555;">Refund Amount</td><td style="font-size:16px;color:#198754;font-weight:bold;">{{ currency }} {{ refund_amount }}</td></tr>
+<tr><td style="font-size:13px;color:#555;">Status</td><td style="font-size:13px;color:#121010;">{{ refund_status }}</td></tr>
+{% if refund_reason %}<tr><td style="font-size:13px;color:#555;">Reason</td><td style="font-size:13px;color:#121010;">{{ refund_reason }}</td></tr>{% endif %}
+{% if refund_reference %}<tr><td style="font-size:13px;color:#555;">Reference</td><td style="font-size:13px;color:#121010;font-family:monospace;">{{ refund_reference }}</td></tr>{% endif %}
 </table>
 <p style="color:#555;font-size:14px;margin:0;">The refund will be credited to your original payment method within 5-10 business days.</p>
-<table cellpadding="0" cellspacing="0" style="margin:20px 0;"><tr><td style="background-color:#F2660F;border-radius:6px;"><a href="{{{{ order_url }}}}" style="display:inline-block;padding:14px 40px;color:#ffffff;text-decoration:none;font-weight:bold;font-size:16px;">View Order</a></td></tr></table>
+<table cellpadding="0" cellspacing="0" style="margin:20px 0;"><tr><td style="background-color:#F2660F;border-radius:6px;"><a href="{{ order_url }}" style="display:inline-block;padding:14px 40px;color:#ffffff;text-decoration:none;font-weight:bold;font-size:16px;">View Order</a></td></tr></table>
 </td></tr>
 
 <tr><td style="background-color:#F6F9F9;padding:30px 40px;text-align:center;border-top:1px solid #DBD2CB;border-radius:0 0 8px 8px;">
-<p style="color:#999;font-size:12px;margin:0 0 5px;">&copy; {{{{ year }}}} {{{{ store_name }}}}. All rights reserved.</p>
+<p style="color:#999;font-size:12px;margin:0 0 5px;">&copy; {{ year }} {{ store_name }}. All rights reserved.</p>
 <p style="color:#999;font-size:12px;margin:0;">This is a transactional email regarding your account.</p>
 </td></tr>
 </table>

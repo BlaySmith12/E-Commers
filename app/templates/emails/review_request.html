@@ -11,17 +11,17 @@
 
 <tr><td style="background-color:#ffffff;padding:40px;">
 <h2 style="color:#121010;margin:0 0 15px;font-size:24px;">How Was Your Purchase?</h2>
-<p style="color:#555;font-size:15px;margin:0 0 20px;">Hi {{{{ customer_name }}}},</p>
-<p style="color:#555;font-size:15px;margin:0 0 25px;">We hope you're enjoying your recent order <strong>#{{{{ order_number }}}}</strong>. Your feedback helps other customers make great choices!</p>
+<p style="color:#555;font-size:15px;margin:0 0 20px;">Hi {{ customer_name }},</p>
+<p style="color:#555;font-size:15px;margin:0 0 25px;">We hope you're enjoying your recent order <strong>#{{ order_number }}</strong>. Your feedback helps other customers make great choices!</p>
 {% for item in items %}
 <table width="100%" cellpadding="12" cellspacing="0" style="margin:0 0 15px;border:1px solid #DBD2CB;border-radius:6px;">
 <tr>
 <td style="width:60px;">
-{% if item.image %}<img src="{{{{ item.image }}}}" width="50" height="50" style="border-radius:4px;">{% endif %}
+{% if item.image %}<img src="{{ item.image }}" width="50" height="50" style="border-radius:4px;">{% endif %}
 </td>
-<td style="font-size:14px;color:#121010;">{{{{ item.name }}}}</td>
+<td style="font-size:14px;color:#121010;">{{ item.name }}</td>
 <td style="text-align:right;white-space:nowrap;">
-<a href="{{{{ base_url }}}}/product/{{{{ item.slug }}}}" style="display:inline-block;padding:8px 16px;background-color:#F2660F;color:#ffffff;text-decoration:none;border-radius:4px;font-size:13px;font-weight:bold;">Leave a Review</a>
+<a href="{{ base_url }}/product/{{ item.slug }}" style="display:inline-block;padding:8px 16px;background-color:#F2660F;color:#ffffff;text-decoration:none;border-radius:4px;font-size:13px;font-weight:bold;">Leave a Review</a>
 </td>
 </tr>
 </table>
@@ -29,7 +29,7 @@
 </td></tr>
 
 <tr><td style="background-color:#F6F9F9;padding:30px 40px;text-align:center;border-top:1px solid #DBD2CB;border-radius:0 0 8px 8px;">
-<p style="color:#999;font-size:12px;margin:0 0 5px;">&copy; {{{{ year }}}} {{{{ store_name }}}}. All rights reserved.</p>
+<p style="color:#999;font-size:12px;margin:0 0 5px;">&copy; {{ year }} {{ store_name }}. All rights reserved.</p>
 <p style="color:#999;font-size:12px;margin:0;">This is a transactional email regarding your account.</p>
 </td></tr>
 </table>

@@ -4,6 +4,8 @@ import os
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
 def w(name, html):
+    # Fix double-braces: f-string escaping produced {{{{ instead of {{
+    html = html.replace('{{{{', '{{').replace('}}}}', '}}')
     with open(os.path.join(OUT, name), "w", encoding="utf-8") as f:
         f.write(html)
 
