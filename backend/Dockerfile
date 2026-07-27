@@ -30,6 +30,7 @@ COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 
 RUN mkdir -p app/static/images/uploads && \
+    cp app/static/favicon.png /app/favicon.png && \
     chown -R appuser:appuser /app
 
 USER appuser

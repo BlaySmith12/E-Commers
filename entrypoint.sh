@@ -85,6 +85,11 @@ asyncio.run(seed())
 "
 echo "Seeding complete."
 
+# ─── Ensure favicon is in static volume ──────────────────────────────────────
+if [ ! -f /app/app/static/favicon.png ]; then
+  cp /app/favicon.png /app/app/static/favicon.png 2>/dev/null || true
+fi
+
 # ─── Start application ────────────────────────────────────────────────────────
 echo "==> Starting uvicorn..."
 exec uvicorn manage:app --host 0.0.0.0 --port 8000 --workers 2
