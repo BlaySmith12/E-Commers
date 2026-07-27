@@ -58,7 +58,7 @@ async def initialize_payment(
     payload: PaymentInitIn,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(CurrentUser),
+    current_user: CurrentUser,
 ):
     """Initialize a Paystack payment for an existing order.
 
@@ -396,7 +396,7 @@ async def verify_payment(
 async def get_payment_by_order(
     order_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(CurrentUser),
+    current_user: CurrentUser,
 ):
     """Get the latest payment record for an order. Requires authentication and order ownership."""
     result = await db.execute(
@@ -438,7 +438,7 @@ async def retry_payment(
     payload: PaymentRetryIn,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(CurrentUser),
+    current_user: CurrentUser,
 ):
     """Retry a failed payment for an existing order.
 
