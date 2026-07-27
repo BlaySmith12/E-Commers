@@ -6,7 +6,7 @@
     {% set site_title = site_settings.get('seo_meta_title') or site_settings.get('store_name') or "ASAH'S PRIMENEST" %}
     {% set site_desc = site_settings.get('seo_meta_description') or site_settings.get('store_description') or 'Premium plumbing materials, household appliances, tools, and home improvement products.' %}
     <title>{{ site_title }} | {% block title %}{% endblock %}</title>
-    {% if site_settings.get('favicon_url') %}<link rel="icon" type="image/png" href="{{ site_settings.get('favicon_url') }}">{% endif %}
+    <link rel="icon" type="image/png" href="{{ site_settings.get('favicon_url') or '/static/favicon.png' }}">
     <meta name="description" content="{{ site_desc }}">
     <meta property="og:title" content="{{ site_title }}">
     <meta property="og:description" content="{{ site_desc }}">
