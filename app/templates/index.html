@@ -4,7 +4,8 @@
 {% block content %}
 <!-- Hero Section -->
 {% set b = banners[0] if banners else None %}
-<section class="hero-section" style="background: linear-gradient(rgba(18,16,16,.90), rgba(18,16,16,.85)){% if b and b.image_url %}, url('{{ b.image_url }}') center/cover no-repeat{% elif not b %}, url('/static/images/hero_bg.png') center/cover no-repeat{% endif %}; padding: 100px 0 60px;">
+{% set bg_image = b.image_url if b and b.image_url else (b.desktop_image_url if b and b.desktop_image_url else (b.tablet_image_url if b and b.tablet_image_url else (b.mobile_image_url if b and b.mobile_image_url else ''))) %}
+<section class="hero-section" style="background: linear-gradient(rgba(18,16,16,.90), rgba(18,16,16,.85)){% if bg_image %}, url('{{ bg_image }}') center/cover no-repeat{% elif not b %}, url('/static/images/hero_bg.png') center/cover no-repeat{% endif %}; padding: 100px 0 60px;">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-lg-7 mb-4 mb-lg-0">
