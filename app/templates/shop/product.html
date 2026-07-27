@@ -158,6 +158,39 @@
         </div>
 
         <div id="tab-reviews" class="tab-content-active" style="display:none">
+            <!-- Write a Review Form -->
+            <div id="reviewFormWrap" style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:1.5rem;margin-bottom:2rem">
+                <h6 style="color:var(--white);font-weight:700;margin-bottom:1rem"><i class="bi bi-pencil-square me-2" style="color:var(--primary-orange)"></i>Write a Review</h6>
+                <div id="reviewFormLoginMsg" style="display:none;text-align:center;padding:1.5rem 0">
+                    <p style="color:var(--warm-gray);margin-bottom:.75rem">You need an account to leave a review.</p>
+                    <a href="/login" class="btn btn-sm" style="background:var(--primary-orange);color:var(--white);border-radius:10px;padding:8px 24px">Log In</a>
+                </div>
+                <form id="reviewForm" style="display:none" onsubmit="submitReview(event)">
+                    <div class="mb-3">
+                        <label style="font-size:.8rem;color:var(--warm-gray);display:block;margin-bottom:6px">Your Rating *</label>
+                        <div id="starRating" class="d-flex gap-1" style="cursor:pointer">
+                            <i class="bi bi-star" data-val="1" style="font-size:1.4rem;color:#555;transition:color .15s" onmouseenter="hoverStar(1)" onmouseleave="resetStars()" onclick="setStar(1)"></i>
+                            <i class="bi bi-star" data-val="2" style="font-size:1.4rem;color:#555;transition:color .15s" onmouseenter="hoverStar(2)" onmouseleave="resetStars()" onclick="setStar(2)"></i>
+                            <i class="bi bi-star" data-val="3" style="font-size:1.4rem;color:#555;transition:color .15s" onmouseenter="hoverStar(3)" onmouseleave="resetStars()" onclick="setStar(3)"></i>
+                            <i class="bi bi-star" data-val="4" style="font-size:1.4rem;color:#555;transition:color .15s" onmouseenter="hoverStar(4)" onmouseleave="resetStars()" onclick="setStar(4)"></i>
+                            <i class="bi bi-star" data-val="5" style="font-size:1.4rem;color:#555;transition:color .15s" onmouseenter="hoverStar(5)" onmouseleave="resetStars()" onclick="setStar(5)"></i>
+                        </div>
+                        <input type="hidden" id="reviewRating" value="0">
+                        <div id="ratingError" style="color:#dc3545;font-size:.78rem;margin-top:4px;display:none">Please select a rating</div>
+                    </div>
+                    <div class="mb-3">
+                        <label style="font-size:.8rem;color:var(--warm-gray);display:block;margin-bottom:6px">Your Review</label>
+                        <textarea id="reviewComment" rows="4" maxlength="1000" placeholder="Share your experience with this product..." style="width:100%;background:transparent;border:1px solid var(--border-color);border-radius:10px;padding:12px;color:var(--white);font-size:.85rem;resize:vertical"></textarea>
+                        <div style="text-align:right;font-size:.72rem;color:var(--warm-gray);margin-top:2px"><span id="reviewCharCount">0</span>/1000</div>
+                    </div>
+                    <button type="submit" id="reviewSubmitBtn" class="btn btn-sm" style="background:var(--primary-orange);color:var(--white);border-radius:10px;padding:10px 28px;font-weight:600">
+                        <i class="bi bi-send me-1"></i>Submit Review
+                    </button>
+                    <span id="reviewSuccess" style="color:#198754;font-size:.85rem;margin-left:12px;display:none"><i class="bi bi-check-circle-fill me-1"></i>Review submitted!</span>
+                </form>
+            </div>
+
+            <!-- Existing Reviews -->
             {% if product.reviews %}
                 {% for r in product.reviews %}
                 <div style="border-bottom:1px solid var(--border-color);padding:16px 0">
@@ -171,8 +204,9 @@
                 </div>
                 {% endfor %}
             {% else %}
-                <p style="color:var(--warm-gray)">No reviews yet. Be the first to review this product!</p>
+                <p id="noReviewsMsg" style="color:var(--warm-gray)">No reviews yet. Be the first to review this product!</p>
             {% endif %}
+            <div id="newReviews"></div>
         </div>
     </div>
 
@@ -282,10 +316,121 @@ async function addToWishlist(productId) {
 function showToast(msg, type) {
     const t = document.createElement('div');
     t.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;padding:12px 20px;border-radius:10px;color:#fff;font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.3);animation:fadeIn .3s ease;max-width:380px';
-    t.style.background = type === 'success' ? 'linear-gradient(135deg,#198754,#157347)' : 'linear-gradient(135deg,#dc3545,#bb2d3b)';
-    t.innerHTML = '<i class="bi bi-' + (type === 'success' ? 'check-circle-fill' : 'exclamation-circle-fill') + '"></i><span>' + msg + '</span>';
+    t.style.background = type === 'success' ? 'linear-gradient(135deg,#198754,#157347)' : type === 'warning' ? 'linear-gradient(135deg,#ffc107,#e0a800)' : 'linear-gradient(135deg,#dc3545,#bb2d3b)';
+    t.innerHTML = '<i class="bi bi-' + (type === 'success' ? 'check-circle-fill' : type === 'warning' ? 'exclamation-triangle-fill' : 'exclamation-circle-fill') + '"></i><span>' + msg + '</span>';
     document.body.appendChild(t);
     setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 4000);
+}
+
+/* Review form */
+var REVIEW_PRODUCT_ID = {{ product.id }};
+var reviewSelectedRating = 0;
+
+(function initReviewForm() {
+    var token = localStorage.getItem('token');
+    var form = document.getElementById('reviewForm');
+    var loginMsg = document.getElementById('reviewFormLoginMsg');
+    if (token) {
+        if (form) form.style.display = 'block';
+        if (loginMsg) loginMsg.style.display = 'none';
+        checkExistingReview();
+    } else {
+        if (form) form.style.display = 'none';
+        if (loginMsg) loginMsg.style.display = 'block';
+    }
+    var ta = document.getElementById('reviewComment');
+    if (ta) ta.addEventListener('input', function() {
+        document.getElementById('reviewCharCount').textContent = ta.value.length;
+    });
+})();
+
+function hoverStar(n) {
+    var stars = document.querySelectorAll('#starRating i');
+    for (var i = 0; i < stars.length; i++) {
+        stars[i].className = i < n ? 'bi bi-star-fill' : 'bi bi-star';
+        stars[i].style.color = i < n ? '#ffc107' : '#555';
+    }
+}
+function resetStars() {
+    var stars = document.querySelectorAll('#starRating i');
+    for (var i = 0; i < stars.length; i++) {
+        stars[i].className = i < reviewSelectedRating ? 'bi bi-star-fill' : 'bi bi-star';
+        stars[i].style.color = i < reviewSelectedRating ? '#ffc107' : '#555';
+    }
+}
+function setStar(n) {
+    reviewSelectedRating = n;
+    document.getElementById('reviewRating').value = n;
+    document.getElementById('ratingError').style.display = 'none';
+    resetStars();
+}
+
+async function checkExistingReview() {
+    var token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+        var resp = await fetch('/api/reviews/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!resp.ok) return;
+        var reviews = await resp.json();
+        for (var i = 0; i < reviews.length; i++) {
+            if (reviews[i].product_id === REVIEW_PRODUCT_ID) {
+                var wrap = document.getElementById('reviewFormWrap');
+                if (wrap) wrap.innerHTML = '<div style="text-align:center;padding:1rem 0"><i class="bi bi-check-circle" style="font-size:2rem;color:var(--primary-orange);display:block;margin-bottom:.5rem"></i><p style="color:var(--white);font-size:.9rem;font-weight:600;margin-bottom:.25rem">You already reviewed this product</p><div class="d-flex justify-content-center gap-1 mb-2">' + renderStarsHTML(reviews[i].rating) + '</div><p style="color:var(--warm-gray);font-size:.83rem">' + (reviews[i].comment || '') + '</p></div>';
+                return;
+            }
+        }
+    } catch(e) {}
+}
+
+function renderStarsHTML(rating) {
+    var html = '';
+    for (var i = 1; i <= 5; i++) {
+        html += '<i class="bi bi-star' + (i <= rating ? '-fill' : '') + '" style="color:#ffc107;font-size:.9rem"></i>';
+    }
+    return html;
+}
+
+async function submitReview(e) {
+    e.preventDefault();
+    var token = localStorage.getItem('token');
+    if (!token) { window.location.href = '/login'; return; }
+    var rating = parseInt(document.getElementById('reviewRating').value);
+    if (!rating || rating < 1 || rating > 5) {
+        document.getElementById('ratingError').style.display = 'block';
+        return;
+    }
+    var comment = document.getElementById('reviewComment').value.trim();
+    var btn = document.getElementById('reviewSubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Submitting...';
+    try {
+        var resp = await fetch('/api/reviews', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ product_id: REVIEW_PRODUCT_ID, rating: rating, comment: comment || null })
+        });
+        if (resp.ok) {
+            document.getElementById('reviewSuccess').style.display = 'inline';
+            var noMsg = document.getElementById('noReviewsMsg');
+            if (noMsg) noMsg.style.display = 'none';
+            var html = '<div style="border-bottom:1px solid var(--border-color);padding:16px 0;border-top:1px solid var(--border-color);margin-top:16px">' +
+                '<div class="d-flex align-items-center gap-2 mb-2">' + renderStarsHTML(rating) +
+                '<span style="font-size:.75rem;color:var(--warm-gray)">Just now</span></div>' +
+                '<p style="color:var(--warm-gray);font-size:.85rem;margin:0">' + (comment || '') + '</p></div>';
+            document.getElementById('newReviews').innerHTML = html;
+            document.getElementById('reviewFormWrap').innerHTML = '<div style="text-align:center;padding:1rem 0"><i class="bi bi-check-circle" style="font-size:2rem;color:var(--primary-orange);display:block;margin-bottom:.5rem"></i><p style="color:var(--white);font-size:.9rem;font-weight:600;margin-bottom:.25rem">You already reviewed this product</p><div class="d-flex justify-content-center gap-1 mb-2">' + renderStarsHTML(rating) + '</div><p style="color:var(--warm-gray);font-size:.83rem">' + (comment || '') + '</p></div>';
+            showToast('Review submitted! Thank you.', 'success');
+        } else {
+            var err = await resp.json().catch(function() { return {}; });
+            showToast(err.detail || 'Failed to submit review', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-send me-1"></i>Submit Review';
+        }
+    } catch(e) {
+        showToast('Network error', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send me-1"></i>Submit Review';
+    }
 }
 </script>
 {% endblock %}

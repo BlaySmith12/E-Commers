@@ -87,32 +87,32 @@ _ROUTES = {
 }
 
 
-_site_settings_cache = {}
-_site_settings_cache_time = None
+from app.settings_cache import invalidate_site_settings_cache, get_cached_settings, get_cache_time, set_cache
 
 
 async def _get_site_settings() -> dict:
     """Load site settings from DB (cached for 60 seconds)."""
-    global _site_settings_cache, _site_settings_cache_time
     from datetime import datetime as _dt
     now = _dt.now()
-    if _site_settings_cache and _site_settings_cache_time and (now - _site_settings_cache_time).seconds < 60:
-        return _site_settings_cache
+    cached = get_cached_settings()
+    cached_time = get_cache_time()
+    if cached and cached_time and (now - cached_time).seconds < 60:
+        return cached
     try:
         async with async_session_maker() as db:
             result = await db.execute(select(SiteSetting))
-            _site_settings_cache = {s.key: s.value for s in result.scalars().all() if s.value}
-            _site_settings_cache_time = now
+            data = {s.key: s.value for s in result.scalars().all() if s.value}
+            set_cache(data, now)
     except Exception:
         pass
-    return _site_settings_cache
+    return get_cached_settings()
 
 
 def render(template_name: str, request: Request, **context) -> HTMLResponse:
     template = env.get_template(template_name)
     # Merge site settings into context so footer can use them
     merged = dict(context)
-    merged['site_settings'] = _site_settings_cache
+    merged['site_settings'] = get_cached_settings()
     merged['config'] = config
     html = template.render(
         request=request,
@@ -963,6 +963,56 @@ def create_app() -> FastAPI:
         title=config.PROJECT_NAME,
         version="2.0.0",
     )
+
+    # ─── Settings Cache Refresh Middleware ────────────────────────────────
+    from starlette.middleware.base import BaseHTTPMiddleware
+
+    class SettingsCacheMiddleware(BaseHTTPMiddleware):
+        """Auto-refresh site settings cache when empty."""
+        async def dispatch(self, request, call_next):
+            from app.settings_cache import is_cache_empty
+            if is_cache_empty():
+                await _get_site_settings()
+            return await call_next(request)
+
+    app.add_middleware(SettingsCacheMiddleware)
+
+    # ─── Maintenance Mode Middleware ─────────────────────────────────
+
+    class MaintenanceModeMiddleware(BaseHTTPMiddleware):
+        """Block storefront when maintenance mode is enabled. Admin and API routes pass through."""
+        async def dispatch(self, request, call_next):
+            path = request.url.path
+            if path.startswith('/admin') or path.startswith('/api') or path.startswith('/static'):
+                return await call_next(request)
+            try:
+                from app.settings_cache import get_cached_settings, is_cache_empty
+                if is_cache_empty():
+                    await _get_site_settings()
+                settings = get_cached_settings()
+                if settings and settings.get('maintenance_mode') == 'true':
+                    msg = settings.get('maintenance_message', '')
+                    socials = {
+                        'facebook': settings.get('social_facebook', ''),
+                        'instagram': settings.get('social_instagram', ''),
+                        'twitter': settings.get('social_twitter', ''),
+                        'tiktok': settings.get('social_tiktok', ''),
+                        'whatsapp': settings.get('social_whatsapp', ''),
+                    }
+                    template = env.get_template('maintenance.html')
+                    html = template.render(
+                        request=request,
+                        message=msg,
+                        **socials,
+                    )
+                    from starlette.responses import HTMLResponse as StarletteHTMLResponse
+                    return StarletteHTMLResponse(content=html)
+            except Exception:
+                import traceback, logging
+                logging.getLogger(__name__).error('MaintenanceModeMiddleware error: %s', traceback.format_exc())
+            return await call_next(request)
+
+    app.add_middleware(MaintenanceModeMiddleware)
 
     # ─── Admin Auth Middleware ─────────────────────────────────────────
     from starlette.middleware.base import BaseHTTPMiddleware

@@ -44,8 +44,9 @@
                         <td class="border-secondary text-light fw-bold">{{ b.title }}</td>
                         <td class="border-secondary text-muted small">{{ b.subtitle or '-' }}</td>
                         <td class="border-secondary">
-                            {% if b.image_url %}
-                            <img src="{{ b.image_url }}" alt="" style="width: 80px; height: 40px; object-fit: cover; border-radius: 4px;" class="border border-secondary">
+                            {% set img = b.image_url or b.desktop_image_url or b.tablet_image_url or b.mobile_image_url %}
+                            {% if img %}
+                            <img src="{{ img }}" alt="" style="width: 80px; height: 40px; object-fit: cover; border-radius: 4px;" class="border border-secondary">
                             {% else %}
                             <span class="text-muted">No image</span>
                             {% endif %}

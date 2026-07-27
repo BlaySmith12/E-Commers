@@ -10,14 +10,12 @@
 .pc-title{font-size:1.2rem;font-weight:700;color:#fff;margin-bottom:.5rem}
 .pc-sub{font-size:.88rem;color:var(--text-secondary,#C8BEB7)}
 
-/* Success */
-.pc-icon{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;background:linear-gradient(135deg,rgba(25,135,84,.15),rgba(25,135,84,.05));border:3px solid #198754;animation:pcPopIn .5s cubic-bezier(.175,.885,.32,1.275)}
-.pc-icon i{font-size:2.2rem;color:#198754}
+.pc-icon{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;animation:pcPopIn .5s cubic-bezier(.175,.885,.32,1.275)}
+.pc-icon i{font-size:2.2rem}
+.pc-icon-success{background:linear-gradient(135deg,rgba(25,135,84,.15),rgba(25,135,84,.05));border:3px solid #198754}.pc-icon-success i{color:#198754}
+.pc-icon-cancel{background:linear-gradient(135deg,rgba(255,193,7,.15),rgba(255,193,7,.05));border:3px solid #ffc107}.pc-icon-cancel i{color:#ffc107}
+.pc-icon-error{background:linear-gradient(135deg,rgba(220,53,69,.15),rgba(220,53,69,.05));border:3px solid #dc3545}.pc-icon-error i{color:#dc3545}
 @keyframes pcPopIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
-
-/* Error */
-.pc-icon-error{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;background:linear-gradient(135deg,rgba(220,53,69,.15),rgba(220,53,69,.05));border:3px solid #dc3545;animation:pcPopIn .5s cubic-bezier(.175,.885,.32,1.275)}
-.pc-icon-error i{font-size:2.2rem;color:#dc3545}
 
 .pc-detail{background:#1a1717;border:1px solid var(--border-color,#2a2727);border-radius:12px;padding:.875rem 1rem;margin:1rem 0;text-align:left}
 .pc-detail-row{display:flex;justify-content:space-between;padding:4px 0;font-size:.85rem}
@@ -35,16 +33,14 @@
 
 <div class="pc-page">
     <div class="pc-card">
-        <!-- Loading state -->
         <div id="pcLoading">
             <div class="pc-spinner"></div>
             <h2 class="pc-title">Verifying Your Payment</h2>
             <p class="pc-sub">Please wait while we confirm your payment with Paystack...</p>
         </div>
 
-        <!-- Success state -->
         <div id="pcSuccess" style="display:none">
-            <div class="pc-icon"><i class="bi bi-check-lg"></i></div>
+            <div class="pc-icon pc-icon-success"><i class="bi bi-check-lg"></i></div>
             <h2 class="pc-title">Payment Successful!</h2>
             <p class="pc-sub">Your payment has been confirmed. Thank you for shopping with ASAH'S PRIMENEST.</p>
             <div class="pc-detail" id="pcDetails"></div>
@@ -54,11 +50,21 @@
             </div>
         </div>
 
-        <!-- Error state -->
+        <div id="pcCancelled" style="display:none">
+            <div class="pc-icon pc-icon-cancel"><i class="bi bi-x-lg"></i></div>
+            <h2 class="pc-title">Payment Cancelled</h2>
+            <p class="pc-sub" id="pcCancelMsg">You cancelled the payment. Your order has not been paid and will be automatically cancelled.</p>
+            <div class="pc-detail" id="pcCancelDetails"></div>
+            <div class="pc-actions">
+                <a href="/checkout" class="pc-btn-primary"><i class="bi bi-arrow-repeat"></i> Try Again</a>
+                <a href="/shop" class="pc-btn-outline"><i class="bi bi-bag"></i> Continue Shopping</a>
+            </div>
+        </div>
+
         <div id="pcError" style="display:none">
-            <div class="pc-icon-error"><i class="bi bi-x-lg"></i></div>
-            <h2 class="pc-title">Payment Verification Failed</h2>
-            <p class="pc-sub" id="pcErrorMsg">We could not verify your payment. Please try again.</p>
+            <div class="pc-icon pc-icon-error"><i class="bi bi-x-lg"></i></div>
+            <h2 class="pc-title">Payment Failed</h2>
+            <p class="pc-sub" id="pcErrorMsg">We could not verify your payment. Please try again or contact support.</p>
             <div class="pc-detail" id="pcErrorDetails"></div>
             <div class="pc-actions">
                 <a href="/checkout" class="pc-btn-primary"><i class="bi bi-arrow-repeat"></i> Try Again</a>
@@ -73,18 +79,22 @@
     var params = new URLSearchParams(window.location.search);
     var reference = params.get('reference') || params.get('trxref');
     var orderId = params.get('order_id');
+    var status = params.get('status');
 
     if(!reference){
         document.getElementById('pcLoading').style.display='none';
-        document.getElementById('pcError').style.display='block';
-        document.getElementById('pcErrorMsg').textContent='No payment reference found.';
+        document.getElementById('pcCancelled').style.display='block';
+        document.getElementById('pcCancelMsg').textContent='You cancelled the payment. Your order has not been paid. No charges were made.';
+        if(orderId){
+            var html='<div class="pc-detail-row"><span class="label">Order ID</span><span class="value">#'+esc(orderId)+'</span></div>';
+            document.getElementById('pcCancelDetails').innerHTML=html;
+        }
         return;
     }
 
     function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
     function fmt(v){return'GHS '+parseFloat(v||0).toFixed(2)}
 
-    // Verify with backend
     fetch('/api/payments/verify?reference='+encodeURIComponent(reference))
     .then(function(r){return r.json()})
     .then(function(data){
@@ -96,16 +106,25 @@
             html+='<div class="pc-detail-row"><span class="label">Payment Status</span><span class="value" style="color:#198754">'+esc(data.payment_status||'Paid')+'</span></div>';
             document.getElementById('pcDetails').innerHTML=html;
         }else{
-            document.getElementById('pcError').style.display='block';
-            document.getElementById('pcErrorMsg').textContent=data.message||'Payment could not be verified.';
-            var html='<div class="pc-detail-row"><span class="label">Reference</span><span class="value">'+esc(reference)+'</span></div>';
-            document.getElementById('pcErrorDetails').innerHTML=html;
+            var msg=(data.message||'').toLowerCase();
+            if(msg.indexOf('abandon')!==-1||msg.indexOf('cancel')!==-1||msg.indexOf('not found')!==-1){
+                document.getElementById('pcCancelled').style.display='block';
+                document.getElementById('pcCancelMsg').textContent='Your payment was not completed. No charges were made to your account.';
+                var html='<div class="pc-detail-row"><span class="label">Reference</span><span class="value">'+esc(reference)+'</span></div>';
+                if(data.order_number) html+='<div class="pc-detail-row"><span class="label">Order</span><span class="value">#'+esc(data.order_number)+'</span></div>';
+                document.getElementById('pcCancelDetails').innerHTML=html;
+            }else{
+                document.getElementById('pcError').style.display='block';
+                document.getElementById('pcErrorMsg').textContent=data.message||'Payment could not be verified. Please try again or contact support.';
+                var html='<div class="pc-detail-row"><span class="label">Reference</span><span class="value">'+esc(reference)+'</span></div>';
+                document.getElementById('pcErrorDetails').innerHTML=html;
+            }
         }
     })
     .catch(function(e){
         document.getElementById('pcLoading').style.display='none';
         document.getElementById('pcError').style.display='block';
-        document.getElementById('pcErrorMsg').textContent='Network error. Please check your order status.';
+        document.getElementById('pcErrorMsg').textContent='Network error. Please check your order status from your dashboard.';
     });
 })();
 </script>

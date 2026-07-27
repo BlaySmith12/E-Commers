@@ -132,6 +132,23 @@ class Address(Base):
         return f'<Address {self.id} - {self.city}>'
 
 
+class CustomerPaymentMethod(Base):
+    __tablename__ = 'customer_payment_methods'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    method_type = Column(String(50), nullable=False)  # mobile_money, bank_transfer, card
+    provider = Column(String(100))  # MTN, Vodafone, AirtelTigo, Visa, Mastercard, etc.
+    account_number = Column(String(100))  # phone number or account number (masked)
+    account_name = Column(String(200))  # name on account
+    expiry_date = Column(String(10))  # MM/YY for cards
+    is_default = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship('User', backref='payment_methods', lazy='joined')
+
+
 # ---------------------------------------------------------------------------
 # Catalog: Category / Brand / Product (+ variants, attributes, images, reviews)
 # ---------------------------------------------------------------------------

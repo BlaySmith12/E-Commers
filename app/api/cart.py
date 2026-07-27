@@ -75,7 +75,7 @@ async def _serialize_cart(cart_id: str, db: AsyncSession, coupon_code: str = Non
     resolved_coupon = coupon_code
     if coupon_code:
         coupon_result = await db.execute(
-            select(Coupon).where(Coupon.code == coupon_code, Coupon.is_active == True)
+            select(Coupon).where(Coupon.code == coupon_code.strip().upper(), Coupon.is_active == True)
         )
         coupon = coupon_result.scalar_one_or_none()
         if coupon:
@@ -95,6 +95,8 @@ async def _serialize_cart(cart_id: str, db: AsyncSession, coupon_code: str = Non
                     discount = subtotal * (coupon.discount_value / 100)
                 else:
                     discount = min(coupon.discount_value, subtotal)
+                if coupon.max_discount_amount and coupon.max_discount_amount > 0:
+                    discount = min(discount, coupon.max_discount_amount)
             else:
                 resolved_coupon = None
         else:

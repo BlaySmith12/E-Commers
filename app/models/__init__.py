@@ -10,7 +10,9 @@ from app.models.catalog import (  # noqa: F401
     Permission,
     Role,
     User,
+    # Addresses / Payment Methods
     Address,
+    CustomerPaymentMethod,
     # Catalog
     Category,
     Brand,

@@ -362,14 +362,31 @@ async def checkout(
         if payload.phone:
             address.phone = payload.phone
     elif payload.street and payload.city:
-        address = Address(
-            full_name=(payload.first_name or '') + ' ' + (payload.last_name or ''),
-            phone=payload.phone,
-            street=payload.street, city=payload.city, state=payload.state,
-            country=payload.country, zip_code=payload.zip_code, user_id=current_user.id,
+        result = await db.execute(
+            select(Address).where(
+                Address.user_id == current_user.id,
+                Address.street == payload.street,
+                Address.city == payload.city,
+                Address.state == payload.state,
+                Address.country == payload.country,
+                Address.zip_code == payload.zip_code,
+            )
         )
-        db.add(address)
-        await db.flush()
+        address = result.scalar_one_or_none()
+        if address:
+            if payload.first_name or payload.last_name:
+                address.full_name = ((payload.first_name or '') + ' ' + (payload.last_name or '')).strip()
+            if payload.phone:
+                address.phone = payload.phone
+        else:
+            address = Address(
+                full_name=(payload.first_name or '') + ' ' + (payload.last_name or ''),
+                phone=payload.phone,
+                street=payload.street, city=payload.city, state=payload.state,
+                country=payload.country, zip_code=payload.zip_code, user_id=current_user.id,
+            )
+            db.add(address)
+            await db.flush()
     else:
         raise HTTPException(status_code=400, detail='Address required')
 

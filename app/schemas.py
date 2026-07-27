@@ -64,6 +64,8 @@ class UserUpdate(BaseModel):
 
 
 class AddressBase(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
     street: str
     city: str
     state: Optional[str] = None
@@ -84,6 +86,37 @@ class AddressOut(AddressBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
     user_id: int
+
+
+class PaymentMethodCreate(BaseModel):
+    method_type: str  # mobile_money, bank_transfer, card
+    provider: Optional[str] = None
+    account_number: str
+    account_name: Optional[str] = None
+    expiry_date: Optional[str] = None
+    is_default: bool = False
+
+
+class PaymentMethodUpdate(BaseModel):
+    method_type: Optional[str] = None
+    provider: Optional[str] = None
+    account_number: Optional[str] = None
+    account_name: Optional[str] = None
+    expiry_date: Optional[str] = None
+    is_default: Optional[bool] = None
+
+
+class PaymentMethodOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    user_id: int
+    method_type: str
+    provider: Optional[str] = None
+    account_number: str
+    account_name: Optional[str] = None
+    expiry_date: Optional[str] = None
+    is_default: bool = False
+    created_at: Optional[datetime] = None
 
 
 # ---------------------------------------------------------------------------
@@ -291,7 +324,7 @@ class CheckoutIn(BaseModel):
     state: Optional[str] = None
     country: str = 'Ghana'
     zip_code: Optional[str] = None
-    payment_method: str = 'Cash on Delivery'
+    payment_method: str = 'Paystack'
     shipping_fee: float = 0.0
     tax: float = 0.0
     coupon_code: Optional[str] = None

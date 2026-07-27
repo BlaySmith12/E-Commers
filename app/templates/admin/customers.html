@@ -263,11 +263,11 @@
 
         <!-- Tabs -->
         <div class="d-flex gap-1 mb-4 p-1 rounded-10" style="background: var(--bg-card); border: 1px solid var(--border-color); overflow-x: auto;">
-            <button class="detail-tab active" onclick="switchDetailTab('overview')">Overview</button>
-            <button class="detail-tab" onclick="switchDetailTab('orders')">Orders</button>
-            <button class="detail-tab" onclick="switchDetailTab('addresses')">Addresses</button>
-            <button class="detail-tab" onclick="switchDetailTab('activity')">Activity</button>
-            <button class="detail-tab" onclick="switchDetailTab('notes')">Notes</button>
+            <button class="detail-tab active" onclick="switchDetailTab('overview', event)">Overview</button>
+            <button class="detail-tab" onclick="switchDetailTab('orders', event)">Orders</button>
+            <button class="detail-tab" onclick="switchDetailTab('addresses', event)">Addresses</button>
+            <button class="detail-tab" onclick="switchDetailTab('activity', event)">Activity</button>
+            <button class="detail-tab" onclick="switchDetailTab('notes', event)">Notes</button>
         </div>
 
         <!-- Tab: Overview -->
@@ -565,7 +565,7 @@
             </div>`;
         const c = document.getElementById('toastContainer');
         c.insertAdjacentHTML('beforeend', html);
-        setTimeout(() => { const t = c.querySelector('.toast'); if (t) t.remove(); }, 4000);
+        setTimeout(() => { const toasts = c.querySelectorAll('.toast'); if (toasts.length) toasts[0].remove(); }, 4000);
     }
     window.showToast = showToast;
 
@@ -702,14 +702,14 @@
                         <div class="d-flex align-items-center">
                             <div class="customer-avatar me-3" style="background: ${color};">${initials}</div>
                             <div>
-                                <div class="text-light fw-semibold" style="font-size: 0.9rem;">${name}</div>
-                                <div class="text-muted" style="font-size: 0.8rem;">${c.email || '-'}</div>
+                                <div class="text-light fw-semibold" style="font-size: 0.9rem;">${escapeHtml(name)}</div>
+                                <div class="text-muted" style="font-size: 0.8rem;">${escapeHtml(c.email || '-')}</div>
                             </div>
                         </div>
                     </td>
                     <td class="border-secondary text-muted" style="font-size: 0.87rem;">${c.phone || '-'}</td>
                     <td class="border-secondary">
-                        <span class="text-muted" style="font-size: 0.82rem; text-transform: capitalize;">${c.role || 'customer'}</span>
+                        <span class="text-muted" style="font-size: 0.82rem; text-transform: capitalize;">${(typeof c.role === 'object' && c.role ? c.role.name : c.role) || 'customer'}</span>
                     </td>
                     <td class="border-secondary text-center">
                         <span class="fw-semibold text-light">${orderCount}</span>
@@ -740,7 +740,7 @@
                                     <i class="bi bi-${isActive ? 'shield-x' : 'shield-check'} me-2"></i> ${isActive ? 'Block' : 'Unblock'}
                                 </a>
                                 <hr class="dropdown-divider my-1" style="border-color: var(--border-color);">
-                                <a class="dropdown-item text-danger" href="#" onclick="promptDelete(${c.id}, '${name.replace(/'/g, "\\'")}'); return false;">
+                                <a class="dropdown-item text-danger" href="#" onclick="promptDelete(${c.id}); return false;">
                                     <i class="bi bi-trash me-2"></i> Delete
                                 </a>
                             </div>
@@ -843,6 +843,10 @@
 
         if (action === 'delete') {
             if (!confirm(`Delete ${ids.length} customer(s)? This cannot be undone.`)) return;
+        } else if (action === 'deactivate') {
+            if (!confirm(`Deactivate ${ids.length} customer(s)? They will lose access.`)) return;
+        } else if (action === 'activate') {
+            if (!confirm(`Activate ${ids.length} customer(s)?`)) return;
         }
 
         try {
@@ -862,40 +866,65 @@
                 });
             }
 
-            if (!res.ok) throw new Error('Request failed');
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || errData.message || 'Request failed');
+            }
             showToast(`${ids.length} customer(s) ${action === 'delete' ? 'deleted' : action + 'd'} successfully`, 'success');
             selectedIds.clear();
             updateBulkBar();
-            await fetchCustomers();
         } catch (err) {
             console.error(err);
             showToast('Operation failed. Please try again.', 'error');
+        } finally {
+            await fetchCustomers();
         }
     };
 
-    window.viewCustomer = function(id) {
-        const c = allCustomers.find(x => x.id === id);
+    window.viewCustomer = async function(id) {
+        var c = allCustomers.find(x => x.id === id);
         if (!c) return;
-        currentViewCustomer = c;
-        const name = `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
-        const initials = getInitials(c.first_name, c.last_name);
-        const color = getAvatarColor(name);
-        const isActive = c.is_active !== false;
-        const orderCount = c.order_count != null ? c.order_count : (c.orders_count || 0);
-        const totalSpent = c.total_spent != null ? c.total_spent : (c.total_amount || 0);
-        const lastActive = c.last_login_at || c.last_active || c.updated_at;
+
+        var name = `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
+        var initials = getInitials(c.first_name, c.last_name);
+        var color = getAvatarColor(name);
 
         document.getElementById('panelAvatar').textContent = initials;
         document.getElementById('panelAvatar').style.background = color;
         document.getElementById('panelName').textContent = name;
         document.getElementById('panelEmail').textContent = c.email || '-';
-        document.getElementById('panelBadge').innerHTML = `<span class="badge-status ${isActive ? 'bg-success bg-opacity-15 text-success' : 'bg-danger bg-opacity-15 text-danger'}">${isActive ? 'Active' : 'Inactive'}</span>`;
+        document.getElementById('viewPanel').classList.add('open');
+        document.getElementById('viewPanelOverlay').classList.add('open');
+        switchDetailTab('overview');
 
+        try {
+            var res = await fetch(`/api/admin/customers/${id}`, {
+                headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') }
+            });
+            if (res.ok) {
+                var fresh = await res.json();
+                c = Object.assign(c, fresh);
+                var idx = allCustomers.findIndex(x => x.id === id);
+                if (idx >= 0) allCustomers[idx] = c;
+                currentViewCustomer = c;
+            }
+        } catch (err) {
+            console.error('Failed to fetch fresh customer data:', err);
+            currentViewCustomer = c;
+        }
+
+        var isActive = c.is_active !== false;
+        var orderCount = c.order_count != null ? c.order_count : (c.orders_count || 0);
+        var totalSpent = c.total_spent != null ? c.total_spent : (c.total_amount || 0);
+        var lastActive = c.last_login_at || c.last_active || c.updated_at;
+
+        document.getElementById('panelBadge').innerHTML = `<span class="badge-status ${isActive ? 'bg-success bg-opacity-15 text-success' : 'bg-danger bg-opacity-15 text-danger'}">${isActive ? 'Active' : 'Inactive'}</span>`;
         document.getElementById('panelTotalOrders').textContent = orderCount;
         document.getElementById('panelTotalSpent').textContent = formatCurrency(totalSpent);
         document.getElementById('panelAvgOrder').textContent = orderCount > 0 ? formatCurrency(totalSpent / orderCount) : 'GHS 0';
         document.getElementById('panelPhone').textContent = c.phone || '-';
-        document.getElementById('panelRole').textContent = (c.role || 'customer').charAt(0).toUpperCase() + (c.role || 'customer').slice(1);
+        var roleName = (typeof c.role === 'object' && c.role) ? c.role.name : (c.role || 'customer');
+        document.getElementById('panelRole').textContent = roleName.charAt(0).toUpperCase() + roleName.slice(1);
         document.getElementById('panelJoined').textContent = formatDate(c.created_at);
         document.getElementById('panelLastActive').textContent = formatDate(lastActive);
         document.getElementById('panelStatus').innerHTML = `<span class="badge-status ${isActive ? 'bg-success bg-opacity-15 text-success' : 'bg-danger bg-opacity-15 text-danger'}">${isActive ? 'Active' : 'Inactive'}</span>`;
@@ -924,11 +953,13 @@
         document.getElementById('viewPanelOverlay').classList.remove('open');
     };
 
-    window.switchDetailTab = function(tab) {
+    window.switchDetailTab = function(tab, evt) {
         document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.detail-tab-content').forEach(c => c.classList.remove('active'));
-        event.target.classList.add('active');
-        document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+        var target = evt ? evt.target : document.querySelector(`.detail-tab[onclick*="${tab}"]`);
+        if (target) target.classList.add('active');
+        var pane = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+        if (pane) pane.classList.add('active');
     };
 
     function renderCustomerOrders(c) {
@@ -1088,7 +1119,8 @@
         document.getElementById('editLastName').value = c.last_name || '';
         document.getElementById('editEmail').value = c.email || '';
         document.getElementById('editPhone').value = c.phone || '';
-        document.getElementById('editRole').value = c.role || 'customer';
+        var editRoleName = (typeof c.role === 'object' && c.role) ? c.role.name : (c.role || 'customer');
+        document.getElementById('editRole').value = editRoleName;
         document.getElementById('editActive').value = c.is_active !== false ? 'true' : 'false';
         new bootstrap.Modal(document.getElementById('editCustomerModal')).show();
     };
@@ -1122,7 +1154,10 @@
                 body: JSON.stringify(body)
             });
 
-            if (!res.ok) throw new Error('Failed to save');
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.detail || data.message || 'Failed to save');
+            }
             showToast('Customer updated successfully', 'success');
             bootstrap.Modal.getInstance(document.getElementById('editCustomerModal')).hide();
             await fetchCustomers();
@@ -1151,7 +1186,10 @@
                 body: JSON.stringify({ is_active: !isActive })
             });
 
-            if (!res.ok) throw new Error('Failed');
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.detail || data.message || 'Failed');
+            }
             showToast(`Customer ${action}ed successfully`, 'success');
             await fetchCustomers();
 
@@ -1165,8 +1203,10 @@
         }
     };
 
-    window.promptDelete = function(id, name) {
+    window.promptDelete = function(id) {
         deleteTarget = id;
+        const c = allCustomers.find(x => x.id === id);
+        const name = c ? `${(c.first_name || '').trim()} ${(c.last_name || '').trim()}`.trim() || 'Unknown' : 'Unknown';
         document.getElementById('deleteMsg').textContent = `Are you sure you want to delete "${name}"? This action cannot be undone.`;
         new bootstrap.Modal(document.getElementById('deleteModal')).show();
     };
@@ -1184,18 +1224,21 @@
                 body: JSON.stringify({ user_ids: [deleteTarget] })
             });
 
-            if (!res.ok) throw new Error('Failed');
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.detail || data.message || 'Failed to delete customer');
+            }
             showToast('Customer deleted successfully', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
             deleteTarget = null;
-            closeViewPanel();
-            await fetchCustomers();
         } catch (err) {
             console.error(err);
-            showToast('Failed to delete customer', 'error');
+            showToast(err.message || 'Failed to delete customer', 'error');
         } finally {
             btn.disabled = false;
             btn.innerHTML = 'Delete';
+            try { bootstrap.Modal.getInstance(document.getElementById('deleteModal'))?.hide(); } catch(e) {}
+            try { closeViewPanel(); } catch(e) {}
+            await fetchCustomers();
         }
     };
 
@@ -1256,7 +1299,7 @@
             `"${(c.last_name || '').replace(/"/g, '""')}"`,
             `"${(c.email || '').replace(/"/g, '""')}"`,
             `"${(c.phone || '').replace(/"/g, '""')}"`,
-            c.role || 'customer',
+            (typeof c.role === 'object' && c.role ? c.role.name : c.role) || 'customer',
             c.order_count != null ? c.order_count : (c.orders_count || 0),
             parseFloat(c.total_spent || c.total_amount || 0).toFixed(2),
             c.created_at ? new Date(c.created_at).toISOString().split('T')[0] : '',

@@ -517,9 +517,9 @@ async function generateReport(type) {
         let columns = [];
 
         if (type === 'sales') {
-            data = await fetchJSON('/api/orders/admin');
+            data = await fetchJSON('/api/orders/admin?limit=1000');
             const filtered = filterByDate(data, range);
-            const totalRevenue = filtered.reduce((s, o) => s + parseFloat(o.total || o.amount || 0), 0);
+            const totalRevenue = filtered.reduce((s, o) => s + parseFloat(o.total_amount || 0), 0);
             const totalOrders = filtered.length;
             const avgOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0;
             document.getElementById('salesRevenue').textContent = formatMoney(totalRevenue);
@@ -529,51 +529,56 @@ async function generateReport(type) {
             columns = ['Order #', 'Customer', 'Items', 'Total (GHS)', 'Status', 'Date'];
             data = filtered.map(o => ({
                 'Order #': o.order_number || o.id,
-                'Customer': o.customer_name || o.customer_email || 'N/A',
-                'Items': o.item_count || (o.items ? o.items.length : 0),
-                'Total (GHS)': parseFloat(o.total || o.amount || 0).toFixed(2),
+                'Customer': o.customer_name || ((o.customer && (o.customer.first_name + ' ' + o.customer.last_name).trim()) || o.customer_email || 'N/A'),
+                'Items': o.items ? o.items.length : 0,
+                'Total (GHS)': parseFloat(o.total_amount || 0).toFixed(2),
                 'Status': o.status || 'N/A',
                 'Date': o.created_at ? o.created_at.split('T')[0] : '-'
             }));
             document.getElementById('salesCsvBtn').disabled = false;
 
         } else if (type === 'products') {
-            data = await fetchJSON('/api/admin/products');
-            const allProducts = data;
+            const [allProducts, catsData] = await Promise.all([
+                fetchJSON('/api/admin/products?limit=1000'),
+                fetchJSON('/api/categories').catch(() => [])
+            ]);
+            const catMap = {};
+            if (Array.isArray(catsData)) catsData.forEach(c => { catMap[c.id] = c.name; });
             const totalProd = allProducts.length;
-            const lowStock = allProducts.filter(p => (p.stock_quantity || 0) > 0 && (p.stock_quantity || 0) <= (p.low_stock_threshold || 10)).length;
-            const cats = new Set(allProducts.map(p => p.category_name || p.category || 'Uncategorized'));
+            const lowStock = allProducts.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= 10).length;
+            const cats = new Set(allProducts.map(p => catMap[p.category_id] || 'Uncategorized'));
             document.getElementById('prodTotal').textContent = totalProd.toLocaleString();
             document.getElementById('prodLowStock').textContent = lowStock.toLocaleString();
             document.getElementById('prodCategories').textContent = cats.size.toLocaleString();
 
-            columns = ['Product', 'Category', 'Price (GHS)', 'Stock', 'Status', 'Sales'];
+            columns = ['Product', 'SKU', 'Category', 'Price (GHS)', 'Stock', 'Status'];
             data = allProducts.map(p => ({
-                'Product': p.name || p.title,
-                'Category': p.category_name || p.category || 'N/A',
-                'Price (GHS)': parseFloat(p.price || 0).toFixed(2),
-                'Stock': p.stock_quantity || 0,
-                'Status': (p.stock_quantity || 0) === 0 ? 'Out of Stock' : (p.stock_quantity || 0) <= (p.low_stock_threshold || 10) ? 'Low Stock' : 'In Stock',
-                'Sales': p.sales_count || p.total_sold || 0
+                'Product': p.name || 'N/A',
+                'SKU': p.sku || '-',
+                'Category': catMap[p.category_id] || 'Uncategorized',
+                'Price (GHS)': parseFloat(p.effective_price || p.discount_price || p.price || 0).toFixed(2),
+                'Stock': p.stock || 0,
+                'Status': (p.stock || 0) === 0 ? 'Out of Stock' : (p.stock || 0) <= 10 ? 'Low Stock' : 'In Stock'
             }));
             document.getElementById('productsCsvBtn').disabled = false;
 
         } else if (type === 'customers') {
-            data = await fetchJSON('/api/admin/customers');
+            data = await fetchJSON('/api/admin/customers?limit=1000');
             const allCust = data;
             const totalCust = allCust.length;
             const dateThreshold = range.from ? new Date(range.from) : new Date(Date.now() - 30*86400000);
             const newCust = allCust.filter(c => c.created_at && new Date(c.created_at) >= dateThreshold).length;
             const sorted = [...allCust].sort((a, b) => parseFloat(b.total_spent || 0) - parseFloat(a.total_spent || 0));
-            const topSpender = sorted.length > 0 ? sorted[0].name || sorted[0].email : '--';
+            const topSpender = sorted.length > 0 ? ((sorted[0].first_name || '') + ' ' + (sorted[0].last_name || '')).trim() || sorted[0].email : '--';
             document.getElementById('custTotal').textContent = totalCust.toLocaleString();
             document.getElementById('custNew').textContent = newCust.toLocaleString();
             document.getElementById('custTopSpender').textContent = topSpender;
 
-            columns = ['Customer', 'Email', 'Orders', 'Total Spent (GHS)', 'Registered', 'Status'];
+            columns = ['Customer', 'Email', 'Phone', 'Orders', 'Total Spent (GHS)', 'Registered', 'Status'];
             data = allCust.map(c => ({
-                'Customer': c.name || c.username || 'N/A',
+                'Customer': ((c.first_name || '') + ' ' + (c.last_name || '')).trim() || c.username || 'N/A',
                 'Email': c.email || 'N/A',
+                'Phone': c.phone || '-',
                 'Orders': c.order_count || 0,
                 'Total Spent (GHS)': parseFloat(c.total_spent || 0).toFixed(2),
                 'Registered': c.created_at ? c.created_at.split('T')[0] : '-',
@@ -582,42 +587,48 @@ async function generateReport(type) {
             document.getElementById('customersCsvBtn').disabled = false;
 
         } else if (type === 'inventory') {
-            data = await fetchJSON('/api/admin/inventory');
-            if (!data.length) data = await fetchJSON('/api/admin/products');
-            const allInv = data;
-            const totalItems = allInv.reduce((s, i) => s + (i.stock_quantity || i.quantity || 0), 0);
-            const lowStock = allInv.filter(i => {
-                const q = i.stock_quantity || i.quantity || 0;
-                return q > 0 && q <= (i.low_stock_threshold || 10);
-            }).length;
-            const outOfStock = allInv.filter(i => (i.stock_quantity || i.quantity || 0) === 0).length;
+            const [invData, prodData] = await Promise.all([
+                fetchJSON('/api/admin/inventory?limit=1000').catch(() => []),
+                fetchJSON('/api/admin/products?limit=1000').catch(() => [])
+            ]);
+            const allInv = invData.length > 0 ? invData : prodData;
+            const catMap = {};
+            try {
+                const catsData = await fetchJSON('/api/categories');
+                if (Array.isArray(catsData)) catsData.forEach(c => { catMap[c.id] = c.name; });
+            } catch(e) {}
+            const prodPriceMap = {};
+            prodData.forEach(p => { prodPriceMap[p.id] = parseFloat(p.effective_price || p.discount_price || p.price || 0); });
+            const totalItems = allInv.reduce((s, i) => s + (i.stock || 0), 0);
+            const lowStock = allInv.filter(i => (i.stock || 0) > 0 && (i.stock || 0) <= 10).length;
+            const outOfStock = allInv.filter(i => (i.stock || 0) === 0).length;
             document.getElementById('invTotal').textContent = totalItems.toLocaleString();
             document.getElementById('invLow').textContent = lowStock.toLocaleString();
             document.getElementById('invOut').textContent = outOfStock.toLocaleString();
 
-            columns = ['Product', 'SKU', 'Category', 'In Stock', 'Reserved', 'Status', 'Value (GHS)'];
+            columns = ['Product', 'SKU', 'Stock', 'Status'];
             data = allInv.map(i => {
-                const q = i.stock_quantity || i.quantity || 0;
-                const status = q === 0 ? 'Out of Stock' : q <= (i.low_stock_threshold || 10) ? 'Low Stock' : 'In Stock';
+                const q = i.stock || 0;
+                const status = q === 0 ? 'Out of Stock' : q <= 10 ? 'Low Stock' : 'In Stock';
                 return {
-                    'Product': i.name || i.product_name || 'N/A',
-                    'SKU': i.sku || i.id || '-',
-                    'Category': i.category_name || i.category || 'N/A',
-                    'In Stock': q,
-                    'Reserved': i.reserved || 0,
-                    'Status': status,
-                    'Value (GHS)': (q * parseFloat(i.price || 0)).toFixed(2)
+                    'Product': i.product_name || i.name || 'N/A',
+                    'SKU': i.product_sku || i.sku || '-',
+                    'Stock': q,
+                    'Status': status
                 };
             });
             document.getElementById('inventoryCsvBtn').disabled = false;
 
         } else if (type === 'payments') {
-            data = await fetchJSON('/api/admin/payments');
+            data = await fetchJSON('/api/admin/payments?limit=1000');
             const filtered = filterByDate(data, range);
             const total = filtered.length;
-            const completed = filtered.filter(p => p.status === 'Completed').length;
+            const completed = filtered.filter(p => (p.status || '').toLowerCase() === 'completed').length;
             const successRate = total > 0 ? ((completed / total) * 100).toFixed(1) : '0';
-            const failedRefunded = filtered.filter(p => p.status === 'Failed' || p.status === 'Refunded').length;
+            const failedRefunded = filtered.filter(p => {
+                const s = (p.status || '').toLowerCase();
+                return s === 'failed' || s === 'refunded';
+            }).length;
             document.getElementById('payTotal').textContent = total.toLocaleString();
             document.getElementById('paySuccess').textContent = successRate + '%';
             document.getElementById('payFailed').textContent = failedRefunded.toLocaleString();
@@ -625,12 +636,12 @@ async function generateReport(type) {
             columns = ['Transaction ID', 'Order #', 'Customer', 'Amount (GHS)', 'Method', 'Status', 'Date'];
             data = filtered.map(p => ({
                 'Transaction ID': p.transaction_id || p.id,
-                'Order #': p.order_number || p.order_id || '-',
+                'Order #': p.order_number || '-',
                 'Customer': p.customer_name || 'N/A',
                 'Amount (GHS)': parseFloat(p.amount || 0).toFixed(2),
                 'Method': p.payment_method || '-',
                 'Status': p.status || '-',
-                'Date': p.created_at ? p.created_at.split('T')[0] : '-'
+                'Date': (p.paid_at || p.created_at) ? (p.paid_at || p.created_at).split('T')[0] : '-'
             }));
             document.getElementById('paymentsCsvBtn').disabled = false;
         }

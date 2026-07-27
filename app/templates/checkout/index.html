@@ -187,9 +187,12 @@ textarea.ck-input{min-height:80px;resize:vertical}
             <div class="ck-section-body">
                 <div id="ckSavedAddrWrap" class="ck-saved-addr" style="display:none">
                     <label><i class="bi bi-bookmark me-1"></i> Saved Address</label>
-                    <select id="ckSavedAddr" class="ck-input" onchange="fillAddr(this)">
-                        <option value="">— Select —</option>
-                    </select>
+                    <div style="display:flex;gap:6px;align-items:center">
+                        <select id="ckSavedAddr" class="ck-input" onchange="fillAddr(this)" style="flex:1">
+                            <option value="">— Select —</option>
+                        </select>
+                        <button onclick="deleteSavedAddr()" type="button" title="Delete address" style="flex-shrink:0;width:36px;height:36px;border:1px solid #dc3545;background:none;color:#dc3545;border-radius:8px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center"><i class="bi bi-trash"></i></button>
+                    </div>
                 </div>
                 <div class="ck-field">
                     <label class="ck-form-label">Street Address *</label>
@@ -201,26 +204,33 @@ textarea.ck-input{min-height:80px;resize:vertical}
                         <input type="text" id="ckCity" class="ck-input" placeholder="Accra" autocomplete="address-level2" required>
                     </div>
                     <div class="ck-field">
-                        <label class="ck-form-label">Region *</label>
+                        <label class="ck-form-label">Region / State *</label>
                         <select id="ckState" class="ck-input" autocomplete="address-level1" required>
-                            <option value="">Select</option>
-                            <option>Greater Accra</option><option>Ashanti</option><option>Western</option>
-                            <option>Central</option><option>Eastern</option><option>Northern</option>
-                            <option>Volta</option><option>Upper East</option><option>Upper West</option>
-                            <option>Bono</option><option>Bono East</option><option>Ahafo</option>
-                            <option>Western North</option><option>Oti</option><option>Savannah</option>
-                            <option>North East</option>
+                            <option value="">Select country first</option>
                         </select>
                     </div>
                 </div>
                 <div class="ck-row">
                     <div class="ck-field">
-                        <label class="ck-form-label">Country</label>
-                        <input type="text" class="ck-input" value="Ghana" readonly style="opacity:.6;cursor:default">
+                        <label class="ck-form-label">Country *</label>
+                        <select id="ckCountry" class="ck-input" autocomplete="country" required onchange="updateStates()">
+                            <option value="">Select Country</option>
+                            <option value="Ghana">Ghana</option><option value="Nigeria">Nigeria</option><option value="Kenya">Kenya</option>
+                            <option value="South Africa">South Africa</option><option value="Egypt">Egypt</option><option value="Ethiopia">Ethiopia</option>
+                            <option value="Tanzania">Tanzania</option><option value="Uganda">Uganda</option><option value="Rwanda">Rwanda</option>
+                            <option value="Senegal">Senegal</option><option value="Cameroon">Cameroon</option><option value="Ivory Coast">Ivory Coast</option>
+                            <option value="United States">United States</option><option value="United Kingdom">United Kingdom</option><option value="Canada">Canada</option>
+                            <option value="Germany">Germany</option><option value="France">France</option><option value="India">India</option>
+                            <option value="China">China</option><option value="Japan">Japan</option><option value="Australia">Australia</option>
+                            <option value="Brazil">Brazil</option><option value="Mexico">Mexico</option><option value="UAE">UAE</option>
+                            <option value="Saudi Arabia">Saudi Arabia</option><option value="Turkey">Turkey</option><option value="Italy">Italy</option>
+                            <option value="Spain">Spain</option><option value="Netherlands">Netherlands</option><option value="South Korea">South Korea</option>
+                            <option value="Singapore">Singapore</option>
+                        </select>
                     </div>
                     <div class="ck-field">
-                        <label class="ck-form-label">Postal Code</label>
-                        <input type="text" id="ckZip" class="ck-input" placeholder="00233" autocomplete="postal-code">
+                        <label class="ck-form-label">Postal / ZIP Code</label>
+                        <input type="text" id="ckZip" class="ck-input" placeholder="e.g. 00233, SW1A" autocomplete="postal-code">
                     </div>
                 </div>
             </div>
@@ -293,11 +303,6 @@ textarea.ck-input{min-height:80px;resize:vertical}
                     <div class="ck-pay-icon"><i class="bi bi-shield-lock"></i></div>
                     <div class="ck-pay-info"><h6>Pay with Paystack</h6><p>Card, Mobile Money, Bank Transfer, USSD — Secure & Instant</p></div>
                 </div>
-                <div class="ck-pay-card" onclick="selectPay(this,'Cash on Delivery')">
-                    <div class="ck-pay-radio"></div>
-                    <div class="ck-pay-icon"><i class="bi bi-cash-stack"></i></div>
-                    <div class="ck-pay-info"><h6>Cash on Delivery</h6><p>Pay when order arrives (limited areas)</p></div>
-                </div>
             </div>
         </div>
 
@@ -329,6 +334,55 @@ textarea.ck-input{min-height:80px;resize:vertical}
     var cart=null, selectedPay='Paystack', shippingFee=15, deliveryMethod='standard';
     var PAYSTACK_PUBLIC_KEY='{{ config.PAYSTACK_PUBLIC_KEY if config else "" }}';
     var BASE_URL='{{ config.BASE_URL if config else "" }}';
+
+    var COUNTRIES_STATES={
+        'Ghana':['Greater Accra','Ashanti','Western','Central','Eastern','Northern','Volta','Upper East','Upper West','Bono','Bono East','Ahafo','Western North','Oti','Savannah','North East'],
+        'Nigeria':['Abia','Adamawa','Akwa Ibom','Anambra','Bauchi','Bayelsa','Benue','Borno','Cross River','Delta','Ebonyi','Edo','Ekiti','Enugu','FCT','Gombe','Imo','Jigawa','Kaduna','Kano','Katsina','Kebbi','Kogi','Kwara','Lagos','Nassarawa','Niger','Ogun','Ondo','Osun','Oyo','Plateau','Rivers','Sokoto','Taraba','Yobe','Zamfara'],
+        'Kenya':['Baringo','Bomet','Bungoma','Busia','Elgeyo-Marakwet','Embu','Garissa','Homa Bay','Isiolo','Kajiado','Kakamega','Kericho','Kiambu','Kilifi','Kirinyaga','Kisii','Kisumu','Kitui','Kwale','Laikipia','Lamu','Machakos','Makueni','Mandera','Marsabit','Meru','Migori','Mombasa','Muranga','Nairobi','Nakuru','Nandi','Narok','Nyamira','Nyandarua','Nyeri','Samburu','Siaya','Taita-Taveta','Tana River','Tharaka-Nithi','Trans-Nzoia','Turkana','Uasin Gishu','Vihiga','Wajir','West Pokot'],
+        'South Africa':['Eastern Cape','Free State','Gauteng','KwaZulu-Natal','Limpopo','Mpumalanga','North West','Northern Cape','Western Cape'],
+        'Egypt':['Alexandria','Aswan','Asyut','Beheira','Beni Suef','Cairo','Dakahlia','Damietta','Fayyum','Gharbia','Giza','Ismailia','Kafr el-Sheikh','Luxor','Matruh','Minya','Monufia','New Valley','North Sinai','Port Said','Qalyubia','Qena','Red Sea','Sharqia','Sohag','South Sinai','Suez'],
+        'Ethiopia':['Addis Ababa','Afar','Amhara','Benishangul-Gumuz','Dire Dawa','Gambela','Harari','Oromia','Sidama','SNNPR','Somali','Tigray'],
+        'Tanzania':['Arusha','Dar es Salaam','Dodoma','Geita','Iringa','Kagera','Katavi','Kilimanjaro','Kigoma','Lindi','Manyara','Mara','Mbeya','Morogoro','Mtwara','Mwanja','Njombe','Pemba North','Pemba South','Rukwa','Ruvuma','Shinyanga','Simiyu','Singida','Tabora','Tanga'],
+        'Uganda':['Acholi','Bugisu','Bukedi','Bunyoro','Busoga','Central','Elgon','Karamoja','Lango','North Buganda','South Buganda','Teso','West Nile'],
+        'Rwanda':['Eastern','Kigali','Northern','Southern','Western'],
+        'Senegal':['Dakar','Diourbel','Fatick','Kaffrine','Kaolack','Kedougou','Kolda','Louga','Matam','Saint-Louis','Sedhiou','Tambacounda','Thies','Ziguinchor'],
+        'Cameroon':['Adamawa','Centre','East','Far North','Littoral','North','Northwest','South','Southwest','West'],
+        'Ivory Coast':['Abidjan','Bouaké','Daloa','Yamoussoukro','Korhogo','San-Pédro','Man','Divo','Gagnoa','Abengourou'],
+        'United States':['Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia','Wisconsin','Wyoming','District of Columbia'],
+        'United Kingdom':['England','Scotland','Wales','Northern Ireland','London','Manchester','Birmingham','Leeds','Glasgow','Liverpool','Bristol','Sheffield','Newcastle','Nottingham','Leicester','Coventry','Bradley','Cardiff','Edinburgh','Belfast'],
+        'Canada':['Alberta','British Columbia','Manitoba','New Brunswick','Newfoundland and Labrador','Nova Scotia','Ontario','Prince Edward Island','Quebec','Saskatchewan','Northwest Territories','Nunavut','Yukon'],
+        'Germany':['Baden-Württemberg','Bavaria','Berlin','Brandenburg','Bremen','Hamburg','Hesse','Lower Saxony','Mecklenburg-Vorpommern','North Rhine-Westphalia','Rhineland-Palatinate','Saarland','Saxony','Saxony-Anhalt','Schleswig-Holstein','Thuringia'],
+        'France':['Auvergne-Rhône-Alpes','Bourgogne-Franche-Comté','Brittany','Centre-Val de Loire','Corsica','Grand Est','Hauts-de-France','Île-de-France','Normandy','Nouvelle-Aquitaine','Occitanie','Pays de la Loire','Provence-Alpes-Côte d\'Azur','Guadeloupe','Martinique','French Guiana','Réunion','Mayotte'],
+        'India':['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Delhi','Jammu and Kashmir','Ladakh'],
+        'China':['Beijing','Tianjin','Shanghai','Chongqing','Hebei','Shanxi','Liaoning','Jilin','Heilongjiang','Jiangsu','Zhejiang','Anhui','Fujian','Jiangxi','Shandong','Henan','Hubei','Hunan','Guangdong','Hainan','Sichuan','Guizhou','Yunnan','Shaanxi','Gansu','Qinghai','Taiwan','Inner Mongolia','Guangxi','Tibet','Ningxia','Xinjiang','Hong Kong','Macau'],
+        'Japan':['Hokkaido','Tohoku','Kanto','Chubu','Kinki','Chugoku','Shikoku','Kyushu','Okinawa','Tokyo','Osaka','Kyoto','Yokohama','Nagoya','Sapporo','Fukuoka','Kobe','Kawasaki'],
+        'Australia':['New South Wales','Queensland','South Australia','Tasmania','Victoria','Western Australia','Northern Territory','Australian Capital Territory'],
+        'Brazil':['Acre','Alagoas','Amapá','Amazonas','Bahia','Ceará','Distrito Federal','Espírito Santo','Goiás','Maranhão','Mato Grosso','Mato Grosso do Sul','Minas Gerais','Pará','Paraíba','Paraná','Pernambuco','Piauí','Rio de Janeiro','Rio Grande do Norte','Rio Grande do Sul','Rondônia','Roraima','Santa Catarina','São Paulo','Sergipe','Tocantins'],
+        'Mexico':['Aguascalientes','Baja California','Baja California Sur','Campeche','Chiapas','Chihuahua','Coahuila','Colima','Durango','Guanajuato','Guerrero','Hidalgo','Jalisco','México','Michoacán','Morelos','Nayarit','Nuevo León','Oaxaca','Puebla','Querétaro','Quintana Roo','San Luis Potosí','Sinaloa','Sonora','Tabasco','Tamaulipas','Tlaxcala','Veracruz','Yucatán','Zacatecas'],
+        'UAE':['Abu Dhabi','Dubai','Sharjah','Ajman','Umm Al Quwain','Ras Al Khaimah','Fujairah'],
+        'Saudi Arabia':['Riyadh','Makkah','Madinah','Eastern Province','Asir','Tabuk','Ha\'il','Jizan','Najran','Al Baha','Al Jouf','Qassim'],
+        'Turkey':['Adana','Adıyaman','Afyonkarahisar','Ağrı','Aksaray','Amasya','Ankara','Antalya','Ardahan','Artvin','Aydın','Balıkesir','Bartın','Batman','Bayburt','Bilecik','Bingöl','Bitlis','Bolu','Burdur','Bursa','Çanakkale','Çankırı','Çorum','Denizli','Diyarbakır','Düzce','Edirne','Elazığ','Erzincan','Erzurum','Eskişehir','Gaziantep','Giresun','Gümüşhane','Hakkari','Hatay','Iğdır','Isparta','İstanbul','İzmir','Kahramanmaraş','Karabük','Karaman','Kars','Kastamonu','Kayseri','Kırıkkale','Kırklareli','Kırşehir','Kilis','Kocaeli','Konya','Kütahya','Malatya','Manisa','Mardin','Mersin','Muğla','Muş','Nevşehir','Niğde','Ordu','Osmaniye','Rize','Sakarya','Samsun','Şanlıurfa','Siirt','Sinop','Sivas','Şırnak','Tekirdağ','Tokat','Trabzon','Tunceli','Uşak','Van','Yalova','Yozgat','Zonguldak'],
+        'Italy':['Abruzzo','Aosta Valley','Apulia','Basilicata','Calabria','Campania','Emilia-Romagna','Friuli Venezia Giulia','Lazio','Liguria','Lombardy','Marche','Molise','Piedmont','Sardinia','Sicily','Trentino-Alto Adige','Tuscany','Umbria','Veneto'],
+        'Spain':['Andalusia','Aragon','Asturias','Balearic Islands','Basque Country','Canary Islands','Cantabria','Castilla-La Mancha','Castilla y León','Catalonia','Extremadura','Galicia','La Rioja','Madrid','Murcia','Navarre','Valencia'],
+        'Netherlands':['Drenthe','Flevoland','Friesland','Gelderland','Groningen','Limburg','North Brabant','North Holland','Overijssel','South Holland','Utrecht','Zeeland'],
+        'South Korea':['Seoul','Busan','Daegu','Incheon','Gwangju','Daejeon','Ulsan','Gyeonggi','Gangwon','Chungbuk','Chungnam','Jeonbuk','Jeonnam','Gyeongbuk','Gyeongnam','Jeju'],
+        'Singapore':['Central Region','East Region','North Region','North-East Region','West Region']
+    };
+
+    window.updateStates=function(){
+        var co=document.getElementById('ckCountry').value;
+        var st=document.getElementById('ckState');
+        st.innerHTML='<option value="">Select State / Region</option>';
+        var states=COUNTRIES_STATES[co]||[];
+        states.forEach(function(s){
+            var o=document.createElement('option');
+            o.value=s;o.textContent=s;
+            st.appendChild(o);
+        });
+        if(!states.length){
+            st.innerHTML='<option value="">Select State / Region</option>';
+        }
+    };
 
     function tok(){return localStorage.getItem('token')}
     function hdr(){var t=tok();return t?{'Authorization':'Bearer '+t,'Content-Type':'application/json'}:{'Content-Type':'application/json'}}
@@ -368,7 +422,7 @@ textarea.ck-input{min-height:80px;resize:vertical}
     // Fetch addresses
     async function loadAddresses(){
         try{
-            var r=await fetch(API+'/customers/addresses',{headers:hdr()});
+            var r=await fetch(API+'/customers/me/addresses',{headers:hdr()});
             if(!r.ok)return;
             var d=await r.json();
             var addrs=Array.isArray(d)?d:(d.results||d.addresses||[]);
@@ -394,10 +448,28 @@ textarea.ck-input{min-height:80px;resize:vertical}
             var a=JSON.parse(opt.dataset.addr);
             document.getElementById('ckStreet').value=a.street||'';
             document.getElementById('ckCity').value=a.city||'';
-            var st=document.getElementById('ckState');
-            for(var i=0;i<st.options.length;i++){if(st.options[i].value===a.state){st.selectedIndex=i;break}}
+            var co=document.getElementById('ckCountry');
+            if(a.country){for(var i=0;i<co.options.length;i++){if(co.options[i].value===a.country){co.selectedIndex=i;break}}}
+            updateStates();
+            if(a.state){var st=document.getElementById('ckState');for(var j=0;j<st.options.length;j++){if(st.options[j].value===a.state){st.selectedIndex=j;break}}}
             document.getElementById('ckZip').value=a.zip_code||'';
         }catch(e){}
+    };
+
+    window.deleteSavedAddr=async function(){
+        var sel=document.getElementById('ckSavedAddr');
+        if(!sel||!sel.value){showError('Select an address to delete');return}
+        if(!confirm('Delete this saved address?'))return;
+        try{
+            var r=await fetch(API+'/customers/me/addresses/'+sel.value,{method:'DELETE',headers:hdr()});
+            if(!r.ok)throw new Error();
+            loadAddresses();
+            document.getElementById('ckStreet').value='';
+            document.getElementById('ckCity').value='';
+            document.getElementById('ckState').innerHTML='<option value="">Select country first</option>';
+            document.getElementById('ckCountry').selectedIndex=0;
+            document.getElementById('ckZip').value='';
+        }catch(e){showError('Could not delete address')}
     };
 
     // Fetch cart
@@ -510,22 +582,24 @@ textarea.ck-input{min-height:80px;resize:vertical}
         return '';
     }
 
-    // Place Order - handles both COD and Paystack
+    // Place Order
     window.placeOrder=function(){
         hideError();
         var street=document.getElementById('ckStreet').value.trim();
         var city=document.getElementById('ckCity').value.trim();
-        var state=document.getElementById('ckState').value;
+        var state=document.getElementById('ckState').value.trim();
+        var country=document.getElementById('ckCountry').value;
         if(!street){showError('Enter your street address');return}
         if(!city){showError('Enter your city');return}
-        if(!state){showError('Select a region');return}
+        if(!state){showError('Enter your region / state');return}
+        if(!country){showError('Select your country');return}
 
         var payload={
             first_name:document.getElementById('ckFirst').value.trim(),
             last_name:document.getElementById('ckLast').value.trim(),
             email:document.getElementById('ckEmail').value.trim(),
             phone:document.getElementById('ckPhone').value.trim(),
-            address_id:null,street:street,city:city,state:state,country:'Ghana',
+            address_id:null,street:street,city:city,state:state,country:document.getElementById('ckCountry').value,
             zip_code:document.getElementById('ckZip').value.trim(),
             payment_method:selectedPay,shipping_fee:shippingFee,tax:cart.tax,
             coupon_code:cart.coupon_code||null,
@@ -541,29 +615,22 @@ textarea.ck-input{min-height:80px;resize:vertical}
         fetch(API+'/orders/checkout?cart_id=default',{method:'POST',headers:hdr(),body:JSON.stringify(payload)})
         .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.detail||'Checkout failed');return d})})
         .then(function(order){
-            // For Paystack: initialize payment and redirect
-            if(selectedPay!=='Cash on Delivery'){
-                var email=getCustomerEmail();
-                if(!email){
-                    showError('Please enter your email address in the Contact section');
-                    setLoading(false);
-                    return;
-                }
-                // Initialize Paystack payment
-                return fetch(API+'/payments/initialize',{method:'POST',headers:hdr(),body:JSON.stringify({order_id:order.id,email:email})})
-                .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.detail||'Payment initialization failed');return d})})
-                .then(function(payData){
-                    if(payData.status&&payData.data&&payData.data.authorization_url){
-                        // Redirect to Paystack
-                        window.location.href=payData.data.authorization_url;
-                    }else{
-                        throw new Error(payData.message||'Could not initialize payment');
-                    }
-                });
-            }else{
-                // COD: redirect to success
-                window.location.href='/order/success?order_id='+order.id;
+            // Initialize Paystack payment
+            var email=getCustomerEmail();
+            if(!email){
+                showError('Please enter your email address in the Contact section');
+                setLoading(false);
+                return;
             }
+            return fetch(API+'/payments/initialize',{method:'POST',headers:hdr(),body:JSON.stringify({order_id:order.id,email:email})})
+            .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.detail||'Payment initialization failed');return d})})
+            .then(function(payData){
+                if(payData.status&&payData.data&&payData.data.authorization_url){
+                    window.location.href=payData.data.authorization_url;
+                }else{
+                    throw new Error(payData.message||'Could not initialize payment');
+                }
+            });
         })
         .catch(function(e){showError(e.message);setLoading(false)});
     };

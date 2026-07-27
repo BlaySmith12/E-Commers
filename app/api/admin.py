@@ -26,6 +26,12 @@ from app.activity import log_activity
 
 router = APIRouter(prefix='/admin', tags=['Admin'])
 
+
+def _invalidate_settings_cache():
+    """Clear site settings cache. Lazy import to avoid circular dependency."""
+    from app.settings_cache import invalidate_site_settings_cache
+    invalidate_site_settings_cache()
+
 # Subquery to identify admin role IDs (roles with ADMIN permission bit set)
 _admin_role_ids_subq = select(Role.id).where(Role.permissions.op('&')(Permission.ADMIN) > 0).scalar_subquery()
 _non_admin_filter = or_(User.role_id.is_(None), User.role_id.notin_(_admin_role_ids_subq))
@@ -980,6 +986,7 @@ async def admin_update_setting(setting_id: int, payload: dict, db: AsyncSession 
         setting.description = payload['description']
     await db.commit()
     await db.refresh(setting)
+    _invalidate_settings_cache()
     changes = []
     if old_value != setting.value:
         changes.append(f"value: '{old_value}' -> '{setting.value}'")
@@ -1012,6 +1019,7 @@ async def admin_create_setting(payload: dict, db: AsyncSession = Depends(get_db)
     db.add(setting)
     await db.commit()
     await db.refresh(setting)
+    _invalidate_settings_cache()
     await log_audit(
         db=db,
         action="CREATE",
@@ -1045,6 +1053,7 @@ async def bulk_delete_settings(
     delete_stmt = SiteSetting.__table__.delete().where(SiteSetting.id.in_(setting_ids))
     await db.execute(delete_stmt)
     await db.commit()
+    _invalidate_settings_cache()
     
     # Log the bulk deletion
     setting_keys = [s.key for s in settings_to_delete]
@@ -1101,6 +1110,8 @@ async def bulk_update_settings(
     
     if updated_count == 0:
         raise HTTPException(status_code=404, detail='No valid settings found to update')
+    
+    _invalidate_settings_cache()
     
     # Log the bulk update
     await log_audit(

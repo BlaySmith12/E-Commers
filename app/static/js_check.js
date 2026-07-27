@@ -429,11 +429,33 @@ async function saveProfile(e) {
 // ===== SECURITY =====
 async function changePassword(e) {
     e.preventDefault();
+    const token = localStorage.getItem('token');
+    if (!token) { window.location.href = '/login'; return; }
+    const cp = document.getElementById('secCurrentPw').value;
     const np = document.getElementById('secNewPw').value;
-    const cp = document.getElementById('secConfirmPw').value;
-    if (np !== cp) { CD.toast('Passwords do not match','error'); return; }
+    const cf = document.getElementById('secConfirmPw').value;
+    if (!cp) { CD.toast('Please enter your current password','error'); return; }
+    if (np !== cf) { CD.toast('Passwords do not match','error'); return; }
     if (np.length < 6) { CD.toast('Password must be at least 6 characters','error'); return; }
-    CD.toast('Password change requires API support. Please contact support.','info');
+    if (cp === np) { CD.toast('New password must be different from current password','error'); return; }
+    try {
+        const resp = await fetch('/api/customers/me/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ current_password: cp, new_password: np })
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+            CD.toast('Password changed successfully!','success');
+            document.getElementById('secCurrentPw').value = '';
+            document.getElementById('secNewPw').value = '';
+            document.getElementById('secConfirmPw').value = '';
+        } else {
+            CD.toast(data.detail || 'Failed to change password','error');
+        }
+    } catch(ex) {
+        CD.toast('Network error. Please try again.','error');
+    }
 }
 
 // ===== SUPPORT (localStorage based) =====

@@ -24,7 +24,7 @@
             <a class="cd-nav-link" data-section="track" onclick="showSection('track',this)"><i class="bi bi-geo-alt"></i><span>Track Orders</span></a>
             <a class="cd-nav-link" data-section="addresses" onclick="showSection('addresses',this)"><i class="bi bi-house-door"></i><span>Addresses</span></a>
             <a class="cd-nav-link" data-section="payment" onclick="showSection('payment',this)"><i class="bi bi-credit-card"></i><span>Payment Methods</span></a>
-            <a class="cd-nav-link" data-section="coupons" onclick="showSection('coupons',this)"><i class="bi bi-ticket"></i><span>Coupons & Rewards</span></a>
+            <a class="cd-nav-link" data-section="coupons" onclick="showSection('coupons',this)"><i class="bi bi-award"></i><span>Rewards</span></a>
             <a class="cd-nav-link" data-section="notifications" onclick="showSection('notifications',this)"><i class="bi bi-bell"></i><span>Notifications</span><span class="cd-nav-badge d-none" id="notifBadge">0</span></a>
             <a class="cd-nav-link" data-section="account" onclick="showSection('account',this)"><i class="bi bi-person-gear"></i><span>Account Details</span></a>
             <a class="cd-nav-link" data-section="security" onclick="showSection('security',this)"><i class="bi bi-shield-lock"></i><span>Security</span></a>
@@ -121,35 +121,69 @@
 
             <!-- PAYMENT -->
             <div class="cd-section" id="sec-payment">
-                <div class="cd-card">
-                    <h5 style="margin-bottom:16px">Payment Methods</h5>
-                    <p class="cd-text-muted" style="margin-bottom:20px;font-size:0.85rem">Your payment information is securely processed. We never store your card details.</p>
-                    <div class="cd-payment-methods">
-                        <div class="cd-payment-card"><i class="bi bi-cash-stack"></i><h6>Cash on Delivery</h6><p>Pay when you receive</p></div>
-                        <div class="cd-payment-card"><i class="bi bi-phone"></i><h6>Mobile Money</h6><p>MTN, Vodafone, AirtelTigo</p></div>
-                        <div class="cd-payment-card"><i class="bi bi-bank"></i><h6>Bank Transfer</h6><p>Direct bank payment</p></div>
-                        <div class="cd-payment-card"><i class="bi bi-credit-card"></i><h6>Credit/Debit Card</h6><p>Secure online payment</p></div>
-                    </div>
+                <div class="cd-section-header">
+                    <h5>Payment Methods</h5>
+                    <button class="cd-btn cd-btn-primary cd-btn-sm" onclick="showAddPaymentModal()"><i class="bi bi-plus"></i> Add New</button>
                 </div>
-                <div class="cd-card">
-                    <h5 style="margin-bottom:16px">Preferred Payment Method</h5>
-                    <select class="cd-select" id="preferredPayment" onchange="localStorage.setItem('preferredPayment',this.value)" style="max-width:320px">
-                        <option value="cod">Cash on Delivery</option>
-                        <option value="momo">Mobile Money</option>
-                        <option value="bank">Bank Transfer</option>
-                        <option value="card">Credit/Debit Card</option>
-                    </select>
+                <p class="cd-text-muted" style="margin-bottom:16px;font-size:0.85rem">Manage your saved payment methods for faster checkout.</p>
+                <div id="paymentMethodsList">
+                    <div class="cd-skeleton-card"></div>
                 </div>
             </div>
 
-            <!-- COUPONS -->
-            <div class="cd-section" id="sec-coupons">
-                <div class="cd-tabs">
-                    <button class="cd-tab active" onclick="showCouponTab('available',this)">Available Coupons</button>
-                    <button class="cd-tab" onclick="showCouponTab('rewards',this)">Rewards</button>
+            <!-- Add/Edit Payment Method Modal -->
+            <div id="paymentModal" class="cd-modal-overlay" style="display:none" onclick="if(event.target===this)closePaymentModal()">
+                <div class="cd-modal-card">
+                    <div class="cd-modal-head">
+                        <h5 id="paymentModalTitle">Add Payment Method</h5>
+                        <button onclick="closePaymentModal()" style="background:none;border:none;color:var(--text-secondary);font-size:1.2rem;cursor:pointer">&times;</button>
+                    </div>
+                    <form id="paymentForm" onsubmit="savePaymentMethod(event)">
+                        <input type="hidden" id="pmId">
+                        <div class="cd-field">
+                            <label class="cd-label">Payment Type *</label>
+                            <select id="pmType" class="cd-select" required onchange="onPaymentTypeChange()">
+                                <option value="mobile_money">Mobile Money</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="card">Credit / Debit Card</option>
+                            </select>
+                        </div>
+                        <div class="cd-field" id="pmProviderField">
+                            <label class="cd-label">Provider</label>
+                            <select id="pmProvider" class="cd-select">
+                                <option value="MTN">MTN Mobile Money</option>
+                                <option value="Vodafone">Vodafone Cash</option>
+                                <option value="AirtelTigo">AirtelTigo Money</option>
+                            </select>
+                        </div>
+                        <div class="cd-field">
+                            <label class="cd-label" id="pmAccountLabel">Phone Number *</label>
+                            <input type="text" id="pmAccount" class="cd-input" placeholder="e.g. 0241234567" required>
+                        </div>
+                        <div class="cd-field">
+                            <label class="cd-label">Account Holder Name</label>
+                            <input type="text" id="pmName" class="cd-input" placeholder="Name on account">
+                        </div>
+                        <div class="cd-field" id="pmExpiryField" style="display:none">
+                            <label class="cd-label">Expiry Date</label>
+                            <input type="text" id="pmExpiry" class="cd-input" placeholder="MM/YY" maxlength="5">
+                        </div>
+                        <div class="cd-field" style="flex-direction:row;align-items:center;gap:8px">
+                            <input type="checkbox" id="pmDefault" style="width:18px;height:18px;accent-color:var(--primary-orange)">
+                            <label for="pmDefault" style="color:var(--text-secondary);font-size:0.85rem;cursor:pointer">Set as default payment method</label>
+                        </div>
+                        <div style="display:flex;gap:10px;margin-top:16px">
+                            <button type="button" onclick="closePaymentModal()" class="cd-btn cd-btn-outline" style="flex:1">Cancel</button>
+                            <button type="submit" class="cd-btn cd-btn-primary" style="flex:1" id="pmSaveBtn">Save</button>
+                        </div>
+                    </form>
                 </div>
-                <div id="couponsAvailable"><div id="couponsList"><div class="cd-skeleton-card"></div></div></div>
-                <div id="couponsRewards" class="d-none">
+            </div>
+
+            <!-- REWARDS -->
+            <div class="cd-section" id="sec-coupons">
+                <div class="cd-section-header"><h5>Rewards</h5></div>
+                <div id="couponsRewards">
                     <div class="cd-card">
                         <h5>Reward Points</h5>
                         <div class="cd-reward-balance"><h2 id="rewardPointsDisplay">0</h2><span>Points</span></div>
@@ -158,6 +192,7 @@
                             <div class="cd-progress-bar"><div class="cd-progress-fill" id="tierProgress" style="width:0%"></div></div>
                         </div>
                         <p class="cd-text-muted" style="margin-top:16px;font-size:0.82rem">Earn 10 points for every GHS 1 spent. Redeem for discounts.</p>
+                        <div id="rewardHistory"></div>
                     </div>
                 </div>
             </div>
@@ -166,6 +201,12 @@
             <div class="cd-section" id="sec-notifications">
                 <div class="cd-section-header"><h5>Notifications</h5><button class="cd-btn cd-btn-outline cd-btn-sm" onclick="markAllRead()">Mark All Read</button></div>
                 <div id="notifList"><div class="cd-skeleton-card"></div></div>
+
+                <div class="cd-card" style="margin-top:24px">
+                    <h5 style="margin-bottom:6px"><i class="bi bi-envelope-gear me-2" style="color:var(--primary-orange)"></i>Email Preferences</h5>
+                    <p class="cd-text-muted" style="font-size:.82rem;margin-bottom:16px">Control which emails you receive. Transactional emails (orders, password resets) cannot be disabled.</p>
+                    <div id="emailPrefsWrap"><div class="cd-skeleton-card"></div></div>
+                </div>
             </div>
 
             <!-- ACCOUNT -->
@@ -306,14 +347,15 @@ function showSection(name, el) {
     var links = document.querySelectorAll('.cd-nav-link');
     for (var i = 0; i < links.length; i++) links[i].classList.remove('active');
     if (el) el.classList.add('active');
-    var titles = {overview:'Dashboard',orders:'My Orders',track:'Track Orders',addresses:'Addresses',payment:'Payment Methods',coupons:'Coupons & Rewards',notifications:'Notifications',account:'Account Details',security:'Security',support:'Support'};
+    var titles = {overview:'Dashboard',orders:'My Orders',track:'Track Orders',addresses:'Addresses',payment:'Payment Methods',coupons:'Rewards',notifications:'Notifications',account:'Account Details',security:'Security',support:'Support'};
     document.getElementById('sectionTitle').textContent = titles[name] || 'Dashboard';
     document.getElementById('cdSidebar').classList.remove('open');
     document.getElementById('mobileOverlay').classList.remove('show');
     if (name==='overview') loadOverview();
     if (name==='orders') loadOrders();
     if (name==='addresses') loadAddresses();
-    if (name==='notifications') loadNotifications();
+    if (name==='payment') loadPaymentMethods();
+    if (name==='notifications') { loadNotifications(); loadEmailPrefs(); }
     if (name==='coupons') loadCoupons();
     if (name==='account') loadProfile();
 }
@@ -596,43 +638,44 @@ async function deleteAddress(id) {
     try { await CD.api('/api/customers/me/addresses/' + id, {method:'DELETE'}); CD.toast('Address deleted', 'success'); loadAddresses(); } catch(e) {}
 }
 
-/* COUPONS */
-function showCouponTab(tab, el) {
-    var tabs = document.querySelectorAll('#sec-coupons .cd-tab');
-    for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
-    el.classList.add('active');
-    document.getElementById('couponsAvailable').classList.toggle('d-none', tab !== 'available');
-    document.getElementById('couponsRewards').classList.toggle('d-none', tab !== 'rewards');
-    if (tab === 'rewards') loadRewards();
-}
-async function loadCoupons() {
-    try {
-        var coupons = await CD.api('/api/coupons/available') || [];
-        var el = document.getElementById('couponsList');
-        if (!coupons.length) { el.innerHTML = '<div class="cd-empty-state"><i class="bi bi-ticket"></i><p>No coupons available at the moment</p></div>'; return; }
-        var html = '';
-        for (var i = 0; i < coupons.length; i++) {
-            var c = coupons[i];
-            if (!c.is_active) continue;
-            var disc = c.discount_type === 'percentage' ? c.discount_value + '%' : 'GHS ' + c.discount_value;
-            html += '<div class="cd-card cd-coupon-card"><div class="cd-coupon-discount">' + disc + ' OFF</div><div class="cd-coupon-code">' + c.code + '</div><p class="cd-text-muted" style="font-size:0.82rem">' + (c.description || 'Use this coupon on your next order') + '</p><div class="cd-coupon-meta"><span>Min. order: ' + fmt(c.min_order_amount) + '</span>' + (c.end_date ? '<span>Expires: ' + new Date(c.end_date).toLocaleDateString() + '</span>' : '') + '</div><button class="cd-btn cd-btn-outline cd-btn-xs" onclick="copyCoupon(\'' + c.code + '\')"><i class="bi bi-clipboard"></i> Copy</button></div>';
-        }
-        el.innerHTML = html;
-    } catch(e) {}
-}
-function copyCoupon(code) { navigator.clipboard.writeText(code).then(function(){ CD.toast('Copied!', 'success'); }).catch(function(){ CD.toast('Copy failed', 'error'); }); }
+/* REWARDS */
+function loadCoupons() { loadRewards(); }
 function loadRewards() {
-    var spent = 0;
-    for (var i = 0; i < CD.orders.length; i++) spent += CD.orders[i].total_amount || 0;
-    var points = Math.floor(spent * 10);
-    var tier = 'Bronze', next = 'Silver at 1,000 pts', pct = points / 10;
-    if (points >= 10000) { tier = 'Platinum'; next = 'Max tier'; pct = 100; }
-    else if (points >= 5000) { tier = 'Gold'; next = 'Platinum at 10,000 pts'; pct = ((points-5000)/5000)*100; }
-    else if (points >= 1000) { tier = 'Silver'; next = 'Gold at 5,000 pts'; pct = ((points-1000)/4000)*100; }
-    document.getElementById('rewardPointsDisplay').textContent = points.toLocaleString();
-    document.getElementById('tierName').textContent = tier;
-    document.getElementById('tierNext').textContent = next;
-    document.getElementById('tierProgress').style.width = Math.min(pct, 100) + '%';
+    CD.api('/api/loyalty/me').then(function(data) {
+        if (!data) {
+            document.getElementById('rewardPointsDisplay').textContent = '0';
+            return;
+        }
+        var points = data.points_balance || 0;
+        var tier = data.tier || 'Bronze';
+        var earned = data.total_earned || 0;
+        var next = 'Silver at 1,000 pts', pct = 0;
+        if (tier === 'Platinum') { next = 'Max tier'; pct = 100; }
+        else if (tier === 'Gold') { next = 'Platinum at 10,000 pts'; pct = ((earned - 5000) / 5000) * 100; }
+        else if (tier === 'Silver') { next = 'Gold at 5,000 pts'; pct = ((earned - 1000) / 4000) * 100; }
+        else { next = 'Silver at 1,000 pts'; pct = (earned / 1000) * 100; }
+        document.getElementById('rewardPointsDisplay').textContent = points.toLocaleString();
+        document.getElementById('tierName').textContent = tier;
+        document.getElementById('tierNext').textContent = next;
+        document.getElementById('tierProgress').style.width = Math.min(Math.max(pct, 0), 100) + '%';
+
+        var txEl = document.getElementById('rewardHistory');
+        if (txEl) {
+            CD.api('/api/loyalty/me/history?limit=10').then(function(txs) {
+                if (!txs || !txs.length) { txEl.innerHTML = '<div class="cd-text-muted" style="font-size:0.82rem;text-align:center;padding:16px;">No points history yet</div>'; return; }
+                var html = '<div style="margin-top:16px;">';
+                for (var i = 0; i < txs.length; i++) {
+                    var t = txs[i];
+                    var icon = t.type === 'earn' ? 'bi-arrow-up-circle text-success' : t.type === 'redeem' ? 'bi-arrow-down-circle text-danger' : 'bi-circle text-muted';
+                    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.85rem;"><i class="bi ' + icon + '"></i><div style="flex:1;"><div class="text-light">' + (t.description || t.type) + '</div><small class="cd-text-muted">' + (t.created_at ? new Date(t.created_at).toLocaleDateString() : '') + '</small></div><div class="' + (t.points >= 0 ? 'text-success' : 'text-danger') + '" style="font-weight:600;">' + (t.points >= 0 ? '+' : '') + t.points + '</div></div>';
+                }
+                html += '</div>';
+                txEl.innerHTML = html;
+            }).catch(function() {});
+        }
+    }).catch(function() {
+        document.getElementById('rewardPointsDisplay').textContent = '0';
+    });
 }
 
 /* NOTIFICATIONS */
@@ -666,6 +709,56 @@ async function deleteNotif(id) {
     try { await CD.api('/api/notifications/' + id, {method:'DELETE'}); loadNotifications(); } catch(e) {}
 }
 
+/* EMAIL PREFERENCES */
+var _emailPrefDefs = [
+    { key: 'order_updates', label: 'Order Updates', desc: 'Order confirmations, shipping, and delivery status', essential: true },
+    { key: 'newsletter', label: 'Newsletter', desc: 'Weekly product updates and store news' },
+    { key: 'promotional_emails', label: 'Promotional Emails', desc: 'Sales, deals, and special offers' },
+    { key: 'product_promotions', label: 'Product Promotions', desc: 'New product launches and featured items' },
+    { key: 'price_drop_alerts', label: 'Price Drop Alerts', desc: 'Get notified when wishlist items go on sale' },
+    { key: 'back_in_stock_alerts', label: 'Back in Stock Alerts', desc: 'Notifications when out-of-stock items return' },
+    { key: 'review_requests', label: 'Review Requests', desc: 'Reminders to review products you purchased' },
+    { key: 'loyalty_updates', label: 'Loyalty Updates', desc: 'Points earned, redeemed, and rewards available' },
+    { key: 'coupon_notifications', label: 'Coupon Notifications', desc: 'Coupons expiring or new coupons available' }
+];
+async function loadEmailPrefs() {
+    try {
+        var prefs = await CD.api('/api/customers/me/email-preferences') || {};
+        var el = document.getElementById('emailPrefsWrap');
+        var html = '';
+        for (var i = 0; i < _emailPrefDefs.length; i++) {
+            var d = _emailPrefDefs[i];
+            var val = d.essential ? true : (prefs[d.key] !== false);
+            html += '<div class="d-flex align-items-center justify-content-between" style="padding:12px 0;' + (i < _emailPrefDefs.length - 1 ? 'border-bottom:1px solid var(--border-color)' : '') + '">';
+            html += '<div><div style="color:var(--white);font-size:.88rem;font-weight:500">' + d.label + (d.essential ? ' <span style="color:var(--primary-orange);font-size:.7rem;font-weight:400">Required</span>' : '') + '</div>';
+            html += '<div style="color:var(--warm-gray);font-size:.78rem;margin-top:2px">' + d.desc + '</div></div>';
+            if (d.essential) {
+                html += '<span class="cd-badge cd-badge-success" style="font-size:.72rem">Always On</span>';
+            } else {
+                html += '<label class="cd-toggle"><input type="checkbox" data-pref="' + d.key + '"' + (val ? ' checked' : '') + ' onchange="saveEmailPrefs()"><span class="cd-toggle-slider"></span></label>';
+            }
+            html += '</div>';
+        }
+        el.innerHTML = html;
+    } catch(e) { document.getElementById('emailPrefsWrap').innerHTML = '<p class="cd-text-muted" style="font-size:.85rem">Failed to load preferences.</p>'; }
+}
+async function saveEmailPrefs() {
+    var body = {};
+    var toggles = document.querySelectorAll('#emailPrefsWrap input[data-pref]');
+    for (var i = 0; i < toggles.length; i++) {
+        body[toggles[i].dataset.pref] = toggles[i].checked;
+    }
+    try {
+        var resp = await fetch('/api/customers/me/email-preferences', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+            body: JSON.stringify(body)
+        });
+        if (resp.ok) CD.toast('Email preferences saved', 'success');
+        else CD.toast('Failed to save preferences', 'error');
+    } catch(e) { CD.toast('Network error', 'error'); }
+}
+
 /* PROFILE */
 function loadProfile() {
     if (!CD.user) return;
@@ -690,13 +783,35 @@ async function saveProfile(e) {
 }
 
 /* SECURITY */
-function changePassword(e) {
+async function changePassword(e) {
     e.preventDefault();
+    var token = localStorage.getItem('token');
+    if (!token) { window.location.href = '/login'; return; }
+    var cp = document.getElementById('secCurrentPw').value;
     var np = document.getElementById('secNewPw').value;
-    var cp = document.getElementById('secConfirmPw').value;
-    if (np !== cp) { CD.toast('Passwords do not match', 'error'); return; }
+    var cf = document.getElementById('secConfirmPw').value;
+    if (!cp) { CD.toast('Please enter your current password', 'error'); return; }
+    if (np !== cf) { CD.toast('Passwords do not match', 'error'); return; }
     if (np.length < 6) { CD.toast('Password must be at least 6 characters', 'error'); return; }
-    CD.toast('Password change requires API support. Please contact support.', 'info');
+    if (cp === np) { CD.toast('New password must be different from current password', 'error'); return; }
+    try {
+        var resp = await fetch('/api/customers/me/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ current_password: cp, new_password: np })
+        });
+        var data = await resp.json();
+        if (resp.ok) {
+            CD.toast('Password changed successfully!', 'success');
+            document.getElementById('secCurrentPw').value = '';
+            document.getElementById('secNewPw').value = '';
+            document.getElementById('secConfirmPw').value = '';
+        } else {
+            CD.toast(data.detail || 'Failed to change password', 'error');
+        }
+    } catch(ex) {
+        CD.toast('Network error. Please try again.', 'error');
+    }
 }
 
 /* SUPPORT */
@@ -738,6 +853,122 @@ function updateTopbar() {
     el = document.getElementById('welcomeName'); if (el) el.textContent = CD.user.first_name || CD.user.username;
 }
 
+/* PAYMENT METHODS */
+async function loadPaymentMethods() {
+    var el = document.getElementById('paymentMethodsList');
+    el.innerHTML = '<div class="cd-skeleton-card"></div>';
+    try {
+        var methods = await CD.api('/api/customers/me/payment-methods') || [];
+        if (!methods.length) {
+            el.innerHTML = '<div class="cd-empty-state"><i class="bi bi-credit-card"></i><p>No saved payment methods yet</p><button class="cd-btn cd-btn-primary cd-btn-sm" style="margin-top:12px" onclick="showAddPaymentModal()"><i class="bi bi-plus"></i> Add Payment Method</button></div>';
+            return;
+        }
+        var html = '';
+        var icons = {mobile_money:'bi-phone',bank_transfer:'bi-bank',card:'bi-credit-card'};
+        var typeLabels = {mobile_money:'Mobile Money',bank_transfer:'Bank Transfer',card:'Card'};
+        for (var i = 0; i < methods.length; i++) {
+            var m = methods[i];
+            var masked = m.account_number ? maskAccount(m.account_number, m.method_type) : '***';
+            html += '<div class="cd-card" style="margin-bottom:12px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px"><div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;border-radius:10px;background:rgba(242,102,15,.1);display:flex;align-items:center;justify-content:center"><i class="bi '+(icons[m.method_type]||'bi-credit-card')+'" style="color:var(--primary-orange);font-size:1.1rem"></i></div><div><div style="color:#fff;font-weight:600;font-size:.9rem">'+(m.provider||typeLabels[m.method_type]||m.method_type)+(m.is_default?' <span style="color:var(--primary-orange);font-size:.72rem">DEFAULT</span>':'')+'</div><div style="color:var(--text-secondary);font-size:.82rem">'+masked+(m.account_name?' &middot; '+esc(m.account_name):'')+(m.expiry_date?' &middot; Exp '+esc(m.expiry_date):'')+'</div></div></div><div style="display:flex;gap:6px"><button class="cd-btn cd-btn-outline cd-btn-xs" onclick="editPaymentMethod('+m.id+')"><i class="bi bi-pencil"></i></button><button class="cd-btn cd-btn-outline cd-btn-xs" style="color:#dc3545;border-color:#dc3545" onclick="deletePaymentMethod('+m.id+')"><i class="bi bi-trash"></i></button></div></div></div>';
+        }
+        el.innerHTML = html;
+    } catch(e) { el.innerHTML = '<div class="cd-empty-state"><i class="bi bi-exclamation-circle"></i><p>Failed to load payment methods</p></div>'; }
+}
+function maskAccount(num, type) {
+    if (!num) return '***';
+    if (type === 'card') return '**** **** **** ' + num.slice(-4);
+    if (num.length <= 6) return num.slice(0,2) + '****' + num.slice(-2);
+    return num.slice(0,3) + '****' + num.slice(-3);
+}
+function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function showAddPaymentModal() {
+    document.getElementById('pmId').value = '';
+    document.getElementById('pmType').value = 'mobile_money';
+    document.getElementById('pmProvider').value = 'MTN';
+    document.getElementById('pmAccount').value = '';
+    document.getElementById('pmName').value = '';
+    document.getElementById('pmExpiry').value = '';
+    document.getElementById('pmDefault').checked = false;
+    document.getElementById('paymentModalTitle').textContent = 'Add Payment Method';
+    onPaymentTypeChange();
+    document.getElementById('paymentModal').style.display = 'flex';
+}
+function closePaymentModal() { document.getElementById('paymentModal').style.display = 'none'; }
+function onPaymentTypeChange() {
+    var type = document.getElementById('pmType').value;
+    var pf = document.getElementById('pmProviderField');
+    var ef = document.getElementById('pmExpiryField');
+    var al = document.getElementById('pmAccountLabel');
+    var an = document.getElementById('pmAccount');
+    if (type === 'mobile_money') {
+        pf.style.display = '';
+        ef.style.display = 'none';
+        al.textContent = 'Phone Number *';
+        an.placeholder = 'e.g. 0241234567';
+    } else if (type === 'bank_transfer') {
+        pf.innerHTML = '<label class="cd-label">Bank</label><select id="pmProvider" class="cd-select"><option value="MTN">MTN</option><option value="Vodafone">Vodafone</option><option value="AirtelTigo">AirtelTigo</option><option value="Ecobank">Ecobank</option><option value="Stanbic">Stanbic</option><option value="Fidelity">Fidelity</option><option value="GCB">GCB Bank</option><option value="Absa">Absa</option><option value="Other">Other</option></select>';
+        pf.style.display = '';
+        ef.style.display = 'none';
+        al.textContent = 'Account Number *';
+        an.placeholder = 'e.g. 0123456789';
+    } else {
+        pf.innerHTML = '<label class="cd-label">Card Network</label><select id="pmProvider" class="cd-select"><option value="Visa">Visa</option><option value="Mastercard">Mastercard</option><option value="Verve">Verve</option></select>';
+        pf.style.display = '';
+        ef.style.display = '';
+        al.textContent = 'Card Number *';
+        an.placeholder = '**** **** **** ****';
+    }
+}
+async function savePaymentMethod(e) {
+    e.preventDefault();
+    var id = document.getElementById('pmId').value;
+    var payload = {
+        method_type: document.getElementById('pmType').value,
+        provider: document.getElementById('pmProvider').value,
+        account_number: document.getElementById('pmAccount').value.trim(),
+        account_name: document.getElementById('pmName').value.trim(),
+        expiry_date: document.getElementById('pmExpiry').value.trim() || null,
+        is_default: document.getElementById('pmDefault').checked,
+    };
+    try {
+        if (id) {
+            await CD.api('/api/customers/me/payment-methods/' + id, {method:'PUT',body:JSON.stringify(payload)});
+            CD.toast('Payment method updated', 'success');
+        } else {
+            await CD.api('/api/customers/me/payment-methods', {method:'POST',body:JSON.stringify(payload)});
+            CD.toast('Payment method added', 'success');
+        }
+        closePaymentModal();
+        loadPaymentMethods();
+    } catch(e) { CD.toast(e.message || 'Failed to save', 'error'); }
+}
+async function editPaymentMethod(id) {
+    try {
+        var methods = await CD.api('/api/customers/me/payment-methods') || [];
+        var m = methods.find(function(x){return x.id===id});
+        if (!m) return;
+        document.getElementById('pmId').value = m.id;
+        document.getElementById('pmType').value = m.method_type;
+        onPaymentTypeChange();
+        var prov = document.getElementById('pmProvider');
+        if (prov) prov.value = m.provider || '';
+        document.getElementById('pmAccount').value = m.account_number || '';
+        document.getElementById('pmName').value = m.account_name || '';
+        document.getElementById('pmExpiry').value = m.expiry_date || '';
+        document.getElementById('pmDefault').checked = m.is_default;
+        document.getElementById('paymentModalTitle').textContent = 'Edit Payment Method';
+        document.getElementById('paymentModal').style.display = 'flex';
+    } catch(e) { CD.toast('Failed to load payment method', 'error'); }
+}
+async function deletePaymentMethod(id) {
+    if (!confirm('Delete this payment method?')) return;
+    try {
+        await CD.api('/api/customers/me/payment-methods/' + id, {method:'DELETE'});
+        CD.toast('Payment method deleted', 'success');
+        loadPaymentMethods();
+    } catch(e) { CD.toast(e.message || 'Failed to delete', 'error'); }
+}
+
 /* INIT */
 (function() {
     var loadEl = document.getElementById('cdLoading');
@@ -756,7 +987,6 @@ function updateTopbar() {
         CD.user = user;
         hideLoading();
         updateTopbar();
-        try { var pp = localStorage.getItem('preferredPayment'); if (pp) document.getElementById('preferredPayment').value = pp; } catch(e) {}
         loadOverview();
         loadNotifications();
         renderTickets();

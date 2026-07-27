@@ -55,6 +55,9 @@
                 <a class="settings-nav-link" data-group="maintenance" onclick="switchGroup('maintenance')">
                     <i class="bi bi-tools"></i><span>Maintenance</span>
                 </a>
+                <a class="settings-nav-link" data-group="about" onclick="switchGroup('about')">
+                    <i class="bi bi-person-lines-fill"></i><span>About Page</span>
+                </a>
             </nav>
         </div>
 
@@ -428,9 +431,12 @@
                         </div>
                     </div>
                     <div class="mt-3">
-                        <button class="btn btn-outline-info btn-sm" onclick="testEmail()">
-                            <i class="bi bi-send me-1"></i>Send Test Email
-                        </button>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <input type="email" class="form-control bg-dark text-light border-secondary" id="testEmailInput" placeholder="Test email address" style="max-width:280px;font-size:.85rem">
+                            <button class="btn btn-outline-info btn-sm" onclick="testEmail()">
+                                <i class="bi bi-send me-1"></i>Send Test Email
+                            </button>
+                        </div>
                     </div>
                     <div class="mt-4 pt-3 border-top border-secondary">
                         <button class="btn btn-primary-custom" onclick="saveGroup('email')">
@@ -552,6 +558,72 @@
                     <div class="mt-4 pt-3 border-top border-secondary">
                         <button class="btn btn-danger" onclick="saveGroup('maintenance')">
                             <i class="bi bi-exclamation-triangle me-1"></i>Save Maintenance Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- About Page Settings -->
+                <div class="settings-panel" id="panel-about" style="display:none;">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-person-lines-fill text-warning fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">About Page</h5>
+                            <small class="text-muted">Manage images displayed on the About Us page.</small>
+                        </div>
+                    </div>
+                    <div class="card bg-dark border-secondary mb-4">
+                        <div class="card-body">
+                            <h6 class="fw-bold text-light mb-1">Mission & Vision Image</h6>
+                            <p class="text-muted small mb-3">Displayed in the Mission & Vision section. Recommended: 600x450px.</p>
+                            <div id="aboutMissionUpload"></div>
+                            <input type="hidden" class="setting-input" data-key="about_mission_image" value="">
+                        </div>
+                    </div>
+                    <h6 class="fw-bold text-light mb-3 mt-4">Team Member Photos</h6>
+                    <p class="text-muted small mb-3">Recommended: 300x300px square headshots.</p>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card bg-dark border-secondary h-100">
+                                <div class="card-body">
+                                    <label class="form-label text-muted small fw-bold">Founder & CEO</label>
+                                    <div id="aboutTeamCeoUpload"></div>
+                                    <input type="hidden" class="setting-input" data-key="about_team_ceo_image" value="">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-dark border-secondary h-100">
+                                <div class="card-body">
+                                    <label class="form-label text-muted small fw-bold">Head of Operations</label>
+                                    <div id="aboutTeamOpsUpload"></div>
+                                    <input type="hidden" class="setting-input" data-key="about_team_ops_image" value="">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-dark border-secondary h-100">
+                                <div class="card-body">
+                                    <label class="form-label text-muted small fw-bold">Marketing Director</label>
+                                    <div id="aboutTeamMktUpload"></div>
+                                    <input type="hidden" class="setting-input" data-key="about_team_marketing_image" value="">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-dark border-secondary h-100">
+                                <div class="card-body">
+                                    <label class="form-label text-muted small fw-bold">Customer Success Lead</label>
+                                    <div id="aboutTeamCsUpload"></div>
+                                    <input type="hidden" class="setting-input" data-key="about_team_success_image" value="">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top border-secondary">
+                        <button class="btn btn-primary-custom" onclick="saveGroup('about')">
+                            <i class="bi bi-check-lg me-1"></i>Save About Page Settings
                         </button>
                     </div>
                 </div>
@@ -878,12 +950,30 @@ function togglePasswordVisibility(btn) {
 
 /* ────────── Test Email ────────── */
 async function testEmail() {
-    showToast('info', 'Sending test email...');
+    const toEmail = document.getElementById('testEmailInput').value.trim();
+    if (!toEmail) { showToast('warning', 'Please enter a test email address.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)) { showToast('warning', 'Please enter a valid email address.'); return; }
+    const btn = document.querySelector('[onclick="testEmail()"]');
+    const origHTML = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Sending...'; }
     try {
-        const res = await fetch('/api/admin/settings/test-email', { method: 'POST' });
-        if (res.ok) showToast('success', 'Test email sent!');
-        else showToast('danger', 'Failed to send test email.');
-    } catch { showToast('danger', 'Failed to send test email.'); }
+        const token = localStorage.getItem('admin_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        const res = await fetch('/api/email/test', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({ to_email: toEmail, email_type: 'test' })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            showToast('success', data.detail || 'Test email sent to ' + toEmail);
+        } else {
+            const err = await res.json().catch(() => ({}));
+            showToast('danger', err.detail || 'Failed to send test email.');
+        }
+    } catch(e) { showToast('danger', 'Failed to send test email.'); }
+    if (btn) { btn.disabled = false; btn.innerHTML = origHTML; }
 }
 
 /* ────────── SEO Character Counters ────────── */
@@ -968,11 +1058,16 @@ async function uploadSettingFile(uid, inputKey, folder, file) {
             document.querySelector('[data-key="' + inputKey + '"]').value = data.url;
             markUnsaved();
             setTimeout(() => { progressEl.style.display = 'none'; bar.style.width = '0%'; }, 800);
-        } else { const err = await resp.json(); alert(err.detail || 'Upload failed'); progressEl.style.display = 'none'; }
-    } catch(e) { alert('Upload failed'); progressEl.style.display = 'none'; }
+        } else { const err = await resp.json().catch(() => ({})); showToast('danger', err.detail || 'Upload failed'); progressEl.style.display = 'none'; }
+    } catch(e) { showToast('danger', 'Upload failed'); progressEl.style.display = 'none'; }
 }
 
 createSettingUploader('siteLogoUpload', 'store_logo', 'site');
 createSettingUploader('siteFaviconUpload', 'favicon_url', 'site');
+createSettingUploader('aboutMissionUpload', 'about_mission_image', 'about');
+createSettingUploader('aboutTeamCeoUpload', 'about_team_ceo_image', 'about');
+createSettingUploader('aboutTeamOpsUpload', 'about_team_ops_image', 'about');
+createSettingUploader('aboutTeamMktUpload', 'about_team_marketing_image', 'about');
+createSettingUploader('aboutTeamCsUpload', 'about_team_success_image', 'about');
 </script>
 {% endblock %}

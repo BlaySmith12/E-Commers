@@ -32,7 +32,7 @@ class Payment(db.Model):
     transaction_id = db.Column(db.String(100))
     amount = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(50), default='Pending') # Pending, Completed, Failed
-    payment_method = db.Column(db.String(50), default='Cash on Delivery')
+    payment_method = db.Column(db.String(50), default='Paystack')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'))

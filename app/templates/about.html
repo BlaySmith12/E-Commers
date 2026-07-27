@@ -59,7 +59,7 @@
             </div>
             <div class="col-lg-6" data-aos="fade-left">
                 <div class="card card-custom overflow-hidden border-0" style="height: 450px;">
-                    <img src="https://via.placeholder.com/600x450/121010/DBD2CB?text=Our+Story" alt="Our Story" class="w-100 h-100 object-fit-cover" style="opacity: 0.8;">
+                    <img src="{{ site_settings.get('about_mission_image') or 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&h=450&fit=crop&auto=format' }}" alt="Our Story" class="w-100 h-100 object-fit-cover" style="opacity: 0.8;">
                 </div>
             </div>
         </div>
@@ -130,39 +130,39 @@
             <h2 class="text-white mt-3">Our Team</h2>
         </div>
         <div class="row g-4 justify-content-center">
-            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+            <div class="col-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
                 <div class="card card-custom border-0 text-center overflow-hidden">
-                    <img src="https://via.placeholder.com/300x300/121010/DBD2CB?text=CEO" alt="CEO" class="w-100" style="height:280px; object-fit:cover;">
-                    <div class="p-4">
-                        <h6 class="text-white fw-bold mb-1">Asah Mensah</h6>
-                        <small class="text-primary-orange">Founder & CEO</small>
+                    <img src="{{ site_settings.get('about_team_ceo_image') or 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300&h=300&fit=crop&auto=format' }}" alt="Asah Mensah - Founder and CEO" class="w-100" style="height:280px; object-fit:cover;">
+                    <div class="p-3 p-lg-4">
+                        <h6 class="text-white fw-bold mb-1" style="font-size:.85rem">Asah Mensah</h6>
+                        <small class="text-primary-orange" style="font-size:.75rem">Founder & CEO</small>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+            <div class="col-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
                 <div class="card card-custom border-0 text-center overflow-hidden">
-                    <img src="https://via.placeholder.com/300x300/121010/DBD2CB?text=CTO" alt="CTO" class="w-100" style="height:280px; object-fit:cover;">
-                    <div class="p-4">
-                        <h6 class="text-white fw-bold mb-1">Kofi Amoako</h6>
-                        <small class="text-primary-orange">Head of Operations</small>
+                    <img src="{{ site_settings.get('about_team_ops_image') or 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&auto=format' }}" alt="Kofi Amoako - Head of Operations" class="w-100" style="height:280px; object-fit:cover;">
+                    <div class="p-3 p-lg-4">
+                        <h6 class="text-white fw-bold mb-1" style="font-size:.85rem">Kofi Amoako</h6>
+                        <small class="text-primary-orange" style="font-size:.75rem">Head of Operations</small>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+            <div class="col-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
                 <div class="card card-custom border-0 text-center overflow-hidden">
-                    <img src="https://via.placeholder.com/300x300/121010/DBD2CB?text=CMO" alt="CMO" class="w-100" style="height:280px; object-fit:cover;">
-                    <div class="p-4">
-                        <h6 class="text-white fw-bold mb-1">Ama Serwah</h6>
-                        <small class="text-primary-orange">Marketing Director</small>
+                    <img src="{{ site_settings.get('about_team_marketing_image') or 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=300&fit=crop&auto=format' }}" alt="Ama Serwah - Marketing Director" class="w-100" style="height:280px; object-fit:cover;">
+                    <div class="p-3 p-lg-4">
+                        <h6 class="text-white fw-bold mb-1" style="font-size:.85rem">Ama Serwah</h6>
+                        <small class="text-primary-orange" style="font-size:.75rem">Marketing Director</small>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="400">
+            <div class="col-6 col-lg-3" data-aos="fade-up" data-aos-delay="400">
                 <div class="card card-custom border-0 text-center overflow-hidden">
-                    <img src="https://via.placeholder.com/300x300/121010/DBD2CB?text=CS" alt="CS" class="w-100" style="height:280px; object-fit:cover;">
-                    <div class="p-4">
-                        <h6 class="text-white fw-bold mb-1">Yaw Boateng</h6>
-                        <small class="text-primary-orange">Customer Success Lead</small>
+                    <img src="{{ site_settings.get('about_team_success_image') or 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop&auto=format' }}" alt="Yaw Boateng - Customer Success Lead" class="w-100" style="height:280px; object-fit:cover;">
+                    <div class="p-3 p-lg-4">
+                        <h6 class="text-white fw-bold mb-1" style="font-size:.85rem">Yaw Boateng</h6>
+                        <small class="text-primary-orange" style="font-size:.75rem">Customer Success Lead</small>
                     </div>
                 </div>
             </div>

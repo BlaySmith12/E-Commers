@@ -355,8 +355,8 @@
                             <td class="border-secondary fw-bold dash-row-value">#{{ order.order_number or order.id }}</td>
                             <td class="border-secondary">
                                 <div class="d-flex align-items-center">
-                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width:30px;height:30px;font-size:0.8rem;">{{ (order.customer.full_name[0] if order.customer and order.customer.full_name else 'U')|upper }}</div>
-                                    <span>{{ order.customer.full_name if order.customer and order.customer.full_name else 'Guest' }}</span>
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width:30px;height:30px;font-size:0.8rem;">{{ (((order.customer.first_name or '') ~ ' ' ~ (order.customer.last_name or '')).strip()[:1] if order.customer else 'U')|upper }}</div>
+                                    <span>{{ ((order.customer.first_name or '') ~ ' ' ~ (order.customer.last_name or '')).strip() if order.customer else 'Guest' }}</span>
                                 </div>
                             </td>
                             <td class="border-secondary dash-meta-value">{{ order.created_at.strftime('%b %d, %Y') if order.created_at else '-' }}</td>

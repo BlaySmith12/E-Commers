@@ -191,6 +191,25 @@
                                     <label class="form-label text-light small fw-semibold">Uses Per Customer</label>
                                     <input type="number" class="form-control bg-dark text-light border-secondary" id="usesPerCustomer" min="1" value="1">
                                 </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label text-light small fw-semibold">Max Discount Amount (GHS)</label>
+                                    <input type="number" class="form-control bg-dark text-light border-secondary" id="maxDiscountAmount" min="0" step="0.01" placeholder="0 = no cap">
+                                    <small class="text-muted">Cap for percentage coupons</small>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label text-light small fw-semibold">Customer Eligibility</label>
+                                    <select class="form-select form-select-sm bg-dark text-light border-secondary" id="customerEligibility">
+                                        <option value="all">All Customers</option>
+                                        <option value="new">New Customers Only</option>
+                                        <option value="returning">Returning Customers</option>
+                                    </select>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-check form-switch mt-4">
+                                        <input class="form-check-input" type="checkbox" id="firstOrderOnly" style="width: 3em; height: 1.5em; cursor: pointer;">
+                                        <label class="form-check-label text-light" for="firstOrderOnly">First Order Only</label>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="form-section-title mt-4">Date Range</div>
@@ -237,6 +256,15 @@
                                 <div class="d-flex justify-content-between text-light small mb-1">
                                     <span>Per Customer:</span><span id="summaryPerCustomer">1</span>
                                 </div>
+                                <div class="d-flex justify-content-between text-light small mb-1">
+                                    <span>Max Discount:</span><span id="summaryMaxDiscount">None</span>
+                                </div>
+                                <div class="d-flex justify-content-between text-light small mb-1">
+                                    <span>Eligibility:</span><span id="summaryEligibility">All</span>
+                                </div>
+                                <div class="d-flex justify-content-between text-light small mb-1">
+                                    <span>First Order:</span><span id="summaryFirstOrder">No</span>
+                                </div>
                                 <div class="d-flex justify-content-between text-light small">
                                     <span>Active:</span><span id="summaryActive" class="text-success">Yes</span>
                                 </div>
@@ -271,6 +299,21 @@
                 <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="confirmDelete()">
                     <i class="bi bi-trash me-1"></i> Delete
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="usageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white fw-bold" id="usageModalTitle">Usage History</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="usageModalBody"></div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -500,6 +543,7 @@ async function loadCoupons() {
                 <td class="border-secondary text-muted small">${expiry}</td>
                 <td class="border-secondary text-end pe-3">
                     <div class="d-flex gap-1 justify-content-end">
+                        <button class="btn btn-sm btn-outline-success rounded-circle" style="width:32px;height:32px;padding:0;" title="Usage History" onclick="viewUsage(${c.id}, '${(c.code || '').replace(/'/g, "\\'")}')"><i class="bi bi-people"></i></button>
                         <button class="btn btn-sm btn-outline-primary rounded-circle" style="width:32px;height:32px;padding:0;" title="Edit" onclick='openEditModal(${JSON.stringify(c).replace(/'/g, "&#39;")})'><i class="bi bi-pencil"></i></button>
                         <button class="btn btn-sm btn-outline-info rounded-circle" style="width:32px;height:32px;padding:0;" title="Duplicate" onclick="duplicateCoupon(${c.id})"><i class="bi bi-copy"></i></button>
                         <button class="btn btn-sm btn-outline-danger rounded-circle" style="width:32px;height:32px;padding:0;" title="Delete" onclick="openDeleteModal(${c.id}, '${(c.code || '').replace(/'/g, "\\'")}')"><i class="bi bi-trash"></i></button>
@@ -543,6 +587,12 @@ function updatePreview() {
     document.getElementById('summaryMin').textContent = min > 0 ? `GHS ${min.toFixed(2)}` : 'None';
     document.getElementById('summaryMax').textContent = (parseInt(document.getElementById('maxUses').value) || 0) === 0 ? 'Unlimited' : document.getElementById('maxUses').value;
     document.getElementById('summaryPerCustomer').textContent = document.getElementById('usesPerCustomer').value || '1';
+    const maxDisc = parseFloat(document.getElementById('maxDiscountAmount').value) || 0;
+    document.getElementById('summaryMaxDiscount').textContent = maxDisc > 0 ? `GHS ${maxDisc.toFixed(2)}` : 'None';
+    const elig = document.getElementById('customerEligibility').value;
+    document.getElementById('summaryEligibility').textContent = elig === 'all' ? 'All' : elig === 'new' ? 'New Customers' : 'Returning';
+    const firstOnly = document.getElementById('firstOrderOnly').checked;
+    document.getElementById('summaryFirstOrder').textContent = firstOnly ? 'Yes' : 'No';
     document.getElementById('summaryActive').textContent = active ? 'Yes' : 'No';
     document.getElementById('summaryActive').className = active ? 'text-success' : 'text-danger';
 }
@@ -557,6 +607,9 @@ function resetForm() {
     document.getElementById('minOrder').value = '';
     document.getElementById('maxUses').value = '';
     document.getElementById('usesPerCustomer').value = '1';
+    document.getElementById('maxDiscountAmount').value = '';
+    document.getElementById('customerEligibility').value = 'all';
+    document.getElementById('firstOrderOnly').checked = false;
     document.getElementById('startDate').value = '';
     document.getElementById('endDate').value = '';
     document.getElementById('couponActive').checked = true;
@@ -585,7 +638,10 @@ function openEditModal(coupon) {
     document.getElementById('discountValue').value = coupon.discount_value || '';
     document.getElementById('minOrder').value = coupon.min_order_amount || '';
     document.getElementById('maxUses').value = coupon.max_uses || '';
-    document.getElementById('usesPerCustomer').value = coupon.uses_per_customer || 1;
+    document.getElementById('usesPerCustomer').value = coupon.uses_per_customer || coupon.max_uses_per_customer || 1;
+    document.getElementById('maxDiscountAmount').value = coupon.max_discount_amount || '';
+    document.getElementById('customerEligibility').value = coupon.customer_eligibility || 'all';
+    document.getElementById('firstOrderOnly').checked = coupon.first_order_only || false;
     if (coupon.start_date) document.getElementById('startDate').value = coupon.start_date.slice(0, 16);
     if (coupon.end_date) document.getElementById('endDate').value = coupon.end_date.slice(0, 16);
     document.getElementById('couponActive').checked = coupon.active !== false;
@@ -607,6 +663,10 @@ async function saveCoupon(e) {
         min_order_amount: parseFloat(document.getElementById('minOrder').value) || 0,
         max_uses: parseInt(document.getElementById('maxUses').value) || 0,
         uses_per_customer: parseInt(document.getElementById('usesPerCustomer').value) || 1,
+        max_uses_per_customer: parseInt(document.getElementById('usesPerCustomer').value) || 1,
+        max_discount_amount: parseFloat(document.getElementById('maxDiscountAmount').value) || 0,
+        customer_eligibility: document.getElementById('customerEligibility').value,
+        first_order_only: document.getElementById('firstOrderOnly').checked,
         start_date: document.getElementById('startDate').value || null,
         end_date: document.getElementById('endDate').value || null,
         active: document.getElementById('couponActive').checked
@@ -714,12 +774,53 @@ function exportCSV() {
     showToast('CSV exported.', 'info');
 }
 
-document.querySelectorAll('#minOrder, #maxUses, #usesPerCustomer').forEach(el => {
+document.querySelectorAll('#minOrder, #maxUses, #usesPerCustomer, #maxDiscountAmount').forEach(el => {
     el.addEventListener('input', updatePreview);
 });
 document.getElementById('couponActive').addEventListener('change', updatePreview);
+document.getElementById('customerEligibility').addEventListener('change', updatePreview);
+document.getElementById('firstOrderOnly').addEventListener('change', updatePreview);
 
 document.getElementById('couponModal').addEventListener('shown.bs.modal', () => { updatePreview(); });
+
+async function viewUsage(couponId, code) {
+    const modal = document.getElementById('usageModal');
+    document.getElementById('usageModalTitle').textContent = `Usage History: ${code}`;
+    document.getElementById('usageModalBody').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-warning" role="status"></div></div>';
+    new bootstrap.Modal(modal).show();
+
+    try {
+        const resp = await fetch(`${API}/usage?coupon_id=${couponId}`, { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') } });
+        if (!resp.ok) throw new Error('Failed to fetch');
+        const data = await resp.json();
+        const usageList = Array.isArray(data) ? data : (data.usage || []);
+        if (usageList.length === 0) {
+            document.getElementById('usageModalBody').innerHTML = '<div class="text-center py-4 text-muted"><i class="bi bi-inbox" style="font-size:2rem;"></i><p class="mt-2 mb-0">No usage records yet</p></div>';
+            return;
+        }
+        document.getElementById('usageModalBody').innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-dark table-sm table-hover mb-0" style="--bs-table-bg: transparent;">
+                    <thead><tr>
+                        <th class="text-muted fw-normal border-secondary">Customer</th>
+                        <th class="text-muted fw-normal border-secondary">Email</th>
+                        <th class="text-muted fw-normal border-secondary">Order</th>
+                        <th class="text-muted fw-normal border-secondary">Discount</th>
+                        <th class="text-muted fw-normal border-secondary">Date</th>
+                    </tr></thead>
+                    <tbody>${usageList.map(u => `<tr>
+                        <td class="border-secondary text-light">${escapeHtml(u.customer_name || 'N/A')}</td>
+                        <td class="border-secondary text-muted small">${escapeHtml(u.customer_email || '')}</td>
+                        <td class="border-secondary text-warning">${escapeHtml(u.order_number || '-')}</td>
+                        <td class="border-secondary text-success">GHS ${(u.discount_amount || 0).toFixed(2)}</td>
+                        <td class="border-secondary text-muted small">${u.used_at ? new Date(u.used_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '-'}</td>
+                    </tr>`).join('')}</tbody>
+                </table>
+            </div>`;
+    } catch (e) {
+        document.getElementById('usageModalBody').innerHTML = '<div class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle" style="font-size:2rem;"></i><p class="mt-2 mb-0">Failed to load usage data</p></div>';
+    }
+}
 
 loadCoupons();
 </script>

@@ -180,6 +180,23 @@ async def init_db() -> None:
             )
         """))
 
+        # Customer payment methods table
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS customer_payment_methods (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                method_type VARCHAR(50) NOT NULL,
+                provider VARCHAR(100),
+                account_number VARCHAR(100),
+                account_name VARCHAR(200),
+                expiry_date VARCHAR(10),
+                is_default BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_cpm_user ON customer_payment_methods (user_id)"))
+
 
 async def dispose_engine() -> None:
     await engine.dispose()
