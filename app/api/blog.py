@@ -80,7 +80,9 @@ async def list_posts(
 
 @router.get('/{slug}', response_model=BlogPostDetailOut)
 async def get_post_by_slug(slug: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(BlogPost).where(BlogPost.slug == slug))
+    result = await db.execute(
+        select(BlogPost).where(BlogPost.slug == slug, BlogPost.is_published == True)
+    )
     post = result.scalar_one_or_none()
     if not post:
         raise HTTPException(status_code=404, detail='Blog post not found')

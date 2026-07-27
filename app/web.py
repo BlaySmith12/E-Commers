@@ -1071,12 +1071,15 @@ def create_app() -> FastAPI:
         __import__("fastapi.middleware.cors", fromlist=["CORSMiddleware"]).CORSMiddleware,
         allow_origins=config.CORS_ORIGINS,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "Accept"],
     )
 
     app.add_middleware(ErrorHandlerMiddleware)
     app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
+
+    from app.middleware.security_headers import SecurityHeadersMiddleware
+    app.add_middleware(SecurityHeadersMiddleware)
     register_exception_handlers(app)
 
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

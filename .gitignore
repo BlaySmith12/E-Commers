@@ -4,7 +4,11 @@ __pycache__/
 *.pyo
 venv/
 .venv/
+
+# Environment files (NEVER commit secrets)
 .env
+.env.*
+!.env.example
 
 # Docker
 docker-compose.override.yml
@@ -32,3 +36,14 @@ Thumbs.db
 
 # Deployment scripts (run on VPS only)
 vps-setup.sh
+
+# Temp/debug scripts (may contain credentials)
+temp_*.py
+tmp_*.py
+fix_*.sql
+update_*.sql
+gen_*.py
+test_*.py
+debug_*.py
+create_admin.py
+seed.py

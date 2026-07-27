@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
 from app.models.catalog import Notification
 from app.schemas import MessageOut
-from app.security import CurrentUser
+from app.security import CurrentUser, AdminUser
 
 router = APIRouter(prefix='/notifications', tags=['Notifications'])
 
@@ -87,6 +87,7 @@ async def notification_count(
 async def create_notification(
     data: NotificationCreate,
     db: AsyncSession = Depends(get_db),
+    admin: AdminUser = None,
 ):
     notif = Notification(**data.model_dump())
     db.add(notif)

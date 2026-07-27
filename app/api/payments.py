@@ -58,17 +58,23 @@ async def initialize_payment(
     payload: PaymentInitIn,
     request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(CurrentUser),
 ):
     """Initialize a Paystack payment for an existing order.
 
     Creates the Paystack transaction and returns the authorization URL
-    for the customer to complete payment.
+    for the customer to complete payment. Requires authentication and
+    order ownership verification.
     """
     # Load the order
     result = await db.execute(select(Order).where(Order.id == payload.order_id))
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail='Order not found')
+
+    # Ownership check: customer can only pay for their own orders
+    if order.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail='Not authorized to pay for this order')
 
     # Find or create pending payment
     pay_result = await db.execute(
@@ -181,6 +187,21 @@ async def verify_payment(
     """
     if not reference:
         raise HTTPException(status_code=400, detail='Reference required')
+
+    # Idempotency guard — if payment is already completed, return success immediately
+    existing = await db.execute(
+        select(Payment).where(Payment.transaction_reference == reference)
+    )
+    existing_payment = existing.scalar_one_or_none()
+    if existing_payment and existing_payment.status == 'Completed':
+        return PaymentVerifyOut(
+            success=True,
+            message='Payment already verified',
+            order_id=existing_payment.order_id,
+            order_number=existing_payment.order.order_number if existing_payment.order else None,
+            payment_status='Completed',
+            transaction_reference=reference,
+        )
 
     # Verify with Paystack
     verify_result = await paystack.verify_transaction(reference)
@@ -375,8 +396,9 @@ async def verify_payment(
 async def get_payment_by_order(
     order_id: int,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(CurrentUser),
 ):
-    """Get the latest payment record for an order."""
+    """Get the latest payment record for an order. Requires authentication and order ownership."""
     result = await db.execute(
         select(Payment)
         .where(Payment.order_id == order_id)
@@ -385,6 +407,12 @@ async def get_payment_by_order(
     payment = result.scalars().first()
     if not payment:
         raise HTTPException(status_code=404, detail='No payment found for this order')
+
+    # Ownership check
+    order = await db.execute(select(Order).where(Order.id == order_id))
+    order = order.scalar_one_or_none()
+    if order and order.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail='Not authorized to view this payment')
 
     return {
         "id": payment.id,
@@ -410,11 +438,11 @@ async def retry_payment(
     payload: PaymentRetryIn,
     request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(CurrentUser),
 ):
     """Retry a failed payment for an existing order.
 
-    Creates a new Paystack transaction for the same order without
-    duplicating the order.
+    Requires authentication and order ownership verification.
     """
     # Load existing payment
     result = await db.execute(
@@ -432,6 +460,10 @@ async def retry_payment(
     order = order_result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail='Order not found')
+
+    # Ownership check
+    if order.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail='Not authorized to retry this payment')
 
     # Generate new reference
     reference = f"PN-{secrets.token_hex(12).upper()}"
@@ -513,9 +545,12 @@ async def paystack_webhook(
     body = await request.body()
     signature = request.headers.get('x-paystack-signature', '')
 
-    # Verify signature (skip if no webhook secret configured)
-    if config.PAYSTACK_WEBHOOK_SECRET and not paystack.verify_webhook_signature(body, signature):
-        logger.warning("Invalid Paystack webhook signature")
+    # Verify signature — fail closed if webhook secret is not configured
+    if not config.PAYSTACK_WEBHOOK_SECRET:
+        logger.critical("PAYSTACK_WEBHOOK_SECRET is not configured — rejecting webhook")
+        raise HTTPException(status_code=500, detail='Webhook not configured')
+    if not paystack.verify_webhook_signature(body, signature):
+        logger.warning("Invalid Paystack webhook signature from %s", request.client.host if request.client else "unknown")
         raise HTTPException(status_code=400, detail='Invalid signature')
 
     try:

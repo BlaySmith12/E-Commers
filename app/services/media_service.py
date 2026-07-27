@@ -100,7 +100,7 @@ async def save_upload(
         )
 
     unique_name = f"{uuid.uuid4().hex}{ext}"
-    storage_folder = FOLDER_MAP.get(folder, folder)
+    storage_folder = FOLDER_MAP.get(folder, "uploads")
     dest_dir = UPLOAD_DIR / storage_folder
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / unique_name

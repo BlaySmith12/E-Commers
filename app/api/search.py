@@ -10,7 +10,7 @@ from app.db import get_db
 from app.models.catalog import (
     Product, Order, User, Category, Brand, Coupon, ProductReview
 )
-from app.security import CurrentUser
+from app.security import AdminUser
 
 router = APIRouter(prefix='/search', tags=['Search'])
 
@@ -27,7 +27,7 @@ class SearchResult(BaseModel):
 @router.get('', response_model=List[SearchResult])
 async def global_search(
     q: str = Query(..., min_length=1),
-    current_user: CurrentUser = None,
+    admin: AdminUser = None,
     db: AsyncSession = Depends(get_db),
 ):
     results = []

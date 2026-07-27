@@ -14,20 +14,20 @@ def _csv_list(value: str | None) -> list[str]:
 class Config:
     PROJECT_NAME = os.environ.get('PROJECT_NAME') or "E-Commerce API"
     API_PREFIX = os.environ.get('API_PREFIX') or '/api'
-    DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+    DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-    # PostgreSQL (async) — SQLite fallback only for local dev
+    # PostgreSQL (async)
     DATABASE_URL = os.environ.get('DATABASE_URL') or \
         'postgresql+asyncpg://ecom_user:ecom_secure_2026@localhost:5432/ecom_db'
 
-    # Security — never use defaults in production
+    # Security — production must set these via environment variables
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-change-me'
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'dev-jwt-secret-change-me'
     JWT_ALGORITHM = os.environ.get('JWT_ALGORITHM') or 'HS256'
-    ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get('ACCESS_TOKEN_EXPIRE_MINUTES') or 1440)
+    ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get('ACCESS_TOKEN_EXPIRE_MINUTES') or 60)
 
-    # CORS
-    CORS_ORIGINS = _csv_list(os.environ.get('CORS_ORIGINS')) or ['*']
+    # CORS — never default to wildcard
+    CORS_ORIGINS = _csv_list(os.environ.get('CORS_ORIGINS')) or ['http://localhost:3000', 'http://localhost:8000']
 
     # Uploads
     UPLOAD_FOLDER = os.path.join(basedir, 'app', 'static', 'images', 'uploads')

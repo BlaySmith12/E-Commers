@@ -1,12 +1,13 @@
 """Extended auth endpoints: forgot-password, reset-password, admin role check."""
 
 import secrets
+import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.db import get_db
 from app.models.catalog import User, Permission
@@ -16,11 +17,14 @@ from app.security import (
     get_current_active_user,
     hash_password,
     verify_password,
+    validate_password_strength,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/auth', tags=['Auth Extensions'])
 
-# In-memory reset tokens (production would use DB or email service)
+# In-memory reset tokens (production should use DB-backed tokens)
 _reset_tokens: dict[str, dict] = {}
 
 
@@ -48,12 +52,12 @@ async def forgot_password(payload: ForgotPasswordRequest, db: AsyncSession = Dep
         # Send password reset email (fire-and-forget)
         try:
             from app.services.email_service import send_password_reset_email
+            from app.db import async_session_maker
             async with async_session_maker() as email_db:
                 await send_password_reset_email(email_db, user, token)
                 await email_db.commit()
         except Exception:
-            import logging
-            logging.getLogger(__name__).exception("Failed to send password reset email")
+            logger.exception("Failed to send password reset email")
 
     return {"detail": "If an account with that email exists, a reset link has been sent."}
 
@@ -69,6 +73,9 @@ async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depen
         del _reset_tokens[payload.token]
         raise HTTPException(status_code=400, detail="Reset token has expired")
 
+    # Enforce password strength on reset
+    validate_password_strength(payload.password)
+
     user = await db.execute(select(User).where(User.id == token_data['user_id']))
     user = user.scalar_one_or_none()
     if not user:
@@ -77,6 +84,7 @@ async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depen
     user.password_hash = hash_password(payload.password)
     await db.commit()
 
+    # Consume the token (single-use)
     del _reset_tokens[payload.token]
     return {"detail": "Password reset successfully"}
 

@@ -298,7 +298,7 @@ async def get_order(order_id: int, current_user: CurrentUser, db: AsyncSession =
             'currency': order.payment.currency,
             'paid_at': order.payment.paid_at.isoformat() if order.payment.paid_at else None,
             'customer_email': order.payment.customer_email,
-            'gateway_response': order.payment.gateway_response,
+            'gateway_response': order.payment.gateway_response if current_user.is_admin else None,
         }
     addr = None
     if order.shipping_address:

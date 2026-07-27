@@ -106,6 +106,20 @@ async def get_homepage(db: AsyncSession = Depends(get_db)):
 
 @router.get('/settings', response_model=List[SettingOut])
 async def get_public_settings(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(SiteSetting).order_by(SiteSetting.key))
+    # Only return non-sensitive, public-facing settings
+    PUBLIC_KEYS = {
+        'store_name', 'store_description', 'store_email', 'store_phone',
+        'store_address', 'store_logo', 'store_favicon', 'currency',
+        'currency_symbol', 'tax_rate', 'shipping_fee',
+        'contact_email', 'contact_phone', 'contact_address',
+        'social_facebook', 'social_instagram', 'social_twitter', 'social_tiktok',
+        'maintenance_mode', 'maintenance_message',
+        'about_mission_image', 'about_team_ceo_image', 'about_team_ops_image',
+        'about_team_marketing_image', 'about_team_success_image',
+        'hero_title', 'hero_subtitle', 'hero_image',
+        'meta_title', 'meta_description', 'meta_keywords',
+        'seo_meta_title', 'seo_meta_description',
+    }
+    result = await db.execute(select(SiteSetting).where(SiteSetting.key.in_(PUBLIC_KEYS)).order_by(SiteSetting.key))
     settings = result.scalars().all()
     return [SettingOut.model_validate(s) for s in settings]

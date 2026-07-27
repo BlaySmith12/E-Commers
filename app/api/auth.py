@@ -1,6 +1,7 @@
 """Authentication REST API."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import logging
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,16 +18,36 @@ from app.security import (
     create_access_token,
     hash_password,
     verify_password,
+    validate_password_strength,
+    brute_force,
     get_current_active_user,
     get_current_user,
 )
 from app.activity import log_activity
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix='/auth', tags=['Authentication'])
 
 
+def _client_ip(request: Request) -> str:
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
+
+
 @router.post('/register', response_model=Token, status_code=status.HTTP_201_CREATED)
-async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(
+    payload: RegisterRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    # Enforce password strength
+    validate_password_strength(payload.password)
+
+    if payload.confirm_password is not None and payload.password != payload.confirm_password:
+        raise HTTPException(status_code=400, detail='Passwords do not match')
+
     # uniqueness checks
     existing_email = await db.execute(select(User).where(User.email == payload.email))
     if existing_email.scalar_one_or_none():
@@ -80,7 +101,17 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
 
 
 @router.post('/login', response_model=Token)
-async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    ip = _client_ip(request)
+
+    # Brute-force check
+    if brute_force.is_locked(ip):
+        logger.warning("Login blocked by brute-force protection from IP %s", ip)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail='Too many failed login attempts. Please try again later.',
+        )
+
     # accept email OR username in `username` field
     user = await db.execute(
         select(User).where(
@@ -90,13 +121,19 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = user.scalar_one_or_none()
 
     if not user or not verify_password(payload.password, user.password_hash):
+        brute_force.record_failure(ip)
+        logger.warning("Failed login attempt from IP %s for user %s", ip, payload.username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Invalid credentials',
             headers={'WWW-Authenticate': 'Bearer'},
         )
+
     if not user.is_active:
         raise HTTPException(status_code=400, detail='Account is inactive')
+
+    # Clear brute-force counter on successful login
+    brute_force.clear(ip)
 
     token = create_access_token(subject=user.id)
     return Token(access_token=token, user=UserOut.model_validate(user))
@@ -109,5 +146,4 @@ async def read_me(current_user: User = Depends(get_current_active_user)):
 
 @router.post('/logout', response_model=MessageOut)
 async def logout(current_user: User = Depends(get_current_user)):
-    # Stateless JWT: client discards the token. Endpoint provided for UX.
     return MessageOut(detail='Logged out successfully')

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.models.catalog import Message
-from app.security import CurrentUser
+from app.security import AdminUser
 
 router = APIRouter(prefix='/messages', tags=['Messages'])
 
@@ -37,7 +37,7 @@ class MessageCreate(BaseModel):
 
 @router.get('', response_model=List[MessageOut])
 async def list_messages(
-    current_user: CurrentUser,
+    admin: AdminUser,
     db: AsyncSession = Depends(get_db),
     unread_only: bool = Query(False),
     category: Optional[str] = Query(None),
@@ -56,7 +56,7 @@ async def list_messages(
 
 @router.get('/count')
 async def message_count(
-    current_user: CurrentUser,
+    admin: AdminUser,
     db: AsyncSession = Depends(get_db),
 ):
     total = (await db.execute(select(func.count()).select_from(Message))).scalar_one()
@@ -68,7 +68,7 @@ async def message_count(
 
 @router.get('/unread-count')
 async def unread_count(
-    current_user: CurrentUser,
+    admin: AdminUser,
     db: AsyncSession = Depends(get_db),
 ):
     count = (await db.execute(
@@ -80,7 +80,7 @@ async def unread_count(
 @router.patch('/{message_id}/read')
 async def mark_as_read(
     message_id: int,
-    current_user: CurrentUser,
+    admin: AdminUser,
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Message).where(Message.id == message_id))
@@ -95,7 +95,7 @@ async def mark_as_read(
 
 @router.patch('/read-all')
 async def mark_all_read(
-    current_user: CurrentUser,
+    admin: AdminUser,
     db: AsyncSession = Depends(get_db),
 ):
     stmt = update(Message).where(Message.is_read == False).values(is_read=True)
@@ -107,7 +107,7 @@ async def mark_all_read(
 @router.delete('/{message_id}')
 async def delete_message(
     message_id: int,
-    current_user: CurrentUser,
+    admin: AdminUser,
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Message).where(Message.id == message_id))

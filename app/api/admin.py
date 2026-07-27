@@ -738,21 +738,19 @@ async def admin_get_customer(user_id: int, db: AsyncSession = Depends(get_db), a
 
 @router.post('/customers', response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def admin_create_customer(payload: dict, db: AsyncSession = Depends(get_db), admin: User = Depends(RequireCreator)):
-    from app.security import hash_password
+    from app.security import hash_password, validate_password_strength
     email = (payload.get('email') or '').strip()
     password = payload.get('password') or ''
     if not email or not password:
         raise HTTPException(status_code=400, detail='Email and password are required')
+    validate_password_strength(password)
     existing = await db.execute(select(User).where(User.email == email))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail='A customer with this email already exists')
 
-    role_name = (payload.get('role') or 'customer').strip().lower()
-    role_result = await db.execute(select(Role).where(Role.name == role_name))
+    # Only allow assigning customer role — admin role creation requires RequireAdmin
+    role_result = await db.execute(select(Role).where(Role.name == 'customer'))
     role = role_result.scalar_one_or_none()
-    if not role:
-        role_result = await db.execute(select(Role).where(Role.name == 'customer'))
-        role = role_result.scalar_one_or_none()
 
     user = User(
         email=email,
@@ -1194,7 +1192,7 @@ async def bulk_update_user_role(
     user_ids: List[int],
     role_id: int,
     db: AsyncSession = Depends(get_db),
-    admin: User = Depends(RequireEditor),
+    admin: User = Depends(RequireAdmin),
 ):
     """Bulk update role for multiple users."""
     if not user_ids:
@@ -1287,11 +1285,15 @@ async def bulk_update_user_status(
 
 
 @router.patch('/users/{user_id}/role')
-async def admin_update_user_role(user_id: int, payload: dict, db: AsyncSession = Depends(get_db), admin: User = Depends(RequireEditor)):
+async def admin_update_user_role(user_id: int, payload: dict, db: AsyncSession = Depends(get_db), admin: User = Depends(RequireAdmin)):
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail='User not found')
+
+    # Prevent modifying self
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail='Cannot modify your own role')
 
     old_vals = {'role_id': user.role_id, 'is_active': user.is_active, 'first_name': user.first_name, 'last_name': user.last_name, 'email': user.email, 'phone': user.phone}
 
