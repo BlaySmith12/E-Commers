@@ -181,7 +181,11 @@ async def home(request: Request):
             for b in ban_res.scalars().all():
                 banners.append({
                     "id": b.id, "title": b.title, "subtitle": b.subtitle or "",
-                    "image_url": b.image_url or "", "link_url": b.link_url or "/shop",
+                    "image_url": b.image_url or "",
+                    "desktop_image_url": b.desktop_image_url or "",
+                    "tablet_image_url": b.tablet_image_url or "",
+                    "mobile_image_url": b.mobile_image_url or "",
+                    "link_url": b.link_url or "/shop",
                     "button_text": b.button_text or "Shop Now",
                 })
     except Exception as exc:
