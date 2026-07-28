@@ -19,6 +19,7 @@ class LoginRequest(BaseModel):
     # Accepts either email or username in the "username" field (OAuth2 form style)
     username: str
     password: str
+    remember_me: bool = False
 
 
 class RegisterRequest(BaseModel):

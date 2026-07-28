@@ -135,7 +135,9 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
     # Clear brute-force counter on successful login
     brute_force.clear(ip)
 
-    token = create_access_token(subject=user.id)
+    # Remember me → 30 days; otherwise default 60 minutes
+    expires = 43200 if payload.remember_me else None
+    token = create_access_token(subject=user.id, expires_minutes=expires)
     return Token(access_token=token, user=UserOut.model_validate(user))
 
 
