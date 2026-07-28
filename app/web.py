@@ -301,6 +301,16 @@ async def login_page(request: Request):
     return render("auth/login.html", request)
 
 
+@pages.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page(request: Request):
+    return render("auth/forgot_password.html", request)
+
+
+@pages.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_page(request: Request, token: str = ""):
+    return render("auth/reset_password.html", request, token=token)
+
+
 @pages.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
     return render("auth/register.html", request)
