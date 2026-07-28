@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
 from app.models.catalog import Product, ProductImage, Coupon
 from app.schemas import CartItemIn, CartItemOut, CartOut, MessageOut
-from app.security import CurrentUser
+from app.security import CurrentUser, OptionalCurrentUser
 
 router = APIRouter(prefix='/cart', tags=['Cart'])
 
@@ -121,13 +121,22 @@ async def _serialize_cart(cart_id: str, db: AsyncSession, coupon_code: str = Non
 
 
 @router.get('', response_model=CartOut)
-async def get_cart(cart_id: str = 'default', db: AsyncSession = Depends(get_db)):
+async def get_cart(
+    cart_id: str = 'default',
+    db: AsyncSession = Depends(get_db),
+    user: OptionalCurrentUser = None,
+):
+    if not user:
+        return CartOut(items=[], subtotal=0.0, item_count=0, discount=0.0,
+                       shipping_fee=0.0, tax=0.0, total=0.0)
     coupon = _cart_coupons.get(cart_id)
     return await _serialize_cart(cart_id, db, coupon)
 
 
 @router.post('/items', response_model=CartOut)
-async def add_item(item: CartItemIn, cart_id: str = 'default', db: AsyncSession = Depends(get_db)):
+async def add_item(item: CartItemIn, cart_id: str = 'default', db: AsyncSession = Depends(get_db), user: CurrentUser = None):
+    """Requires authentication. Guests cannot add to cart."""
+    _ = user
     product = (await db.execute(select(Product).where(Product.id == item.product_id))).scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail='Product not found')
@@ -144,7 +153,8 @@ async def add_item(item: CartItemIn, cart_id: str = 'default', db: AsyncSession 
 
 
 @router.put('/items/{product_id}', response_model=CartOut)
-async def update_item(product_id: int, qty: int, cart_id: str = 'default', db: AsyncSession = Depends(get_db)):
+async def update_item(product_id: int, qty: int, cart_id: str = 'default', db: AsyncSession = Depends(get_db), user: CurrentUser = None):
+    _ = user
     if qty < 1:
         raise HTTPException(status_code=400, detail='Quantity must be >= 1')
     product = (await db.execute(select(Product).where(Product.id == product_id))).scalar_one_or_none()
@@ -160,7 +170,8 @@ async def update_item(product_id: int, qty: int, cart_id: str = 'default', db: A
 
 
 @router.delete('/items/{product_id}', response_model=CartOut)
-async def remove_item(product_id: int, cart_id: str = 'default', db: AsyncSession = Depends(get_db)):
+async def remove_item(product_id: int, cart_id: str = 'default', db: AsyncSession = Depends(get_db), user: CurrentUser = None):
+    _ = user
     cart = _get_cart(cart_id)
     cart.pop(product_id, None)
 
@@ -169,14 +180,16 @@ async def remove_item(product_id: int, cart_id: str = 'default', db: AsyncSessio
 
 
 @router.delete('', response_model=MessageOut)
-async def clear_cart(cart_id: str):
+async def clear_cart(cart_id: str, user: CurrentUser = None):
+    _ = user
     _cart_store.pop(cart_id, None)
     _cart_coupons.pop(cart_id, None)
     return MessageOut(detail='Cart cleared')
 
 
 @router.post('/coupon', response_model=CartOut)
-async def apply_coupon(payload: dict, cart_id: str = 'default', db: AsyncSession = Depends(get_db)):
+async def apply_coupon(payload: dict, cart_id: str = 'default', db: AsyncSession = Depends(get_db), user: CurrentUser = None):
+    _ = user
     code = payload.get('coupon_code', '').strip()
     if not code:
         _cart_coupons.pop(cart_id, None)
@@ -186,6 +199,7 @@ async def apply_coupon(payload: dict, cart_id: str = 'default', db: AsyncSession
 
 
 @router.post('/coupon/remove', response_model=CartOut)
-async def remove_coupon(cart_id: str = 'default', db: AsyncSession = Depends(get_db)):
+async def remove_coupon(cart_id: str = 'default', db: AsyncSession = Depends(get_db), user: CurrentUser = None):
+    _ = user
     _cart_coupons.pop(cart_id, None)
     return await _serialize_cart(cart_id, db, None)

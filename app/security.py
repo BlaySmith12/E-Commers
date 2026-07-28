@@ -9,7 +9,7 @@ from typing import Annotated, Optional
 import re
 
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy import select
@@ -188,3 +188,21 @@ RequireAdmin = require_permission(Permission.ADMIN)
 
 CurrentUser = Annotated[User, Depends(get_current_active_user)]
 AdminUser = Annotated[User, Depends(require_permission(Permission.ADMIN))]
+
+async def get_optional_user(
+    db: DbSession,
+    authorization: Optional[str] = Header(None),
+) -> Optional[User]:
+    if not authorization or not authorization.startswith('Bearer '):
+        return None
+    token = authorization[7:]
+    user_id = decode_access_token(token)
+    if user_id is None:
+        return None
+    result = await db.execute(select(User).where(User.id == int(user_id)))
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
+        return None
+    return user
+
+OptionalCurrentUser = Annotated[Optional[User], Depends(get_optional_user)]
