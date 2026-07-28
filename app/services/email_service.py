@@ -349,7 +349,7 @@ async def send_welcome_email(db: AsyncSession, user: User):
 async def send_password_reset_email(db: AsyncSession, user: User, token: str):
     """Send password reset email."""
     name = ((user.first_name or "") + " " + (user.last_name or "")).strip() or user.email
-    reset_url = f"{config.BASE_URL}/reset-password?token={token}"
+    reset_url = f"{config.BASE_URL}/admin/reset-password?token={token}"
     await queue_email(
         db,
         recipient_email=user.email,
