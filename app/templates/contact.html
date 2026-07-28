@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Contact Us{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #contact-map { z-index: 1; }
+    .map-overlay { position: absolute; top: 30px; left: 30px; z-index: 2; background: rgba(10,9,9,0.85); padding: 20px 28px; border-radius: 12px; max-width: 300px; backdrop-filter: blur(4px); }
+    .map-wrapper { position: relative; }
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Hero Banner -->
 <section class="position-relative" style="background: linear-gradient(rgba(18,16,16,0.85), rgba(18,16,16,0.95)), url('{{ url_for("static", filename="images/hero_bg.png") }}') center/cover no-repeat; padding: 120px 0 60px;">
@@ -127,17 +136,15 @@
     </div>
 </section>
 
-<!-- Map Placeholder -->
+<!-- Map -->
 <section style="background-color: #0a0909;">
     <div class="container-fluid p-0">
-        <div class="card card-custom m-0 border-0 rounded-0 overflow-hidden" style="height: 400px;">
-            <div class="d-flex align-items-center justify-content-center h-100" style="background: rgba(255,255,255,0.03);">
-                <div class="text-center">
-                    <i class="bi bi-geo-alt-fill text-primary-orange" style="font-size: 4rem;"></i>
-                    <h5 class="text-white mt-3">Find Us on the Map</h5>
-                    <p class="text-warm-gray">{{ site_settings.get('store_address', '123 Liberation Road, Accra, Ghana') }}</p>
-                    <a href="https://maps.google.com/?q={{ site_settings.get('store_address', '123 Liberation Road, Accra, Ghana') | urlencode }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary">Open in Google Maps</a>
-                </div>
+        <div class="map-wrapper">
+            <div id="contact-map" style="height: 420px; width: 100%;" class="card m-0 border-0 rounded-0 overflow-hidden"></div>
+            <div class="map-overlay border border-secondary">
+                <h5 class="text-white mb-2"><i class="bi bi-geo-alt-fill text-primary-orange me-2"></i>Find Us</h5>
+                <p class="text-warm-gray mb-3 small">{{ site_settings.get('store_address', '123 Liberation Road, Accra, Ghana') }}</p>
+                <a href="https://maps.google.com/?q={{ site_settings.get('store_address', '123 Liberation Road, Accra, Ghana') | urlencode }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm">Open in Google Maps</a>
             </div>
         </div>
     </div>
@@ -150,8 +157,16 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function () {
+    const map = L.map('contact-map').setView([5.5486, -0.2000], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+    const marker = L.marker([5.5486, -0.2000]).addTo(map);
+    marker.bindPopup("<b>ASAH'S PRIMENEST</b><br>{{ site_settings.get('store_address', '123 Liberation Road, Accra, Ghana') | e }}").openPopup();
+
     const form = document.getElementById('contact-form');
     const successMsg = document.getElementById('form-success');
     const errorMsg = document.getElementById('form-error');
