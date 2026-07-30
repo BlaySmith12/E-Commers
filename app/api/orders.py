@@ -687,6 +687,14 @@ async def checkout(
         import logging
         logging.getLogger(__name__).exception("Failed to send order confirmation email")
 
+    # Send admin SMS notification (fire-and-forget)
+    try:
+        from app.services.sms_service import send_admin_sms
+        await send_admin_sms(order)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Failed to send admin SMS notification")
+
     return order
 
 

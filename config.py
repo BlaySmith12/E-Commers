@@ -53,4 +53,10 @@ class Config:
     EMAIL_REPLY_TO = os.environ.get('EMAIL_REPLY_TO', '')
 
 
+    # Arkesel SMS
+    ARKESEL_API_KEY = os.environ.get('ARKESEL_API_KEY', '')
+    ARKESEL_SENDER_ID = os.environ.get('ARKESEL_SENDER_ID', 'ASAHSPRIME')
+    ADMIN_PHONE_NUMBER = os.environ.get('ADMIN_PHONE_NUMBER', '')
+
+
 config = Config()

@@ -334,6 +334,13 @@ async def verify_payment(
         except Exception:
             logger.exception("Failed to send payment success email")
 
+        # Send admin SMS notification (fire-and-forget)
+        try:
+            from app.services.sms_service import send_admin_sms
+            await send_admin_sms(order)
+        except Exception:
+            logger.exception("Failed to send admin SMS notification")
+
         return PaymentVerifyOut(
             success=True,
             message='Payment verified successfully',
@@ -702,6 +709,13 @@ async def _process_successful_payment(payment: Payment, event_data: dict, db: As
             await email_db.commit()
     except Exception:
         logger.exception("Failed to send payment success email via webhook")
+
+    # Send admin SMS notification (fire-and-forget)
+    try:
+        from app.services.sms_service import send_admin_sms
+        await send_admin_sms(order)
+    except Exception:
+        logger.exception("Failed to send admin SMS notification via webhook")
 
     # Activity log for webhook payment success
     try:

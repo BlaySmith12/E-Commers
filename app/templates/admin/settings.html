@@ -46,6 +46,9 @@
                 <a class="settings-nav-link" data-group="email" onclick="switchGroup('email')">
                     <i class="bi bi-envelope-at"></i><span>Email</span>
                 </a>
+                <a class="settings-nav-link" data-group="notifications" onclick="switchGroup('notifications')">
+                    <i class="bi bi-bell"></i><span>Notifications</span>
+                </a>
                 <a class="settings-nav-link" data-group="social" onclick="switchGroup('social')">
                     <i class="bi bi-share"></i><span>Social</span>
                 </a>
@@ -441,6 +444,50 @@
                     <div class="mt-4 pt-3 border-top border-secondary">
                         <button class="btn btn-primary-custom" onclick="saveGroup('email')">
                             <i class="bi bi-check-lg me-1"></i>Save Email Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Notifications Settings -->
+                <div class="settings-panel" id="panel-notifications" style="display:none;">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;background:rgba(242,102,15,0.1);">
+                            <i class="bi bi-bell text-warning fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Notifications</h5>
+                            <small class="text-muted">SMS alerts for new orders via Arkesel.</small>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Admin SMS Phone Number</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-phone"></i></span>
+                                <input type="text" class="form-control bg-dark text-light border-secondary setting-input" data-key="admin_sms_phone" placeholder="233501234567">
+                            </div>
+                            <small class="text-muted">Phone number to receive SMS when a new order is placed. Include country code (e.g., 233 for Ghana).</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Arkesel API Key</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-key"></i></span>
+                                <input type="password" class="form-control bg-dark text-light border-secondary setting-input" data-key="arkesel_api_key" placeholder="Your Arkesel API key">
+                            </div>
+                            <small class="text-muted">API key from your <a href="https://sms.arkesel.com" target="_blank" class="text-warning">Arkesel dashboard</a>.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Arkesel Sender ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-tag"></i></span>
+                                <input type="text" class="form-control bg-dark text-light border-secondary setting-input" data-key="arkesel_sender_id" placeholder="ASAHSPRIME">
+                            </div>
+                            <small class="text-muted">Approved sender ID on Arkesel.</small>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top border-secondary">
+                        <button class="btn btn-primary-custom" onclick="saveGroup('notifications')">
+                            <i class="bi bi-check-lg me-1"></i>Save Notification Settings
                         </button>
                     </div>
                 </div>
