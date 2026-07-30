@@ -108,11 +108,11 @@ async def _get_site_settings() -> dict:
     return get_cached_settings()
 
 
-def render(template_name: str, request: Request, **context) -> HTMLResponse:
+async def render(template_name: str, request: Request, **context) -> HTMLResponse:
     template = env.get_template(template_name)
     # Merge site settings into context so footer can use them
     merged = dict(context)
-    merged['site_settings'] = get_cached_settings()
+    merged['site_settings'] = await _get_site_settings()
     merged['config'] = config
     html = template.render(
         request=request,
@@ -191,7 +191,7 @@ async def home(request: Request):
     except Exception as exc:
         import logging
         logging.getLogger(__name__).warning("Home route error: %s", exc)
-    return render("index.html", request,
+    return await render("index.html", request,
                    categories=categories,
                    featured_products=featured_products,
                    banners=banners)
@@ -229,7 +229,7 @@ async def shop(request: Request):
                 })
     except Exception:
         pass
-    return render("shop/index.html", request,
+    return await render("shop/index.html", request,
                    products=products, categories=categories, brands=brands)
 
 
@@ -282,38 +282,38 @@ async def product(request: Request, slug: str):
     except Exception:
         pass
     if not product_data:
-        return render("404.html", request)
-    return render("shop/product.html", request, product=product_data, related=related)
+        return await render("404.html", request)
+    return await render("shop/product.html", request, product=product_data, related=related)
 
 
 @pages.get("/cart", response_class=HTMLResponse)
 async def cart_page(request: Request):
-    return render("cart/index.html", request)
+    return await render("cart/index.html", request)
 
 
 @pages.get("/checkout", response_class=HTMLResponse)
 async def checkout(request: Request):
-    return render("checkout/index.html", request)
+    return await render("checkout/index.html", request)
 
 
 @pages.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return render("auth/login.html", request)
+    return await render("auth/login.html", request)
 
 
 @pages.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_page(request: Request):
-    return render("auth/forgot_password.html", request)
+    return await render("auth/forgot_password.html", request)
 
 
 @pages.get("/reset-password", response_class=HTMLResponse)
 async def reset_password_page(request: Request, token: str = ""):
-    return render("auth/reset_password.html", request, token=token)
+    return await render("auth/reset_password.html", request, token=token)
 
 
 @pages.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
-    return render("auth/register.html", request)
+    return await render("auth/register.html", request)
 
 
 @pages.get("/logout", response_class=HTMLResponse)
@@ -323,7 +323,7 @@ async def logout_page(request: Request):
 
 @pages.get("/customer/dashboard", response_class=HTMLResponse)
 async def customer_dashboard(request: Request):
-    return render("customer/dashboard.html", request)
+    return await render("customer/dashboard.html", request)
 
 
 @pages.get("/admin", response_class=HTMLResponse)
@@ -409,7 +409,7 @@ async def admin_dashboard(request: Request):
         revenue_data = [{"label": f"Month {i}", "value": 0} for i in range(12)]
         category_data = []
 
-    return render("admin/dashboard.html", request,
+    return await render("admin/dashboard.html", request,
         revenue_today=round(revenue_today, 2),
         revenue_month=round(revenue_month, 2),
         revenue_yesterday=round(revenue_yesterday, 2),
@@ -426,32 +426,32 @@ async def admin_dashboard(request: Request):
 
 @pages.get("/admin/login", response_class=HTMLResponse)
 async def admin_login_page(request: Request):
-    return render("admin/login.html", request)
+    return await render("admin/login.html", request)
 
 
 @pages.get("/admin/forgot-password", response_class=HTMLResponse)
 async def admin_forgot_password(request: Request):
-    return render("admin/forgot_password.html", request)
+    return await render("admin/forgot_password.html", request)
 
 
 @pages.get("/admin/reset-password", response_class=HTMLResponse)
 async def admin_reset_password(request: Request, token: str = ""):
-    return render("admin/reset_password.html", request, token=token)
+    return await render("admin/reset_password.html", request, token=token)
 
 
 @pages.get("/admin/products", response_class=HTMLResponse)
 async def admin_products(request: Request):
-    return render("admin/products/index.html", request)
+    return await render("admin/products/index.html", request)
 
 
 @pages.get("/admin/products/add", response_class=HTMLResponse)
 async def admin_product_add(request: Request):
-    return render("admin/products/add.html", request)
+    return await render("admin/products/add.html", request)
 
 
 @pages.get("/admin/products/edit/{product_id}", response_class=HTMLResponse)
 async def admin_product_edit(request: Request, product_id: int):
-    return render("admin/products/edit.html", request, product_id=product_id)
+    return await render("admin/products/edit.html", request, product_id=product_id)
 
 
 @pages.get("/admin/categories", response_class=HTMLResponse)
@@ -462,7 +462,7 @@ async def admin_categories(request: Request):
             categories = result.scalars().all()
     except Exception:
         categories = []
-    return render("admin/categories.html", request, categories=categories)
+    return await render("admin/categories.html", request, categories=categories)
 
 
 @pages.get("/admin/brands", response_class=HTMLResponse)
@@ -473,7 +473,7 @@ async def admin_brands(request: Request):
             brands = result.scalars().all()
     except Exception:
         brands = []
-    return render("admin/brands.html", request, brands=brands)
+    return await render("admin/brands.html", request, brands=brands)
 
 
 @pages.get("/admin/orders", response_class=HTMLResponse)
@@ -504,7 +504,7 @@ async def admin_orders(request: Request):
                 })
     except Exception:
         orders = []
-    return render("admin/orders.html", request, orders=orders)
+    return await render("admin/orders.html", request, orders=orders)
 
 
 @pages.get("/admin/orders/edit/{order_id}", response_class=HTMLResponse)
@@ -521,7 +521,7 @@ async def admin_customers(request: Request):
             customers = result.scalars().all()
     except Exception:
         customers = []
-    return render("admin/customers.html", request, customers=customers)
+    return await render("admin/customers.html", request, customers=customers)
 
 
 @pages.get("/admin/reviews", response_class=HTMLResponse)
@@ -547,7 +547,7 @@ async def admin_reviews(request: Request):
                 })
     except Exception:
         reviews = []
-    return render("admin/reviews.html", request, reviews=reviews)
+    return await render("admin/reviews.html", request, reviews=reviews)
 
 
 @pages.get("/admin/inventory", response_class=HTMLResponse)
@@ -572,7 +572,7 @@ async def admin_inventory(request: Request):
                 })
     except Exception:
         variants = []
-    return render("admin/inventory.html", request, variants=variants)
+    return await render("admin/inventory.html", request, variants=variants)
 
 
 @pages.get("/admin/payments", response_class=HTMLResponse)
@@ -607,7 +607,7 @@ async def admin_payments(request: Request):
                 })
     except Exception:
         payments = []
-    return render("admin/payments.html", request, payments=payments)
+    return await render("admin/payments.html", request, payments=payments)
 
 
 @pages.get("/admin/settings", response_class=HTMLResponse)
@@ -619,7 +619,7 @@ async def admin_settings(request: Request):
             settings = [{"id": s.id, "key": s.key, "value": s.value or "", "description": s.description or ""} for s in rows]
     except Exception:
         settings = []
-    return render("admin/settings.html", request, settings=settings)
+    return await render("admin/settings.html", request, settings=settings)
 
 
 @pages.get("/admin/users", response_class=HTMLResponse)
@@ -630,37 +630,37 @@ async def admin_users(request: Request):
             users = result.scalars().all()
     except Exception:
         users = []
-    return render("admin/users.html", request, users=users)
+    return await render("admin/users.html", request, users=users)
 
 
 @pages.get("/admin/analytics", response_class=HTMLResponse)
 async def admin_analytics(request: Request):
-    return render("admin/analytics.html", request)
+    return await render("admin/analytics.html", request)
 
 
 @pages.get("/admin/reports", response_class=HTMLResponse)
 async def admin_reports(request: Request):
-    return render("admin/reports.html", request)
+    return await render("admin/reports.html", request)
 
 
 @pages.get("/admin/homepage", response_class=HTMLResponse)
 async def admin_homepage(request: Request):
-    return render("admin/homepage.html", request)
+    return await render("admin/homepage.html", request)
 
 
 @pages.get("/admin/coupons", response_class=HTMLResponse)
 async def admin_coupons(request: Request):
-    return render("admin/coupons.html", request)
+    return await render("admin/coupons.html", request)
 
 
 @pages.get("/admin/loyalty", response_class=HTMLResponse)
 async def admin_loyalty(request: Request):
-    return render("admin/loyalty.html", request)
+    return await render("admin/loyalty.html", request)
 
 
 @pages.get("/admin/promotions", response_class=HTMLResponse)
 async def admin_promotions(request: Request):
-    return render("admin/promotions.html", request)
+    return await render("admin/promotions.html", request)
 
 
 @pages.get("/admin/search", response_class=HTMLResponse)
@@ -702,39 +702,39 @@ async def admin_search(request: Request, q: str = ""):
             results["brands"] = brands
         except Exception:
             pass
-    return render("admin/search.html", request, q=q, results=results)
+    return await render("admin/search.html", request, q=q, results=results)
 
 
 @pages.get("/order/success", response_class=HTMLResponse)
 async def order_success(request: Request):
-    return render("order_success.html", request)
+    return await render("order_success.html", request)
 
 
 @pages.get("/order/failure", response_class=HTMLResponse)
 async def order_failure(request: Request):
-    return render("order_failure.html", request)
+    return await render("order_failure.html", request)
 
 
 @pages.get("/order/invoice", response_class=HTMLResponse)
 async def order_invoice(request: Request):
-    return render("invoice.html", request)
+    return await render("invoice.html", request)
 
 
 @pages.get("/payment/callback", response_class=HTMLResponse)
 async def payment_callback(request: Request):
     """Paystack redirect callback - verifies payment and shows result."""
-    return render("payment_callback.html", request)
+    return await render("payment_callback.html", request)
 
 
 @pages.get("/payment/failed", response_class=HTMLResponse)
 async def payment_failed_page(request: Request):
     """Payment failed/cancelled page."""
-    return render("order_failure.html", request)
+    return await render("order_failure.html", request)
 
 
 @pages.get("/wishlist", response_class=HTMLResponse)
 async def wishlist_page(request: Request):
-    return render("wishlist.html", request)
+    return await render("wishlist.html", request)
 
 
 @pages.get("/categories", response_class=HTMLResponse)
@@ -747,7 +747,7 @@ async def all_categories(request: Request):
             categories = result.scalars().all()
     except Exception:
         categories = []
-    return render("categories.html", request, categories=categories)
+    return await render("categories.html", request, categories=categories)
 
 
 ALL_CATEGORIES = [
@@ -824,7 +824,7 @@ async def category_detail(request: Request, slug: str):
             cat_result = await db.execute(select(Category).where(Category.slug == slug))
             cat = cat_result.scalars().first()
             if not cat:
-                return render("404.html", request)
+                return await render("404.html", request)
             all_cats_result = await db.execute(select(Category).order_by(Category.name))
             all_cats = all_cats_result.scalars().all()
             prods = await db.execute(
@@ -846,57 +846,57 @@ async def category_detail(request: Request, slug: str):
                 })
     except Exception:
         pass
-    return render("category_detail.html", request, category=cat, products=products, all_categories=all_cats)
+    return await render("category_detail.html", request, category=cat, products=products, all_categories=all_cats)
 
 
 @pages.get("/compare", response_class=HTMLResponse)
 async def compare_page(request: Request):
-    return render("compare.html", request)
+    return await render("compare.html", request)
 
 
 @pages.get("/about", response_class=HTMLResponse)
 async def about_page(request: Request):
-    return render("about.html", request)
+    return await render("about.html", request)
 
 
 @pages.get("/contact", response_class=HTMLResponse)
 async def contact_page(request: Request):
-    return render("contact.html", request)
+    return await render("contact.html", request)
 
 
 @pages.get("/shipping-policy", response_class=HTMLResponse)
 async def shipping_policy_page(request: Request):
-    return render("shipping-policy.html", request)
+    return await render("shipping-policy.html", request)
 
 
 @pages.get("/returns-refunds", response_class=HTMLResponse)
 async def returns_refunds_page(request: Request):
-    return render("returns-refunds.html", request)
+    return await render("returns-refunds.html", request)
 
 
 @pages.get("/faq", response_class=HTMLResponse)
 async def faq_page(request: Request):
-    return render("faq.html", request)
+    return await render("faq.html", request)
 
 
 @pages.get("/order-tracking", response_class=HTMLResponse)
 async def order_tracking_page(request: Request):
-    return render("order-tracking.html", request)
+    return await render("order-tracking.html", request)
 
 
 @pages.get("/payment-security", response_class=HTMLResponse)
 async def payment_security_page(request: Request):
-    return render("payment-security.html", request)
+    return await render("payment-security.html", request)
 
 
 @pages.get("/404", response_class=HTMLResponse)
 async def not_found_page(request: Request):
-    return render("404.html", request)
+    return await render("404.html", request)
 
 
 @pages.get("/admin/testimonials", response_class=HTMLResponse)
 async def admin_testimonials(request: Request):
-    return render("admin/testimonials.html", request)
+    return await render("admin/testimonials.html", request)
 
 
 @pages.get("/admin/banners", response_class=HTMLResponse)
@@ -910,62 +910,62 @@ async def admin_banners(request: Request):
             banners = result.scalars().all()
     except Exception:
         pass
-    return render("admin/banners.html", request, banners=banners)
+    return await render("admin/banners.html", request, banners=banners)
 
 
 @pages.get("/admin/blog", response_class=HTMLResponse)
 async def admin_blog(request: Request):
-    return render("admin/blog.html", request)
+    return await render("admin/blog.html", request)
 
 
 @pages.get("/admin/newsletters", response_class=HTMLResponse)
 async def admin_newsletters(request: Request):
-    return render("admin/newsletters.html", request)
+    return await render("admin/newsletters.html", request)
 
 
 @pages.get("/admin/audit-logs", response_class=HTMLResponse)
 async def admin_audit_logs(request: Request):
-    return render("admin/audit-logs.html", request)
+    return await render("admin/audit-logs.html", request)
 
 
 @pages.get("/admin/system-logs", response_class=HTMLResponse)
 async def admin_system_logs(request: Request):
-    return render("admin/system-logs.html", request)
+    return await render("admin/system-logs.html", request)
 
 
 @pages.get("/admin/media", response_class=HTMLResponse)
 async def admin_media(request: Request):
-    return render("admin/media.html", request)
+    return await render("admin/media.html", request)
 
 
 @pages.get("/admin/profile", response_class=HTMLResponse)
 async def admin_profile_page(request: Request):
-    return render("admin/profile.html", request)
+    return await render("admin/profile.html", request)
 
 
 @pages.get("/admin/preferences", response_class=HTMLResponse)
 async def admin_preferences_page(request: Request):
-    return render("admin/preferences.html", request)
+    return await render("admin/preferences.html", request)
 
 
 @pages.get("/admin/security", response_class=HTMLResponse)
 async def admin_security_page(request: Request):
-    return render("admin/security.html", request)
+    return await render("admin/security.html", request)
 
 
 @pages.get("/admin/activity", response_class=HTMLResponse)
 async def admin_activity_page(request: Request):
-    return render("admin/activity.html", request)
+    return await render("admin/activity.html", request)
 
 
 @pages.get("/admin/notifications", response_class=HTMLResponse)
 async def admin_notifications_page(request: Request):
-    return render("admin/notifications.html", request)
+    return await render("admin/notifications.html", request)
 
 
 @pages.get("/admin/messages", response_class=HTMLResponse)
 async def admin_messages_page(request: Request):
-    return render("admin/messages.html", request)
+    return await render("admin/messages.html", request)
 
 
 def create_app() -> FastAPI:
