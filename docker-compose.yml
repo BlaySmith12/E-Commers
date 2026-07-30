@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ecom_user
-      POSTGRES_PASSWORD: ecom_secure_2026
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecom_secure_2026}
       POSTGRES_DB: ecom_db
     ports:
       - "127.0.0.1:5432:5432"
@@ -31,7 +31,7 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://ecom_user:ecom_secure_2026@postgres:5432/ecom_db
+      - DATABASE_URL=postgresql+asyncpg://ecom_user:${POSTGRES_PASSWORD:-ecom_secure_2026}@postgres:5432/ecom_db
       - DEBUG=False
     volumes:
       - static_files:/app/app/static

@@ -100,7 +100,7 @@ python seed_comprehensive.py
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL async connection string | `postgresql+asyncpg://ecom_user:ecom_secure_2026@localhost:5432/ecom_db` |
+| `DATABASE_URL` | PostgreSQL async connection string | `postgresql+asyncpg://ecom_user:****@localhost:5432/ecom_db` |
 | `SECRET_KEY` | Application secret key | `dev-secret-change-me` |
 | `JWT_SECRET_KEY` | JWT signing key | `dev-jwt-secret-change-me` |
 | `JWT_ALGORITHM` | JWT algorithm | `HS256` |
@@ -147,7 +147,7 @@ After running `seed_comprehensive.py`:
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | `admin@primenest.com` | `admin123` |
+| Admin | `admin@primenest.com` | Set via `ADMIN_PASSWORD` env var |
 | Customer | (register via UI or API) | - |
 
 ## Project Structure

@@ -36,7 +36,7 @@ echo "Migrations complete."
 # ─── Seed initial data (roles, admin user) ────────────────────────────────────
 echo "Seeding initial data..."
 python -c "
-import asyncio
+import asyncio, os
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
@@ -69,13 +69,13 @@ async def seed():
                     username='admin',
                     first_name='Admin',
                     last_name='User',
-                    password='admin123',
+                    password=os.environ.get('ADMIN_PASSWORD', 'admin123'),
                     is_active=True,
                     role=admin_role,
                 )
                 session.add(admin)
                 await session.commit()
-                print('  Created admin user: admin@primenest.com / admin123')
+                print(f'  Created admin user: admin@primenest.com (password from ADMIN_PASSWORD env)')
             else:
                 print('  Admin user already exists, skipping.')
 

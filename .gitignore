@@ -40,10 +40,33 @@ vps-setup.sh
 # Temp/debug scripts (may contain credentials)
 temp_*.py
 tmp_*.py
+temp_*.sql
 fix_*.sql
 update_*.sql
 gen_*.py
-test_*.py
 debug_*.py
 create_admin.py
-seed.py
+migrate_admin_header.py
+
+# Seed scripts (use entrypoint.sh or env vars instead)
+seed*.py
+
+# Test files that aren't part of the test suite
+test_banners.py
+
+# Local dev scripts
+start
+stop
+
+# Planning docs
+implementation_plan.md
+
+# Random images in root
+/*.jpg
+/*.png
+
+# Email template generator
+app/templates/emails/generate_templates.py
+
+# Static JS check utility
+app/static/js_check.js

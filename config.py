@@ -18,7 +18,7 @@ class Config:
 
     # PostgreSQL (async)
     DATABASE_URL = os.environ.get('DATABASE_URL') or \
-        'postgresql+asyncpg://ecom_user:ecom_secure_2026@localhost:5432/ecom_db'
+        'postgresql+asyncpg://ecom_user:CHANGE_ME@localhost:5432/ecom_db'
 
     # Security — production must set these via environment variables
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-change-me'
