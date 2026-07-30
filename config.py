@@ -40,7 +40,7 @@ class Config:
     PAYSTACK_API_URL = 'https://api.paystack.co'
 
     # Base URL for callbacks
-    BASE_URL = os.environ.get('BASE_URL', 'http://162.35.186.39')
+    BASE_URL = os.environ.get('BASE_URL', 'http://asahsprimenest.com')
 
     # Email / SMTP
     SMTP_HOST = os.environ.get('SMTP_HOST', '')

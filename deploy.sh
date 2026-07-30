@@ -43,7 +43,7 @@ for i in $(seq 1 30); do
 done
 
 # ─── Initial SSL (first deploy only) ────────────────────────────────────────
-if ! docker compose exec nginx test -f /etc/letsencrypt/live/primenest.com/fullchain.pem 2>/dev/null; then
+if ! docker compose exec nginx test -f /etc/letsencrypt/live/asahsprimenest.com/fullchain.pem 2>/dev/null; then
     echo ""
     echo "==> No SSL certificate found. To obtain one, run:"
     echo "  docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d YOUR_DOMAIN"
