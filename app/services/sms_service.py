@@ -40,6 +40,9 @@ async def send_admin_sms(order) -> bool:
         f"Items: {items_summary}"
     )
 
+    if sender_id and len(sender_id) > 11:
+        sender_id = sender_id[:11]
+
     payload = {
         "sender": sender_id or "ASAHSPRIME",
         "message": message,
@@ -51,10 +54,15 @@ async def send_admin_sms(order) -> bool:
             resp = await client.post(
                 ARKESEL_API_URL,
                 json=payload,
-                headers={"api-key": api_key},
+                headers={"Content-Type": "application/json", "api-key": api_key},
             )
-            resp.raise_for_status()
             data = resp.json()
+            if resp.is_error:
+                logger.error(
+                    "Arkesel API error for order #%s: status=%s body=%s",
+                    order.order_number, resp.status_code, data,
+                )
+                return False
             logger.info("Admin SMS sent for order #%s – Arkesel response: %s", order.order_number, data)
             return True
     except Exception:
