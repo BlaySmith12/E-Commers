@@ -46,18 +46,8 @@ async def send_admin_sms(order) -> bool:
         return False
 
     customer_name = order.customer_name or f"User #{order.user_id}"
-    items_summary = ", ".join(
-        (i.snapshot_name or f"Product #{i.product_id}")
-        for i in (order.items or [])
-    ) or "N/A"
-
-    message = (
-        f"New Order #{order.order_number}\n"
-        f"Customer: {customer_name}\n"
-        f"Total: GHS {order.total_amount:.2f}\n"
-        f"Payment: {getattr(order, 'payment_status', 'Pending')}\n"
-        f"Items: {items_summary}"
-    )
+    payment_status = getattr(order, 'payment_status', 'Pending')
+    message = f"New Order #{order.order_number} | {customer_name} | GHS {order.total_amount:.2f} | {payment_status}"
 
     if sender_id and len(sender_id) > 11:
         sender_id = sender_id[:11]
