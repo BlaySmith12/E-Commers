@@ -82,6 +82,7 @@ async def queue_email(
         "welcome", "password_reset", "password_changed",
         "order_confirmation", "payment_success", "payment_failed",
         "order_status_changed", "order_cancelled", "refund",
+        "broadcast_order",
     }
     if recipient_user_id and email_type not in _ESSENTIAL_TYPES:
         pref = await db.execute(
@@ -90,14 +91,14 @@ async def queue_email(
         pref = pref.scalar_one_or_none()
         if pref:
             _pref_map = {
-                "promotional_emails": ["promotional", "newsletter"],
-                "newsletter": ["newsletter"],
-                "product_promotions": ["promotional"],
-                "price_drop_alerts": ["price_drop"],
-                "back_in_stock_alerts": ["stock_alert"],
-                "review_requests": ["review_request"],
-                "loyalty_updates": ["loyalty_points_earned", "loyalty_points_redeemed"],
-                "coupon_notifications": ["coupon_used", "coupon_expiring"],
+                "promotional_emails": ["promotional", "newsletter", "broadcast_promotional"],
+                "newsletter": ["newsletter", "broadcast_newsletter"],
+                "product_promotions": ["promotional", "broadcast_product"],
+                "price_drop_alerts": ["price_drop", "broadcast_price_drop"],
+                "back_in_stock_alerts": ["stock_alert", "broadcast_stock"],
+                "review_requests": ["review_request", "broadcast_review"],
+                "loyalty_updates": ["loyalty_points_earned", "loyalty_points_redeemed", "broadcast_loyalty"],
+                "coupon_notifications": ["coupon_used", "coupon_expiring", "broadcast_coupon"],
             }
             for col, types in _pref_map.items():
                 if email_type in types and not getattr(pref, col, True):
@@ -748,5 +749,43 @@ async def send_admin_test_email(db: AsyncSession, to_email: str, email_type: str
         },
         entity_type=None,
         entity_id=None,
+        skip_duplicate_check=True,
+    )
+
+
+async def send_broadcast_email(
+    db: AsyncSession,
+    *,
+    user,
+    email_type: str,
+    subject: str,
+    title: str,
+    message: Optional[str],
+    campaign_id: int,
+) -> Optional[EmailLog]:
+    """Queue a broadcast announcement email for one customer.
+
+    Respects the customer's email preferences via queue_email's preference
+    gate (order updates / broadcast_order is always delivered).
+    Returns the EmailLog, or None when skipped (opted out / SMTP unset).
+    """
+    customer_name = ((user.first_name or '') + ' ' + (user.last_name or '')).strip() or "there"
+    return await queue_email(
+        db,
+        recipient_email=user.email,
+        email_type=email_type,
+        subject=subject or title,
+        template_name="broadcast.html",
+        context={
+            "headline": title,
+            "customer_name": customer_name,
+            "content_html": message or "",
+            "cta_url": f"{config.BASE_URL}/customer/dashboard",
+            "cta_text": "View in Your Account",
+            "unsubscribe_url": f"{config.BASE_URL}/customer/dashboard",
+        },
+        recipient_user_id=user.id,
+        entity_type="campaign",
+        entity_id=campaign_id,
         skip_duplicate_check=True,
     )

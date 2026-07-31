@@ -9,9 +9,10 @@ from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
-from app.models.catalog import Notification
+from app.models.catalog import Notification, NotificationCampaign, User
 from app.schemas import MessageOut
 from app.security import CurrentUser, AdminUser
+from app.services.email_service import send_broadcast_email
 
 router = APIRouter(prefix='/notifications', tags=['Notifications'])
 
@@ -31,6 +32,33 @@ class NotificationCreate(BaseModel):
     title: str
     message: Optional[str] = None
     type: str = 'info'
+
+
+class BroadcastCreate(BaseModel):
+    title: str
+    message: Optional[str] = None
+    type: str = 'info'
+    category: str = 'promotional'
+    audience: str = 'all'  # 'all' | 'specific'
+    user_ids: List[int] = []
+    send_email: bool = True
+    subject: Optional[str] = None
+
+
+class CampaignOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: str
+    message: Optional[str] = None
+    type: str
+    category: str
+    audience: str
+    recipient_count: int
+    notifications_created: int
+    email_queued: int
+    email_skipped: int
+    send_email: bool
+    created_at: Optional[datetime] = None
 
 
 # ----------------------------- Endpoints -----------------------------
@@ -153,3 +181,122 @@ async def mark_all_read(
     await db.execute(stmt)
     await db.commit()
     return MessageOut(detail='All notifications marked as read')
+
+
+# ------------------------- Broadcast (admin) -------------------------
+_CATEGORY_EMAIL_TYPES = {
+    'order_updates': 'broadcast_order',
+    'newsletter': 'broadcast_newsletter',
+    'promotional': 'broadcast_promotional',
+    'product_promotions': 'broadcast_product',
+    'price_drop': 'broadcast_price_drop',
+    'back_in_stock': 'broadcast_stock',
+    'review_request': 'broadcast_review',
+    'loyalty': 'broadcast_loyalty',
+    'coupon': 'broadcast_coupon',
+}
+
+
+@router.post('/broadcast', response_model=dict, status_code=201)
+async def broadcast_notification(
+    data: BroadcastCreate,
+    db: AsyncSession = Depends(get_db),
+    admin: AdminUser = None,
+):
+    if not data.title or not data.title.strip():
+        raise HTTPException(status_code=422, detail='Title is required')
+
+    if data.audience == 'specific':
+        if not data.user_ids:
+            raise HTTPException(status_code=422, detail='Select at least one customer')
+        stmt = select(User).where(
+            User.id.in_(data.user_ids),
+            User.is_admin == False,  # noqa: E712
+        )
+    else:
+        stmt = select(User).where(User.is_admin == False)  # noqa: E712
+
+    recipients = (await db.execute(stmt)).scalars().all()
+    if not recipients:
+        raise HTTPException(status_code=400, detail='No recipients matched')
+
+    email_type = _CATEGORY_EMAIL_TYPES.get(data.category, 'broadcast_promotional')
+
+    campaign = NotificationCampaign(
+        title=data.title.strip(),
+        message=data.message,
+        type=data.type,
+        category=data.category,
+        audience=data.audience,
+        recipient_count=len(recipients),
+        send_email=data.send_email,
+        created_by_id=admin.id,
+    )
+    db.add(campaign)
+    await db.flush()
+
+    email_queued = 0
+    email_skipped = 0
+    for user in recipients:
+        db.add(Notification(
+            user_id=user.id,
+            title=data.title.strip(),
+            message=data.message,
+            type=data.type,
+        ))
+        if data.send_email:
+            log = await send_broadcast_email(
+                db,
+                user=user,
+                email_type=email_type,
+                subject=data.subject,
+                title=data.title.strip(),
+                message=data.message,
+                campaign_id=campaign.id,
+            )
+            if log is None:
+                email_skipped += 1
+            else:
+                email_queued += 1
+
+    campaign.notifications_created = len(recipients)
+    campaign.email_queued = email_queued
+    campaign.email_skipped = email_skipped
+    await db.commit()
+    await db.refresh(campaign)
+
+    from app.audit import log_audit
+    await log_audit(
+        db=db,
+        action='CREATE',
+        entity_type='NotificationCampaign',
+        entity_id=campaign.id,
+        user_id=admin.id,
+        details=f"Broadcast '{campaign.title}' to {len(recipients)} customer(s)",
+    )
+    await db.commit()
+
+    return {
+        'id': campaign.id,
+        'recipient_count': len(recipients),
+        'notifications_created': len(recipients),
+        'email_queued': email_queued,
+        'email_skipped': email_skipped,
+    }
+
+
+@router.get('/broadcast', response_model=List[CampaignOut])
+async def list_broadcasts(
+    db: AsyncSession = Depends(get_db),
+    admin: AdminUser = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+):
+    stmt = (
+        select(NotificationCampaign)
+        .order_by(NotificationCampaign.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().all()

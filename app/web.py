@@ -629,6 +629,20 @@ async def admin_customers(request: Request):
     return await render("admin/customers.html", request, customers=customers)
 
 
+@pages.get("/admin/notify", response_class=HTMLResponse)
+async def admin_notify(request: Request):
+    customers = []
+    try:
+        async with async_session_maker() as db:
+            result = await db.execute(
+                select(User).where(User.is_admin == False).order_by(User.created_at.desc())
+            )
+            customers = result.scalars().all()
+    except Exception:
+        customers = []
+    return await render("admin/notify.html", request, customers=customers)
+
+
 @pages.get("/admin/reviews", response_class=HTMLResponse)
 async def admin_reviews(request: Request):
     try:

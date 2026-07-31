@@ -756,6 +756,26 @@ class Notification(Base):
     user = relationship('User', backref='notifications', lazy='selectin')
 
 
+class NotificationCampaign(Base):
+    __tablename__ = 'notification_campaigns'
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String(200), nullable=False)
+    message = Column(Text)
+    type = Column(String(50), default='info')  # info, success, warning, error
+    category = Column(String(50), default='promotional')  # order_updates, newsletter, promotional, product_promotions, price_drop, back_in_stock, review_request, loyalty, coupon
+    audience = Column(String(20), default='all')  # all, specific
+    recipient_count = Column(Integer, default=0)
+    notifications_created = Column(Integer, default=0)
+    email_queued = Column(Integer, default=0)
+    email_skipped = Column(Integer, default=0)
+    send_email = Column(Boolean, default=True)
+    created_by_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+    created_by = relationship('User', lazy='selectin')
+
+
 # ---------------------------------------------------------------------------
 # Warehouses & Inventory
 # ---------------------------------------------------------------------------

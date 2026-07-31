@@ -1,0 +1,308 @@
+{% extends "admin_base.html" %}
+
+{% block head %}
+<style>
+    .stat-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px 20px; min-width: 160px; }
+    .stat-card .stat-value { font-size: 1.6rem; font-weight: 800; color: var(--text-light); }
+    .stat-card .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+    .form-section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-orange); font-weight: 700; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border-color); }
+    .scope-option { border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; cursor: pointer; transition: all 0.2s; background: transparent; }
+    .scope-option:hover { border-color: rgba(242,102,15,0.4); }
+    .scope-option.active { border-color: var(--primary-orange); background: rgba(242,102,15,0.08); }
+    .scope-option input { display: none; }
+    .scope-option .scope-label { font-weight: 600; color: var(--text-light); }
+    .scope-option .scope-desc { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+    .customer-pick-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; }
+    .customer-pick-list label { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; color: var(--text-light); }
+    .customer-pick-list label:hover { background: rgba(242,102,15,0.08); }
+    .cat-badge { font-size: 0.72rem; padding: 3px 10px; border-radius: 20px; background: rgba(242,102,15,0.12); color: var(--primary-orange); }
+    @media (max-width: 768px) { .stats-row { flex-direction: column; } .stat-card { min-width: auto; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h3 class="fw-bold mb-1">Customer Notifications</h3>
+        <p class="text-muted mb-0">Send announcements to all customers or a specific customer. They appear in each customer's account and can also be emailed.</p>
+    </div>
+</div>
+
+<div id="statsRow" class="d-flex flex-wrap gap-3 mb-4">
+    <div class="stat-card flex-fill">
+        <div class="stat-value" id="statCustomers">{{ customers|length }}</div>
+        <div class="stat-label">Total Customers</div>
+    </div>
+    <div class="stat-card flex-fill">
+        <div class="stat-value text-info" id="statCampaigns">-</div>
+        <div class="stat-label">Total Campaigns</div>
+    </div>
+    <div class="stat-card flex-fill">
+        <div class="stat-value text-success" id="statLastRecipients">-</div>
+        <div class="stat-label">Last Campaign Recipients</div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card card-custom">
+            <div class="card-body p-4">
+                <div class="form-section-title">Compose Notification</div>
+                <form id="notifyForm" onsubmit="sendNotification(event)">
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-light mb-2">Audience</label>
+                        <div class="d-flex flex-column flex-sm-row gap-3">
+                            <label class="scope-option flex-fill active" onclick="selectAudience('all', this)">
+                                <input type="radio" name="audience" value="all" checked>
+                                <div class="scope-label"><i class="bi bi-people me-2"></i>All Customers</div>
+                                <div class="scope-desc">Every registered customer gets the notification</div>
+                            </label>
+                            <label class="scope-option flex-fill" onclick="selectAudience('specific', this)">
+                                <input type="radio" name="audience" value="specific">
+                                <div class="scope-label"><i class="bi bi-person me-2"></i>Specific Customer</div>
+                                <div class="scope-desc">Choose one or more customers below</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-light mb-2">Category</label>
+                        <select id="notifyCategory" class="form-select bg-dark text-light border-secondary">
+                            <option value="order_updates">Order Updates — confirmations, shipping, delivery status (always on)</option>
+                            <option value="newsletter">Newsletter — weekly product updates</option>
+                            <option value="promotional">Promotional — sales, deals, special offers</option>
+                            <option value="product_promotions">Product Promotions — new launches, featured items</option>
+                            <option value="price_drop">Price Drop Alerts — wishlist items on sale</option>
+                            <option value="back_in_stock">Back in Stock Alerts</option>
+                            <option value="review_request">Review Requests</option>
+                            <option value="loyalty">Loyalty Updates</option>
+                            <option value="coupon">Coupon Notifications</option>
+                        </select>
+                        <div class="form-text">Customers who opted out of a category won't get the email (Order Updates are always delivered).</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-light">Title</label>
+                        <input type="text" id="notifyTitle" class="form-control bg-dark text-light border-secondary" placeholder="e.g. End of Season Sale — 30% Off Everything" maxlength="200">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-light">Message</label>
+                        <textarea id="notifyMessage" class="form-control bg-dark text-light border-secondary" rows="4" placeholder="Write the announcement message..."></textarea>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-light">Email Subject <span class="text-muted fw-normal">(optional)</span></label>
+                            <input type="text" id="notifySubject" class="form-control bg-dark text-light border-secondary" placeholder="Defaults to the title">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-light">Notification Style</label>
+                            <select id="notifyType" class="form-select bg-dark text-light border-secondary">
+                                <option value="info">Info</option>
+                                <option value="success">Success</option>
+                                <option value="warning">Warning</option>
+                                <option value="error">Error</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" id="notifySendEmail" checked>
+                        <label class="form-check-label text-light" for="notifySendEmail">Also send as email</label>
+                        <div class="form-text">Emails respect each customer's saved email preferences.</div>
+                    </div>
+
+                    <div class="d-none" id="specificCustomersWrap">
+                        <label class="form-label fw-semibold text-light mt-3">Select Customers</label>
+                        <div class="position-relative mb-2">
+                            <i class="bi bi-search position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem;"></i>
+                            <input type="text" id="customerSearch" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Search customers..." style="padding-left: 34px;" oninput="filterCustomers()">
+                        </div>
+                        <div class="customer-pick-list" id="customerList">
+                            {% for c in customers %}
+                            <label>
+                                <input type="checkbox" class="form-check-input me-2 customer-pick" value="{{ c.id }}" data-name="{{ c.first_name or c.username }} {{ c.last_name or '' }}">
+                                <span><strong>{{ c.first_name or c.username }} {{ c.last_name or '' }}</strong> <span class="text-muted">({{ c.email }})</span></span>
+                            </label>
+                            {% else %}
+                            <div class="text-muted small p-2">No customers yet.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary-custom mt-4" id="notifySubmitBtn">
+                        <i class="bi bi-send me-1"></i> Send Notification
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card card-custom p-0 overflow-hidden">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="border-color: var(--border-color) !important;">
+                <h6 class="fw-bold mb-0">Send History</h6>
+                <button class="btn btn-sm btn-outline-secondary" onclick="loadHistory()"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0 align-middle" style="--bs-table-bg: transparent;">
+                    <thead>
+                        <tr>
+                            <th class="text-muted fw-normal border-secondary px-3">Title</th>
+                            <th class="text-muted fw-normal border-secondary">Category</th>
+                            <th class="text-muted fw-normal border-secondary">Recipients</th>
+                            <th class="text-muted fw-normal border-secondary">Emails</th>
+                            <th class="text-muted fw-normal border-secondary text-end pe-3">Sent</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable">
+                        <tr>
+                            <td colspan="5" class="text-center py-5 border-secondary">
+                                <div class="spinner-border text-warning" role="status"><span class="visually-hidden">Loading...</span></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API = '/api/notifications';
+let selectedAudience = 'all';
+
+const CATEGORY_LABELS = {
+    order_updates: 'Order Updates', newsletter: 'Newsletter', promotional: 'Promotional',
+    product_promotions: 'Product Promos', price_drop: 'Price Drop', back_in_stock: 'Back in Stock',
+    review_request: 'Review Request', loyalty: 'Loyalty', coupon: 'Coupon'
+};
+
+function showToast(message, type = 'success') {
+    const icons = { success: 'check-circle-fill', error: 'exclamation-triangle-fill', info: 'info-circle-fill' };
+    const colors = { success: 'text-success', error: 'text-danger', info: 'text-info' };
+    const id = 'toast-' + Date.now();
+    const html = `
+        <div id="${id}" class="toast align-items-center border-secondary" role="alert" style="background: var(--bg-darker); border-color: var(--border-color) !important;">
+            <div class="d-flex">
+                <div class="toast-body ${colors[type] || colors.info}">
+                    <i class="bi ${icons[type] || icons.info} me-2"></i>${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>`;
+    document.getElementById('toastContainer').insertAdjacentHTML('beforeend', html);
+    const el = document.getElementById(id);
+    const toast = new bootstrap.Toast(el, { delay: 3500 });
+    toast.show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
+}
+
+function selectAudience(audience, el) {
+    selectedAudience = audience;
+    document.querySelectorAll('.scope-option').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('specificCustomersWrap').classList.toggle('d-none', audience !== 'specific');
+}
+
+function filterCustomers() {
+    const q = document.getElementById('customerSearch').value.toLowerCase();
+    document.querySelectorAll('#customerList label').forEach(label => {
+        label.style.display = label.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+
+function getSelectedCustomerIds() {
+    return [...document.querySelectorAll('.customer-pick:checked')].map(cb => parseInt(cb.value, 10));
+}
+
+async function sendNotification(e) {
+    e.preventDefault();
+    const title = document.getElementById('notifyTitle').value.trim();
+    if (!title) {
+        showToast('Enter a title for the notification', 'error');
+        return;
+    }
+    const user_ids = selectedAudience === 'specific' ? getSelectedCustomerIds() : [];
+    if (selectedAudience === 'specific' && user_ids.length === 0) {
+        showToast('Select at least one customer', 'error');
+        return;
+    }
+
+    const payload = {
+        title: title,
+        message: document.getElementById('notifyMessage').value.trim() || null,
+        category: document.getElementById('notifyCategory').value,
+        type: document.getElementById('notifyType').value,
+        audience: selectedAudience,
+        user_ids: user_ids,
+        send_email: document.getElementById('notifySendEmail').checked,
+        subject: document.getElementById('notifySubject').value.trim() || null
+    };
+
+    const btn = document.getElementById('notifySubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
+
+    try {
+        const resp = await fetch(`${API}/broadcast`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') },
+            body: JSON.stringify(payload)
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.detail || err.message || err.error || 'Request failed');
+        }
+        const result = await resp.json();
+        document.getElementById('notifyForm').reset();
+        document.querySelector('input[name="audience"][value="all"]').checked = true;
+        selectAudience('all', document.querySelector('.scope-option'));
+        showToast(`Sent to ${result.recipient_count} customer(s) — ${result.email_queued} email(s) queued, ${result.email_skipped} skipped.`);
+        loadHistory();
+    } catch (err) {
+        showToast(err.message || 'Failed to send notification', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send me-1"></i> Send Notification';
+    }
+}
+
+async function loadHistory() {
+    try {
+        const resp = await fetch(`${API}/broadcast`, {
+            headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('admin_token') || '') }
+        });
+        if (!resp.ok) throw new Error('Failed to load history');
+        const data = await resp.json();
+        document.getElementById('statCampaigns').textContent = data.length;
+        const tbody = document.getElementById('historyTable');
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted border-secondary">No campaigns sent yet.</td></tr>';
+            return;
+        }
+        document.getElementById('statLastRecipients').textContent = data[0].recipient_count;
+        tbody.innerHTML = data.map(c => `
+            <tr>
+                <td class="px-3">
+                    <div class="fw-semibold text-light">${c.title.replace(/</g, '&lt;')}</div>
+                    <div class="text-muted small">${c.audience === 'all' ? 'All customers' : 'Specific customer(s)'} ${c.send_email ? '&nbsp;<span class="text-info"><i class="bi bi-envelope"></i></span>' : ''}</div>
+                </td>
+                <td><span class="cat-badge">${CATEGORY_LABELS[c.category] || c.category}</span></td>
+                <td class="text-light">${c.recipient_count}</td>
+                <td class="text-light">${c.send_email ? `${c.email_queued} sent / ${c.email_skipped} skipped` : '<span class="text-muted">—</span>'}</td>
+                <td class="text-end pe-3 text-muted small">${c.created_at ? new Date(c.created_at).toLocaleDateString() + ' ' + new Date(c.created_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : ''}</td>
+            </tr>`).join('');
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+loadHistory();
+</script>
+{% endblock %}
