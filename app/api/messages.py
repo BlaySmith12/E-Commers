@@ -133,10 +133,10 @@ async def create_message(
     try:
         import asyncio
         from app.services.sms_service import send_admin_sms_message
-        name = msg.name or 'Visitor'
-        subject = msg.subject or 'New message'
+        name = data.sender_name or 'Visitor'
+        subject = data.subject or 'New message'
         task = asyncio.create_task(
-            send_admin_sms_message(f"New contact message | {name} | {subject} | {msg.email}")
+            send_admin_sms_message(f"New contact message | {name} | {subject} | {data.sender_email}")
         )
         from app.activity import _sms_tasks
         _sms_tasks.add(task)
