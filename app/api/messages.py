@@ -128,4 +128,20 @@ async def create_message(
     db.add(msg)
     await db.commit()
     await db.refresh(msg)
+
+    # Notify admin via SMS (fire-and-forget)
+    try:
+        import asyncio
+        from app.services.sms_service import send_admin_sms_message
+        name = msg.name or 'Visitor'
+        subject = msg.subject or 'New message'
+        task = asyncio.create_task(
+            send_admin_sms_message(f"New contact message | {name} | {subject} | {msg.email}")
+        )
+        from app.activity import _sms_tasks
+        _sms_tasks.add(task)
+        task.add_done_callback(_sms_tasks.discard)
+    except Exception:
+        pass
+
     return msg

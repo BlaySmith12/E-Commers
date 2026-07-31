@@ -667,7 +667,7 @@ async def checkout(
     await log_activity(
         db=db,
         activity_type="order_created",
-        description=f"New order #{order.order_number} was placed by {customer_name}",
+        description=f"New Order #{order.order_number} | {customer_name} | GHS {total_amount:.2f} | {payload.payment_method}",
         entity_type="Order",
         entity_id=order.id,
         entity_number=order.order_number,
@@ -686,14 +686,6 @@ async def checkout(
     except Exception:
         import logging
         logging.getLogger(__name__).exception("Failed to send order confirmation email")
-
-    # Send admin SMS notification (fire-and-forget)
-    try:
-        from app.services.sms_service import send_admin_sms
-        await send_admin_sms(order)
-    except Exception:
-        import logging
-        logging.getLogger(__name__).exception("Failed to send admin SMS notification")
 
     return order
 

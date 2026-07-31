@@ -37,24 +37,20 @@ async def _get_sms_config():
     return api_key, sender_id, admin_phone
 
 
-async def send_admin_sms(order) -> bool:
-    """Send an SMS notification to the admin when a new order is placed."""
+async def send_admin_sms_message(message: str) -> bool:
+    """Send an SMS notification to the admin with an arbitrary message."""
     api_key, sender_id, admin_phone = await _get_sms_config()
 
     if not api_key or not admin_phone:
-        logger.warning("Arkesel SMS not configured – skipping admin SMS for order #%s", order.order_number)
+        logger.warning("Arkesel SMS not configured – skipping admin SMS: %.80s", message)
         return False
-
-    customer_name = order.customer_name or f"User #{order.user_id}"
-    payment_status = getattr(order, 'payment_status', 'Pending')
-    message = f"New Order #{order.order_number} | {customer_name} | GHS {order.total_amount:.2f} | {payment_status}"
 
     if sender_id and len(sender_id) > 11:
         sender_id = sender_id[:11]
 
     payload = {
         "sender": sender_id or "ASAHSPRIME",
-        "message": message,
+        "message": message[:160],
         "recipients": [admin_phone],
     }
 
@@ -68,12 +64,20 @@ async def send_admin_sms(order) -> bool:
             data = resp.json()
             if resp.is_error:
                 logger.error(
-                    "Arkesel API error for order #%s: status=%s body=%s",
-                    order.order_number, resp.status_code, data,
+                    "Arkesel API error: status=%s body=%s",
+                    resp.status_code, data,
                 )
                 return False
-            logger.info("Admin SMS sent for order #%s – Arkesel response: %s", order.order_number, data)
+            logger.info("Admin SMS sent – Arkesel response: %s", data)
             return True
     except Exception:
-        logger.exception("Failed to send admin SMS for order #%s", order.order_number)
+        logger.exception("Failed to send admin SMS")
         return False
+
+
+async def send_admin_sms(order) -> bool:
+    """Send an SMS notification to the admin when a new order is placed."""
+    customer_name = order.customer_name or f"User #{order.user_id}"
+    payment_status = getattr(order, 'payment_status', 'Pending')
+    message = f"New Order #{order.order_number} | {customer_name} | GHS {order.total_amount:.2f} | {payment_status}"
+    return await send_admin_sms_message(message)

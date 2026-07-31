@@ -5,6 +5,7 @@ to the activity_logs table so the dashboard can display them.
 """
 
 import hashlib
+import asyncio
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -16,6 +17,10 @@ from app.models.catalog import ActivityLog, StoreVisit, User
 
 # ─── Activity Logging ────────────────────────────────────────────────────────
 
+# Keep strong refs to fire-and-forget SMS tasks so they aren't garbage collected
+_sms_tasks: set = set()
+
+
 async def log_activity(
     db: AsyncSession,
     activity_type: str,
@@ -26,8 +31,13 @@ async def log_activity(
     actor_name: Optional[str] = None,
     actor_id: Optional[int] = None,
     extra_data: Optional[dict] = None,
+    notify_sms: bool = True,
 ) -> ActivityLog:
-    """Create an activity log entry. Returns the created entry."""
+    """Create an activity log entry. Returns the created entry.
+
+    When ``notify_sms`` is True (default), the admin also receives an SMS
+    notification with the activity description.
+    """
     entry = ActivityLog(
         activity_type=activity_type,
         description=description,
@@ -41,6 +51,17 @@ async def log_activity(
     )
     db.add(entry)
     await db.flush()
+
+    # Fire-and-forget admin SMS for every notification
+    if notify_sms:
+        try:
+            from app.services.sms_service import send_admin_sms_message
+            task = asyncio.create_task(send_admin_sms_message(f"{description}"))
+            _sms_tasks.add(task)
+            task.add_done_callback(_sms_tasks.discard)
+        except Exception:
+            pass
+
     return entry
 
 

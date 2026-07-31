@@ -315,7 +315,7 @@ async def verify_payment(
             await log_activity(
                 db=db,
                 activity_type="payment_completed",
-                description=f"Payment for order #{order.order_number} was successfully completed",
+                description=f"Payment received for order #{order.order_number} | GHS {order.total_amount:.2f}",
                 entity_type="Order",
                 entity_id=order.id,
                 entity_number=order.order_number,
@@ -333,13 +333,6 @@ async def verify_payment(
                 await email_db.commit()
         except Exception:
             logger.exception("Failed to send payment success email")
-
-        # Send admin SMS notification (fire-and-forget)
-        try:
-            from app.services.sms_service import send_admin_sms
-            await send_admin_sms(order)
-        except Exception:
-            logger.exception("Failed to send admin SMS notification")
 
         return PaymentVerifyOut(
             success=True,
@@ -710,19 +703,12 @@ async def _process_successful_payment(payment: Payment, event_data: dict, db: As
     except Exception:
         logger.exception("Failed to send payment success email via webhook")
 
-    # Send admin SMS notification (fire-and-forget)
-    try:
-        from app.services.sms_service import send_admin_sms
-        await send_admin_sms(order)
-    except Exception:
-        logger.exception("Failed to send admin SMS notification via webhook")
-
     # Activity log for webhook payment success
     try:
         await log_activity(
             db=db,
             activity_type="payment_completed",
-            description=f"Payment for order #{order.order_number} was successfully completed",
+            description=f"Payment received for order #{order.order_number} | GHS {order.total_amount:.2f} | via webhook",
             entity_type="Order",
             entity_id=order.id,
             entity_number=order.order_number,
