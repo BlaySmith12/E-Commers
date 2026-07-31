@@ -486,19 +486,22 @@ async function saveSettings(e) {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
     try {
-        const inputs = document.querySelectorAll('#settingsGrid input[data-key]');
-        for (const input of inputs) {
-            const key = input.dataset.key;
-            const value = input.value;
-            await fetch(`${LOYALTY_API}/admin/settings`, {
-                method: 'PUT',
-                headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key, value })
-            });
+        const payload = {};
+        document.querySelectorAll('#settingsGrid input[data-key]').forEach(input => {
+            payload[input.dataset.key] = input.value;
+        });
+        const resp = await fetch(`${LOYALTY_API}/admin/settings`, {
+            method: 'PUT',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.detail || err.message || 'Failed');
         }
         showToast('Settings saved successfully.');
     } catch (e) {
-        showToast('Failed to save settings', 'error');
+        showToast('Failed to save settings: ' + e.message, 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Save Settings';
