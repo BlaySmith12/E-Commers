@@ -493,38 +493,59 @@ async def checkout(
     if points_used and points_used > 0:
         loyalty_result = await db.execute(select(LoyaltyAccount).where(LoyaltyAccount.user_id == current_user.id))
         loyalty_account = loyalty_result.scalar_one_or_none()
-        if loyalty_account and loyalty_account.points_balance >= points_used:
-            redemption_rate = 100
-            try:
-                settings_result = await db.execute(
-                    select(LoyaltySettings).where(LoyaltySettings.key == 'redemption_rate')
-                )
-                setting_row = settings_result.scalar_one_or_none()
-                if setting_row:
-                    redemption_rate = int(setting_row.value)
-            except Exception:
-                pass
-            points_discount = round(points_used / redemption_rate, 2)
-            points_discount = min(points_discount, subtotal - discount)
-            loyalty_account.points_balance -= points_used
-            loyalty_account.total_redeemed += points_used
-            await db.add(LoyaltyTransaction(
-                user_id=current_user.id, type='redeem', points=-points_used,
-                balance_after=loyalty_account.points_balance,
-                description=f'Points redeemed for order',
-            ))
-            await db.flush()
-            # Activity log for loyalty points redemption
-            await log_activity(
-                db=db,
-                activity_type="loyalty_points_redeemed",
-                description=f"{((current_user.first_name or '') + ' ' + (current_user.last_name or '')).strip() or current_user.email} redeemed {points_used} loyalty points",
-                entity_type="User",
-                entity_id=current_user.id,
-                actor_name=((current_user.first_name or '') + ' ' + (current_user.last_name or '')).strip() or current_user.email,
-                actor_id=current_user.id,
-                extra_data={"points": points_used, "discount": points_discount},
+        if not loyalty_account or loyalty_account.points_balance < points_used:
+            raise HTTPException(status_code=400, detail='Insufficient loyalty points balance')
+
+        redemption_rate = 100
+        min_points = 500
+        max_points = 5000
+        min_order = 0
+        try:
+            settings_result = await db.execute(
+                select(LoyaltySettings).where(LoyaltySettings.key.in_(
+                    ['redemption_rate', 'min_redemption_points', 'max_redemption_per_order', 'min_order_for_redemption']
+                ))
             )
+            for setting_row in settings_result.scalars().all():
+                if setting_row.key == 'redemption_rate':
+                    redemption_rate = int(setting_row.value)
+                elif setting_row.key == 'min_redemption_points':
+                    min_points = int(setting_row.value)
+                elif setting_row.key == 'max_redemption_per_order':
+                    max_points = int(setting_row.value)
+                elif setting_row.key == 'min_order_for_redemption':
+                    min_order = float(setting_row.value)
+        except Exception:
+            pass
+
+        if min_order and subtotal < min_order:
+            raise HTTPException(status_code=400, detail=f'Minimum order amount for points redemption is GHS {min_order:.2f}')
+        if points_used < min_points:
+            raise HTTPException(status_code=400, detail=f'Minimum points to redeem is {min_points}')
+        if max_points and points_used > max_points:
+            raise HTTPException(status_code=400, detail=f'Maximum points redeemable per order is {max_points}')
+
+        points_discount = round(points_used / redemption_rate, 2)
+        points_discount = min(points_discount, subtotal - discount)
+        loyalty_account.points_balance -= points_used
+        loyalty_account.total_redeemed += points_used
+        await db.add(LoyaltyTransaction(
+            user_id=current_user.id, type='redeem', points=-points_used,
+            balance_after=loyalty_account.points_balance,
+            description=f'Points redeemed for order',
+        ))
+        await db.flush()
+        # Activity log for loyalty points redemption
+        await log_activity(
+            db=db,
+            activity_type="loyalty_points_redeemed",
+            description=f"{((current_user.first_name or '') + ' ' + (current_user.last_name or '')).strip() or current_user.email} redeemed {points_used} loyalty points",
+            entity_type="User",
+            entity_id=current_user.id,
+            actor_name=((current_user.first_name or '') + ' ' + (current_user.last_name or '')).strip() or current_user.email,
+            actor_id=current_user.id,
+            extra_data={"points": points_used, "discount": points_discount},
+        )
 
     discount = round(discount, 2)
     points_discount = round(points_discount, 2)
@@ -603,6 +624,21 @@ async def checkout(
     await db.commit()
     await db.refresh(order)
     await db.refresh(payment)
+
+    # Send loyalty redemption confirmation email
+    if points_used > 0 and current_user.email:
+        try:
+            from app.services.email_service import send_loyalty_points_email
+            async with async_session_maker() as email_db:
+                await send_loyalty_points_email(
+                    email_db, current_user, 'redeem', -points_used,
+                    (loyalty_account.points_balance if loyalty_account else 0),
+                    description=f'Redeemed for order {order.order_number}',
+                    order_number=order.order_number,
+                )
+                await email_db.commit()
+        except Exception:
+            pass
 
     # For COD: clear cart immediately. For Paystack: clear after payment verified.
     if not is_paystack:

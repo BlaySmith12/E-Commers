@@ -161,7 +161,8 @@ async def my_loyalty_settings(
 ):
     settings_keys = [
         'points_per_currency', 'redemption_rate', 'min_redemption_points',
-        'max_redemption_per_order', 'tier_bronze_min', 'tier_silver_min',
+        'max_redemption_per_order', 'min_order_for_redemption',
+        'tier_bronze_min', 'tier_silver_min',
         'tier_gold_min', 'tier_platinum_min',
     ]
     result = await db.execute(

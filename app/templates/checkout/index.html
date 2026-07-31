@@ -279,7 +279,42 @@ textarea.ck-input{min-height:80px;resize:vertical}
             </div>
         </div>
 
-        <!-- 5. Order Summary -->
+        <!-- 5. Loyalty Points -->
+        <div class="ck-section" data-section="loyalty">
+            <div class="ck-section-head" onclick="toggleSection(this)">
+                <h5><i class="bi bi-star"></i> Loyalty Points</h5>
+                <span class="ck-chevron"><i class="bi bi-chevron-down"></i></span>
+            </div>
+            <div class="ck-section-body">
+                <div id="ckLoyaltyWrap" style="display:none">
+                    <div class="ck-saved-addr">
+                        <label><i class="bi bi-star-fill me-1"></i> Your Balance</label>
+                        <div style="color:#fff;font-weight:700;font-size:1.05rem" id="ckLoyaltyBalance">0 points</div>
+                        <div style="color:var(--text-secondary,#C8BEB7);font-size:.75rem" id="ckLoyaltyRate">100 pts = GHS 1.00</div>
+                    </div>
+                    <div id="ckLoyaltyInput" style="display:flex;gap:6px">
+                        <input type="number" id="ckLoyaltyPoints" class="ck-input" placeholder="Points to redeem" min="0" style="flex:1">
+                        <button onclick="applyLoyaltyPoints()" class="ck-input" style="width:auto;padding:0 16px;background:var(--primary-orange);color:#fff;border:none;font-weight:600;cursor:pointer;border-radius:10px">Apply</button>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+                        <button onclick="useMaxPoints()" style="background:none;border:1px solid var(--border-color,#333);color:var(--primary-orange);font-size:.75rem;padding:4px 12px;border-radius:8px;cursor:pointer">Use Maximum</button>
+                        <div id="ckLoyaltyHint" style="color:var(--text-muted,#9a9590);font-size:.72rem"></div>
+                    </div>
+                    <div id="ckLoyaltyActive" style="display:none;margin-top:8px">
+                        <div style="display:flex;align-items:center;gap:6px;color:#4caf50;font-size:.85rem;font-weight:600">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span id="ckLoyaltyActiveText"></span>
+                            <button onclick="removeLoyaltyPoints()" style="background:none;border:none;color:inherit;cursor:pointer;font-size:1rem;padding:0">&times;</button>
+                        </div>
+                        <div id="ckLoyaltySavings" style="color:#4caf50;font-size:.78rem;margin-top:2px"></div>
+                    </div>
+                    <div id="ckLoyaltyErr" style="color:#dc3545;font-size:.78rem;margin-top:4px;display:none"></div>
+                </div>
+                <div id="ckLoyaltyEmpty" style="color:var(--text-secondary,#C8BEB7);font-size:.8rem">You have no loyalty points to redeem yet. Earn points on every order.</div>
+            </div>
+        </div>
+
+        <!-- 6. Order Summary -->
         <div class="ck-summary open" id="ckSummary">
             <div class="ck-summary-head" onclick="toggleSummary()">
                 <h5><i class="bi bi-bag-check"></i> Order Summary</h5>
@@ -291,7 +326,7 @@ textarea.ck-input{min-height:80px;resize:vertical}
             <div class="ck-summary-body" id="ckSumBody"></div>
         </div>
 
-        <!-- 6. Payment -->
+        <!-- 7. Payment -->
         <div class="ck-section open" data-section="payment" style="margin-top:.75rem">
             <div class="ck-section-head" onclick="toggleSection(this)">
                 <h5><i class="bi bi-credit-card"></i> Payment Method</h5>
@@ -306,7 +341,7 @@ textarea.ck-input{min-height:80px;resize:vertical}
             </div>
         </div>
 
-        <!-- 7. Notes -->
+        <!-- 8. Notes -->
         <div class="ck-section" data-section="notes">
             <div class="ck-section-head" onclick="toggleSection(this)">
                 <h5><i class="bi bi-pencil-square"></i> Order Notes</h5>
@@ -334,6 +369,8 @@ textarea.ck-input{min-height:80px;resize:vertical}
     var cart=null, selectedPay='Paystack', shippingFee=15, deliveryMethod='standard';
     var PAYSTACK_PUBLIC_KEY='{{ config.PAYSTACK_PUBLIC_KEY if config else "" }}';
     var BASE_URL='{{ config.BASE_URL if config else "" }}';
+    var loyaltyBalance=0, loyaltyRate=100, loyaltyMin=500, loyaltyMax=5000, loyaltyMinOrder=0;
+    var pointsUsed=0, pointsDiscount=0;
 
     var COUNTRIES_STATES={
         'Ghana':['Greater Accra','Ashanti','Western','Central','Eastern','Northern','Volta','Upper East','Upper West','Bono','Bono East','Ahafo','Western North','Oti','Savannah','North East'],
@@ -490,7 +527,78 @@ textarea.ck-input{min-height:80px;resize:vertical}
         document.getElementById('ckContent').style.display='block';
         renderSummary();
         loadAddresses();
+        loadLoyalty();
     }
+
+    // ── Loyalty points redemption ──
+    async function loadLoyalty(){
+        try{
+            var r=await fetch(API+'/loyalty/me',{headers:hdr()});
+            if(!r.ok){showLoyaltyEmpty();return}
+            var acct=await r.json();
+            loyaltyBalance=acct.points_balance||0;
+            var s=await (await fetch(API+'/loyalty/me/settings',{headers:hdr()})).json();
+            if(s.redemption_rate) loyaltyRate=parseInt(s.redemption_rate,10)||100;
+            if(s.min_redemption_points) loyaltyMin=parseInt(s.min_redemption_points,10)||500;
+            if(s.max_redemption_per_order) loyaltyMax=parseInt(s.max_redemption_per_order,10)||5000;
+            if(s.min_order_for_redemption) loyaltyMinOrder=parseFloat(s.min_order_for_redemption)||0;
+            if(loyaltyBalance<loyaltyMin){showLoyaltyEmpty();return}
+            document.getElementById('ckLoyaltyWrap').style.display='block';
+            document.getElementById('ckLoyaltyEmpty').style.display='none';
+            document.getElementById('ckLoyaltyBalance').textContent=loyaltyBalance.toLocaleString()+' points';
+            document.getElementById('ckLoyaltyRate').textContent=loyaltyRate+' pts = GHS 1.00';
+            document.getElementById('ckLoyaltyHint').textContent='Min '+loyaltyMin+' pts'+(loyaltyMax?' · Max '+loyaltyMax+' pts':'');
+        }catch(e){showLoyaltyEmpty()}
+    }
+
+    function showLoyaltyEmpty(){
+        document.getElementById('ckLoyaltyWrap').style.display='none';
+        document.getElementById('ckLoyaltyEmpty').style.display='block';
+    }
+
+    function loyaltyErr(msg){
+        var el=document.getElementById('ckLoyaltyErr');
+        el.textContent=msg;el.style.display='';
+    }
+
+    window.applyLoyaltyPoints=function(){
+        var input=document.getElementById('ckLoyaltyPoints');
+        var pts=parseInt(input.value,10)||0;
+        var errEl=document.getElementById('ckLoyaltyErr');
+        errEl.style.display='none';
+        if(pts<=0){loyaltyErr('Enter the number of points to redeem');return}
+        var subtotal=cart.subtotal-(cart.discount||0);
+        if(loyaltyMinOrder>0&&cart.subtotal<loyaltyMinOrder){loyaltyErr('Minimum order amount for points is '+fmt(loyaltyMinOrder));return}
+        if(pts<loyaltyMin){loyaltyErr('Minimum points to redeem is '+loyaltyMin.toLocaleString());return}
+        if(loyaltyMax&&pts>loyaltyMax){loyaltyErr('Maximum points per order is '+loyaltyMax.toLocaleString());return}
+        if(pts>loyaltyBalance){loyaltyErr('You only have '+loyaltyBalance.toLocaleString()+' points');return}
+        var maxUsable=Math.floor(subtotal*loyaltyRate);
+        if(pts>maxUsable){loyaltyErr('Points discount cannot exceed your order total');return}
+        pointsUsed=pts;
+        pointsDiscount=Math.round(pts/loyaltyRate*100)/100;
+        document.getElementById('ckLoyaltyInput').style.display='none';
+        document.getElementById('ckLoyaltyActive').style.display='';
+        document.getElementById('ckLoyaltyActiveText').textContent=pts.toLocaleString()+' points applied';
+        document.getElementById('ckLoyaltySavings').textContent='Discount: -'+fmt(pointsDiscount);
+        renderSummary();
+    };
+
+    window.useMaxPoints=function(){
+        var subtotal=cart.subtotal-(cart.discount||0);
+        var maxUsable=Math.min(loyaltyBalance,loyaltyMax?loyaltyMax:loyaltyBalance,Math.floor(subtotal*loyaltyRate));
+        if(maxUsable<loyaltyMin){loyaltyErr('You need at least '+loyaltyMin.toLocaleString()+' points to redeem');return}
+        document.getElementById('ckLoyaltyPoints').value=maxUsable;
+        applyLoyaltyPoints();
+    };
+
+    window.removeLoyaltyPoints=function(){
+        pointsUsed=0;pointsDiscount=0;
+        document.getElementById('ckLoyaltyInput').style.display='';
+        document.getElementById('ckLoyaltyActive').style.display='none';
+        document.getElementById('ckLoyaltyPoints').value='';
+        document.getElementById('ckLoyaltyErr').style.display='none';
+        renderSummary();
+    };
 
     function renderSummary(){
         var el=document.getElementById('ckSumBody');
@@ -512,10 +620,13 @@ textarea.ck-input{min-height:80px;resize:vertical}
 
         html+='<div class="ck-sum-line"><span class="label">Subtotal</span><span class="value">'+fmt(cart.subtotal)+'</span></div>';
         if(cart.discount>0) html+='<div class="ck-sum-line disc"><span class="label">Discount</span><span class="value">-'+fmt(cart.discount)+'</span></div>';
+        if(pointsUsed>0) html+='<div class="ck-sum-line disc"><span class="label">Loyalty Points ('+pointsUsed.toLocaleString()+')</span><span class="value">-'+fmt(pointsDiscount)+'</span></div>';
         html+='<div class="ck-sum-line"><span class="label">Shipping</span><span class="value">'+fmt(shippingFee)+'</span></div>';
-        html+='<div class="ck-sum-line"><span class="label">Tax (15%)</span><span class="value">'+fmt(cart.tax)+'</span></div>';
+        var taxable=Math.max(cart.subtotal-cart.discount-pointsDiscount,0);
+        var tax=Math.round(taxable*0.15*100)/100;
+        html+='<div class="ck-sum-line"><span class="label">Tax (15%)</span><span class="value">'+fmt(tax)+'</span></div>';
 
-        var total=Math.max(cart.subtotal-cart.discount,0)+shippingFee+cart.tax;
+        var total=taxable+shippingFee+tax;
         html+='<div class="ck-sum-total"><span>Total</span><span class="val">'+fmt(total)+'</span></div>';
         html+='<div style="margin-top:8px;text-align:center;font-size:.75rem;color:var(--text-secondary);"><i class="bi bi-shield-lock me-1"></i>Payments processed securely via Paystack</div>';
 
@@ -603,6 +714,7 @@ textarea.ck-input{min-height:80px;resize:vertical}
             zip_code:document.getElementById('ckZip').value.trim(),
             payment_method:selectedPay,shipping_fee:shippingFee,tax:cart.tax,
             coupon_code:cart.coupon_code||null,
+            points_used:pointsUsed||0,
             notes:document.getElementById('ckNotes').value.trim()||null
         };
 
