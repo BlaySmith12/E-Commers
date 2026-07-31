@@ -397,6 +397,7 @@ async def checkout(
 
     # Validate all products exist and have stock
     order_items = []
+    promo_items = []
     subtotal = 0.0
     for product_id, qty in list(cart.items()):
         result = await db.execute(select(Product).where(Product.id == product_id))
@@ -408,6 +409,7 @@ async def checkout(
         unit_price = product.effective_price
         line_total = unit_price * qty
         subtotal += line_total
+        promo_items.append((product, qty))
 
         # Capture product image URL
         snapshot_image = None
@@ -487,6 +489,22 @@ async def checkout(
         else:
             coupon_code = None
 
+    # Auto-applied promotions (no code required) - best single promotion wins.
+    from app.services.promotions_service import compute_promotion_discount, compute_free_shipping
+    promo_result = await compute_promotion_discount(db, promo_items, subtotal)
+    promo_discount = promo_result['discount']
+    applied_promotion_id = None
+    applied_promotion_name = None
+    if promo_discount > discount:
+        discount = promo_discount
+        applied_promotion_id = promo_result['promotion_id']
+        applied_promotion_name = promo_result['promotion_name']
+        if coupon_obj and coupon_obj.used_count > 0:
+            coupon_obj.used_count -= 1
+        coupon_code = None
+        coupon_obj = None
+    free_shipping = await compute_free_shipping(db, subtotal)
+
     # Apply loyalty points redemption
     points_discount = 0.0
     points_used = payload.points_used if payload.points_used else 0
@@ -549,7 +567,10 @@ async def checkout(
 
     discount = round(discount, 2)
     points_discount = round(points_discount, 2)
-    shipping_fee = payload.shipping_fee if payload.shipping_fee else CART_SHIPPING_FEE
+    if free_shipping:
+        shipping_fee = 0.0
+    else:
+        shipping_fee = payload.shipping_fee if payload.shipping_fee else CART_SHIPPING_FEE
     taxable = max(subtotal - discount - points_discount, 0.0)
     tax = round(taxable * CART_TAX_RATE, 2)
     total_amount = round(taxable + shipping_fee + tax, 2)
@@ -580,6 +601,9 @@ async def checkout(
         notes=payload.notes,
         coupon_code=coupon_code if coupon_code else None,
         coupon_id=coupon_obj.id if coupon_obj else None,
+        promotion_id=applied_promotion_id,
+        promotion_name=applied_promotion_name,
+        promotion_discount=round(promo_discount, 2) if applied_promotion_id else 0.0,
         points_used=points_used,
         points_discount=points_discount,
     )

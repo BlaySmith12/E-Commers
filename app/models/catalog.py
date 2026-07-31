@@ -575,14 +575,23 @@ class Promotion(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
     description = Column(Text)
-    discount_type = Column(String(20), nullable=False, default='percentage')
-    discount_value = Column(Float, nullable=False)
+    promotion_type = Column(String(30), nullable=False, default='percent_off')
+    # percent_off, buy_x_get_y, spend_save, free_shipping
+    scope = Column(String(20), default='storewide')  # storewide, category, product
+    discount_value = Column(Float, nullable=False, default=0.0)  # % off for percent_off
+    discount_amount = Column(Float, default=0.0)  # fixed discount for spend_save
+    min_spend = Column(Float, default=0.0)  # threshold for spend_save / free_shipping
+    buy_qty = Column(Integer, default=0)  # buy X get Y free
+    get_qty = Column(Integer, default=0)
+    max_discount = Column(Float, default=0.0)  # optional cap on discount
     product_id = Column(Integer, ForeignKey('products.id'), nullable=True)
+    product_ids = Column(JSON, nullable=True)  # list of product IDs for product scope
     category_id = Column(Integer, ForeignKey('categories.id'), nullable=True)
     is_active = Column(Boolean, default=True)
     start_date = Column(DateTime)
     end_date = Column(DateTime)
     created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, onupdate=utcnow)
 
     product = relationship('Product', lazy='selectin')
     category = relationship('Category', lazy='selectin')

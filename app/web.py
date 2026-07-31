@@ -24,6 +24,7 @@ from app.api import (
     messages as messages_api, search as search_api, admin_profile,
     reports as reports_api, auth_extended, media as media_api,
     payments as payments_api, loyalty, analytics, email_admin,
+    promotions as promotions_api,
 )
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.error_handler import ErrorHandlerMiddleware, register_exception_handlers
@@ -152,8 +153,11 @@ async def home(request: Request):
     featured_products = []
     banners = []
     testimonials = []
+    promotions = []
     try:
         async with async_session_maker() as db:
+            from app.services.promotions_service import get_active_promotions, product_sale_info
+            promotions = await get_active_promotions(db)
             cats = await db.execute(select(Category).order_by(Category.name))
             categories = cats.scalars().all()
             feat = await db.execute(
@@ -166,9 +170,11 @@ async def home(request: Request):
             for row in feat.all():
                 p = row.Product
                 imgs = [img.image_url for img in (p.images or [])]
+                sale_price, sale_pct = product_sale_info(promotions, p)
                 featured_products.append({
                     "id": p.id, "name": p.name, "slug": p.slug,
                     "price": p.price, "discount_price": p.discount_price,
+                    "sale_price": sale_price, "sale_pct": sale_pct,
                     "stock": p.stock, "image": imgs[0] if imgs else "",
                     "category": row.Category.name if row.Category else "",
                     "brand": row.Brand.name if row.Brand else "",
@@ -194,7 +200,8 @@ async def home(request: Request):
     return await render("index.html", request,
                    categories=categories,
                    featured_products=featured_products,
-                   banners=banners)
+                   banners=banners,
+                   promotions=promotions)
 
 
 @pages.get("/shop", response_class=HTMLResponse)
@@ -204,6 +211,8 @@ async def shop(request: Request):
     brands = []
     try:
         async with async_session_maker() as db:
+            from app.services.promotions_service import get_active_promotions, product_sale_info
+            promos = await get_active_promotions(db)
             cats = await db.execute(select(Category).order_by(Category.name))
             categories = cats.scalars().all()
             brs = await db.execute(select(Brand).order_by(Brand.name))
@@ -218,9 +227,11 @@ async def shop(request: Request):
             for row in prods.all():
                 p = row.Product
                 imgs = [img.image_url for img in (p.images or [])]
+                sale_price, sale_pct = product_sale_info(promos, p)
                 products.append({
                     "id": p.id, "name": p.name, "slug": p.slug,
                     "price": p.price, "discount_price": p.discount_price,
+                    "sale_price": sale_price, "sale_pct": sale_pct,
                     "stock": p.stock, "image": imgs[0] if imgs else "",
                     "category_id": p.category_id,
                     "category": row.Category.name if row.Category else "",
@@ -237,8 +248,11 @@ async def shop(request: Request):
 async def product(request: Request, slug: str):
     product_data = None
     related = []
+    product_promos = []
     try:
         async with async_session_maker() as db:
+            from app.services.promotions_service import get_active_promotions, product_sale_info
+            promos = await get_active_promotions(db)
             result = await db.execute(
                 select(Product, Category, Brand)
                 .join(Category, Product.category_id == Category.id, isouter=True)
@@ -252,10 +266,12 @@ async def product(request: Request, slug: str):
                 attrs = [{"name": a.name, "value": a.value} for a in (p.attributes or [])]
                 variants = [{"id": v.id, "name": v.name, "sku": v.sku, "price_modifier": v.price_modifier, "stock": v.stock} for v in (p.variants or [])]
                 reviews = [{"rating": r.rating, "comment": r.comment, "created_at": r.created_at} for r in (p.reviews or [])]
+                sale_price, sale_pct = product_sale_info(promos, p)
                 product_data = {
                     "id": p.id, "name": p.name, "slug": p.slug, "sku": p.sku,
                     "description": p.description or "",
                     "price": p.price, "discount_price": p.discount_price,
+                    "sale_price": sale_price, "sale_pct": sale_pct,
                     "stock": p.stock, "is_featured": p.is_featured,
                     "images": imgs, "image": imgs[0] if imgs else "",
                     "category": row.Category.name if row.Category else "",
@@ -263,6 +279,11 @@ async def product(request: Request, slug: str):
                     "brand": row.Brand.name if row.Brand else "",
                     "attributes": attrs, "variants": variants, "reviews": reviews,
                 }
+                product_promos = [pr for pr in promos
+                                  if pr.promotion_type == 'percent_off'
+                                  and (pr.scope == 'storewide'
+                                       or (pr.scope == 'category' and pr.category_id == p.category_id)
+                                       or (pr.scope == 'product' and (pr.product_id == p.id or (pr.product_ids and p.id in pr.product_ids))))]
                 rel = await db.execute(
                     select(Product, Category, Brand)
                     .join(Category, Product.category_id == Category.id, isouter=True)
@@ -273,9 +294,11 @@ async def product(request: Request, slug: str):
                 for rr in rel.all():
                     rp = rr.Product
                     rims = [img.image_url for img in (rp.images or [])]
+                    r_sale, r_pct = product_sale_info(promos, rp)
                     related.append({
                         "id": rp.id, "name": rp.name, "slug": rp.slug,
                         "price": rp.price, "discount_price": rp.discount_price,
+                        "sale_price": r_sale, "sale_pct": r_pct,
                         "image": rims[0] if rims else "",
                         "category": rr.Category.name if rr.Category else "",
                     })
@@ -283,7 +306,89 @@ async def product(request: Request, slug: str):
         pass
     if not product_data:
         return await render("404.html", request)
-    return await render("shop/product.html", request, product=product_data, related=related)
+    return await render("shop/product.html", request, product=product_data, related=related, product_promos=product_promos)
+
+
+@pages.get("/deals", response_class=HTMLResponse)
+async def deals(request: Request):
+    deals = []
+    try:
+        async with async_session_maker() as db:
+            from app.services.promotions_service import get_active_promotions, product_sale_info
+            promos = await get_active_promotions(db)
+            for pr in promos:
+                prods = []
+                if pr.scope == 'product':
+                    ids = []
+                    if pr.product_id:
+                        ids.append(pr.product_id)
+                    if pr.product_ids:
+                        ids.extend(pr.product_ids)
+                    if ids:
+                        res = await db.execute(
+                            select(Product, Category, Brand)
+                            .join(Category, Product.category_id == Category.id, isouter=True)
+                            .join(Brand, Product.brand_id == Brand.id, isouter=True)
+                            .where(Product.status == 'active', Product.id.in_(list(dict.fromkeys(ids))))
+                        )
+                        for r in res.all():
+                            imgs = [i.image_url for i in (r.Product.images or [])]
+                            sale, pct = product_sale_info(promos, r.Product)
+                            prods.append({"id": r.Product.id, "name": r.Product.name, "slug": r.Product.slug,
+                                          "price": r.Product.price, "discount_price": r.Product.discount_price,
+                                          "sale_price": sale, "sale_pct": pct,
+                                          "image": imgs[0] if imgs else "",
+                                          "category": r.Category.name if r.Category else ""})
+                elif pr.scope == 'category' and pr.category_id:
+                    res = await db.execute(
+                        select(Product, Category, Brand)
+                        .join(Category, Product.category_id == Category.id, isouter=True)
+                        .join(Brand, Product.brand_id == Brand.id, isouter=True)
+                        .where(Product.status == 'active', Product.category_id == pr.category_id)
+                        .order_by(Product.created_at.desc()).limit(8)
+                    )
+                    for r in res.all():
+                        imgs = [i.image_url for i in (r.Product.images or [])]
+                        sale, pct = product_sale_info(promos, r.Product)
+                        prods.append({"id": r.Product.id, "name": r.Product.name, "slug": r.Product.slug,
+                                      "price": r.Product.price, "discount_price": r.Product.discount_price,
+                                      "sale_price": sale, "sale_pct": pct,
+                                      "image": imgs[0] if imgs else "",
+                                      "category": r.Category.name if r.Category else ""})
+                else:
+                    res = await db.execute(
+                        select(Product, Category, Brand)
+                        .join(Category, Product.category_id == Category.id, isouter=True)
+                        .join(Brand, Product.brand_id == Brand.id, isouter=True)
+                        .where(Product.status == 'active')
+                        .order_by(Product.created_at.desc()).limit(8)
+                    )
+                    for r in res.all():
+                        imgs = [i.image_url for i in (r.Product.images or [])]
+                        sale, pct = product_sale_info(promos, r.Product)
+                        prods.append({"id": r.Product.id, "name": r.Product.name, "slug": r.Product.slug,
+                                      "price": r.Product.price, "discount_price": r.Product.discount_price,
+                                      "sale_price": sale, "sale_pct": pct,
+                                      "image": imgs[0] if imgs else "",
+                                      "category": r.Category.name if r.Category else ""})
+                deals.append({
+                    "id": pr.id,
+                    "name": pr.name,
+                    "description": pr.description or "",
+                    "promotion_type": pr.promotion_type,
+                    "scope": pr.scope,
+                    "discount_value": pr.discount_value,
+                    "discount_amount": pr.discount_amount,
+                    "min_spend": pr.min_spend,
+                    "buy_qty": pr.buy_qty,
+                    "get_qty": pr.get_qty,
+                    "start_date": pr.start_date,
+                    "end_date": pr.end_date,
+                    "products": prods,
+                })
+    except Exception:
+        pass
+    return await render("deals.html", request, deals=deals)
 
 
 @pages.get("/cart", response_class=HTMLResponse)
@@ -1124,6 +1229,7 @@ def create_app() -> FastAPI:
     app.include_router(loyalty.router, prefix=api_prefix)
     app.include_router(analytics.router, prefix=api_prefix)
     app.include_router(email_admin.router, prefix=api_prefix)
+    app.include_router(promotions_api.router, prefix=api_prefix)
 
     app.include_router(pages)
 

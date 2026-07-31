@@ -620,13 +620,15 @@ textarea.ck-input{min-height:80px;resize:vertical}
 
         html+='<div class="ck-sum-line"><span class="label">Subtotal</span><span class="value">'+fmt(cart.subtotal)+'</span></div>';
         if(cart.discount>0) html+='<div class="ck-sum-line disc"><span class="label">Discount</span><span class="value">-'+fmt(cart.discount)+'</span></div>';
+        if(cart.promotion_name) html+='<div class="ck-sum-line disc"><span class="label"><i class="bi bi-tags me-1"></i>'+esc(cart.promotion_name)+'</span><span class="value">-'+fmt(cart.promotion_discount||cart.discount)+'</span></div>';
         if(pointsUsed>0) html+='<div class="ck-sum-line disc"><span class="label">Loyalty Points ('+pointsUsed.toLocaleString()+')</span><span class="value">-'+fmt(pointsDiscount)+'</span></div>';
-        html+='<div class="ck-sum-line"><span class="label">Shipping</span><span class="value">'+fmt(shippingFee)+'</span></div>';
+        var shipFee=cart.free_shipping?0:shippingFee;
+        html+='<div class="ck-sum-line"><span class="label">Shipping</span><span class="value">'+(cart.free_shipping?'FREE':fmt(shipFee))+'</span></div>';
         var taxable=Math.max(cart.subtotal-cart.discount-pointsDiscount,0);
         var tax=Math.round(taxable*0.15*100)/100;
         html+='<div class="ck-sum-line"><span class="label">Tax (15%)</span><span class="value">'+fmt(tax)+'</span></div>';
 
-        var total=taxable+shippingFee+tax;
+        var total=taxable+shipFee+tax;
         html+='<div class="ck-sum-total"><span>Total</span><span class="val">'+fmt(total)+'</span></div>';
         html+='<div style="margin-top:8px;text-align:center;font-size:.75rem;color:var(--text-secondary);"><i class="bi bi-shield-lock me-1"></i>Payments processed securely via Paystack</div>';
 
@@ -712,7 +714,7 @@ textarea.ck-input{min-height:80px;resize:vertical}
             phone:document.getElementById('ckPhone').value.trim(),
             address_id:null,street:street,city:city,state:state,country:document.getElementById('ckCountry').value,
             zip_code:document.getElementById('ckZip').value.trim(),
-            payment_method:selectedPay,shipping_fee:shippingFee,tax:cart.tax,
+            payment_method:selectedPay,shipping_fee:cart.free_shipping?0:(shippingFee),tax:cart.tax,
             coupon_code:cart.coupon_code||null,
             points_used:pointsUsed||0,
             notes:document.getElementById('ckNotes').value.trim()||null

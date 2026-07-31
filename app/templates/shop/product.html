@@ -59,7 +59,11 @@
             </div>
 
             <div class="mb-3">
-                {% if product.discount_price and product.discount_price < product.price %}
+                {% if product.sale_price and product.sale_price < product.price %}
+                    <span style="font-size:1.8rem;font-weight:800;color:var(--primary-orange)">GHS {{ "%.2f"|format(product.sale_price) }}</span>
+                    <span style="font-size:1.1rem;color:var(--warm-gray);text-decoration:line-through;margin-left:10px">GHS {{ "%.2f"|format(product.price) }}</span>
+                    <span class="badge ms-2" style="background:rgba(242,102,15,.15);color:var(--primary-orange);font-size:.75rem">-{{ product.sale_pct|int }}%</span>
+                {% elif product.discount_price and product.discount_price < product.price %}
                     <span style="font-size:1.8rem;font-weight:800;color:var(--primary-orange)">GHS {{ "%.2f"|format(product.discount_price) }}</span>
                     <span style="font-size:1.1rem;color:var(--warm-gray);text-decoration:line-through;margin-left:10px">GHS {{ "%.2f"|format(product.price) }}</span>
                     <span class="badge ms-2" style="background:rgba(242,102,15,.15);color:var(--primary-orange);font-size:.75rem">-{{ ((1 - product.discount_price / product.price) * 100)|int }}%</span>
@@ -67,6 +71,21 @@
                     <span style="font-size:1.8rem;font-weight:800;color:var(--white)">GHS {{ "%.2f"|format(product.price) }}</span>
                 {% endif %}
             </div>
+
+            {% if product_promos %}
+            <div class="mb-3 p-3 rounded" style="background:rgba(242,102,15,.08);border:1px solid rgba(242,102,15,.3)">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-tags-fill" style="color:var(--primary-orange)"></i>
+                    <span style="font-weight:700;color:var(--primary-orange);font-size:.9rem">Promotion Active</span>
+                </div>
+                {% for promo in product_promos %}
+                <div style="font-size:.82rem;color:var(--warm-gray)">
+                    {{ promo.name }}{% if promo.discount_value %} — <strong style="color:var(--white)">{{ promo.discount_value|int }}% off</strong>{% endif %}
+                    {% if promo.end_date %} · Ends <span class="promo-countdown" data-end="{{ promo.end_date.isoformat() }}Z">{{ promo.end_date.strftime('%d %b %Y') }}</span>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
 
             {% if product.description %}
             <p style="color:var(--warm-gray);line-height:1.7;font-size:.9rem;margin-bottom:1.5rem">{{ product.description }}</p>
@@ -232,7 +251,10 @@
                             <div class="product-card-category">{{ rp.category }}</div>
                             <h6 class="product-card-name">{{ rp.name }}</h6>
                             <div class="product-card-price">
-                                {% if rp.discount_price and rp.discount_price < rp.price %}
+                                {% if rp.sale_price and rp.sale_price < rp.price %}
+                                    <span class="price-current">GHS {{ "%.2f"|format(rp.sale_price) }}</span>
+                                    <span class="price-original">GHS {{ "%.2f"|format(rp.price) }}</span>
+                                {% elif rp.discount_price and rp.discount_price < rp.price %}
                                     <span class="price-current">GHS {{ "%.2f"|format(rp.discount_price) }}</span>
                                     <span class="price-original">GHS {{ "%.2f"|format(rp.price) }}</span>
                                 {% else %}
@@ -432,5 +454,26 @@ async function submitReview(e) {
         btn.innerHTML = '<i class="bi bi-send me-1"></i>Submit Review';
     }
 }
+
+(function(){
+    function tickPromoCountdowns(){
+        document.querySelectorAll('.promo-countdown').forEach(function(el){
+            var end = new Date(el.dataset.end);
+            if (isNaN(end.getTime())) return;
+            var diff = end - new Date();
+            if (diff <= 0) { el.textContent = 'Ended'; return; }
+            var d = Math.floor(diff/86400000);
+            var h = Math.floor(diff%86400000/3600000);
+            var m = Math.floor(diff%3600000/60000);
+            var s = Math.floor(diff%60000/1000);
+            var parts = [];
+            if (d) parts.push(d + 'd');
+            parts.push(h + 'h', m + 'm', s + 's');
+            el.textContent = parts.join(' ');
+        });
+    }
+    tickPromoCountdowns();
+    setInterval(tickPromoCountdowns, 1000);
+})();
 </script>
 {% endblock %}

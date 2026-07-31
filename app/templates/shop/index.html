@@ -190,9 +190,11 @@
     }
 
     function productCardHTML(p) {
-        const hasDiscount = p.discount_price && p.discount_price < p.price;
-        const discount = hasDiscount ? Math.round((1 - p.discount_price / p.price) * 100) : 0;
-        const displayPrice = hasDiscount ? p.discount_price : p.price;
+        const hasDisc = p.discount_price && p.discount_price < p.price;
+        const hasPromo = p.sale_price && p.sale_price < p.price;
+        const hasDiscount = hasDisc || hasPromo;
+        const displayPrice = Math.min(p.sale_price || p.price, p.discount_price || p.price);
+        const discount = hasDiscount ? Math.round((1 - displayPrice / p.price) * 100) : 0;
         const stockClass = p.stock > 10 ? 'badge-in-stock' : p.stock > 0 ? 'badge-low-stock' : 'badge-out-stock';
         const stockText = p.stock > 10 ? 'In Stock' : p.stock > 0 ? 'Only ' + p.stock + ' left' : 'Out of Stock';
         const img = p.image || '';
@@ -348,7 +350,7 @@
     }
 
     var priceData = (function() {
-        var prices = ALL_PRODUCTS.map(function(p) { return p.discount_price || p.price; }).filter(function(p) { return p > 0; });
+        var prices = ALL_PRODUCTS.map(function(p) { return p.sale_price || p.discount_price || p.price; }).filter(function(p) { return p > 0; });
         var max = Math.ceil(Math.max.apply(null, prices) / 100) * 100;
         var min = Math.floor(Math.min.apply(null, prices) / 100) * 100;
         var step = max <= 5000 ? 50 : max <= 20000 ? 100 : 500;
@@ -406,11 +408,11 @@
         else if (filters.stock === 'out_of_stock') list = list.filter(function(p) { return p.stock <= 0; });
 
         var maxPrice = parseInt(document.getElementById('priceRange').value);
-        if (maxPrice < priceData.max) list = list.filter(function(p) { return (p.discount_price || p.price) <= maxPrice; });
+        if (maxPrice < priceData.max) list = list.filter(function(p) { return (p.sale_price || p.discount_price || p.price) <= maxPrice; });
 
         var sort = document.getElementById('sortSelect').value;
-        if (sort === 'price_asc') list.sort(function(a,b) { return (a.discount_price||a.price) - (b.discount_price||b.price); });
-        else if (sort === 'price_desc') list.sort(function(a,b) { return (b.discount_price||b.price) - (a.discount_price||a.price); });
+        if (sort === 'price_asc') list.sort(function(a,b) { return (a.sale_price||a.discount_price||a.price) - (b.sale_price||b.discount_price||b.price); });
+        else if (sort === 'price_desc') list.sort(function(a,b) { return (b.sale_price||b.discount_price||b.price) - (a.sale_price||a.discount_price||a.price); });
         else if (sort === 'name_asc') list.sort(function(a,b) { return (a.name||'').localeCompare(b.name||''); });
         else if (sort === 'name_desc') list.sort(function(a,b) { return (b.name||'').localeCompare(a.name||''); });
 

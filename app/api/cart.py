@@ -29,6 +29,7 @@ async def _serialize_cart(cart_id: str, db: AsyncSession, coupon_code: str = Non
     items: list[CartItemOut] = []
     subtotal = 0.0
     item_count = 0
+    promo_items = []
 
     for product_id, qty in list(cart.items()):
         result = await db.execute(select(Product).where(Product.id == product_id))
@@ -43,6 +44,7 @@ async def _serialize_cart(cart_id: str, db: AsyncSession, coupon_code: str = Non
         line_total = unit_price * qty
         subtotal += line_total
         item_count += qty
+        promo_items.append((product, qty))
 
         img = next((i for i in getattr(product, 'images', []) if i.is_primary), None)
         if not img and product.images:
@@ -102,8 +104,21 @@ async def _serialize_cart(cart_id: str, db: AsyncSession, coupon_code: str = Non
         else:
             resolved_coupon = None
 
+    # Auto-applied promotions (no code required). Best single promotion wins.
+    from app.services.promotions_service import compute_promotion_discount, compute_free_shipping
+    promo = await compute_promotion_discount(db, promo_items, subtotal)
+    promo_discount = promo['discount']
+    free_shipping = await compute_free_shipping(db, subtotal)
+    applied_promotion_id = None
+    applied_promotion_name = None
+    if promo_discount > discount:
+        discount = promo_discount
+        resolved_coupon = None
+        applied_promotion_id = promo['promotion_id']
+        applied_promotion_name = promo['promotion_name']
+
     discount = round(discount, 2)
-    shipping = CART_SHIPPING_FEE if item_count > 0 else 0.0
+    shipping = 0.0 if free_shipping else (CART_SHIPPING_FEE if item_count > 0 else 0.0)
     taxable = max(subtotal - discount, 0.0)
     tax = round(taxable * CART_TAX_RATE, 2)
     total = round(taxable + shipping + tax, 2)
@@ -114,6 +129,10 @@ async def _serialize_cart(cart_id: str, db: AsyncSession, coupon_code: str = Non
         item_count=item_count,
         discount=discount,
         coupon_code=resolved_coupon,
+        promotion_id=applied_promotion_id,
+        promotion_name=applied_promotion_name,
+        promotion_discount=round(promo_discount, 2) if applied_promotion_id else 0.0,
+        free_shipping=free_shipping,
         shipping_fee=shipping,
         tax=tax,
         total=total,

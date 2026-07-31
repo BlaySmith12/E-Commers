@@ -60,6 +60,20 @@ async def init_db() -> None:
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name VARCHAR(200)",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email VARCHAR(200)",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(30)",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS promotion_id INTEGER",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS promotion_name VARCHAR(200)",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS promotion_discount FLOAT DEFAULT 0.0",
+    ]
+    promotion_columns = [
+        "ALTER TABLE promotions ADD COLUMN IF NOT EXISTS promotion_type VARCHAR(30) DEFAULT 'percent_off'",
+        "ALTER TABLE promotions ADD COLUMN IF NOT EXISTS scope VARCHAR(20) DEFAULT 'storewide'",
+        "ALTER TABLE promotions ADD COLUMN IF NOT EXISTS discount_amount FLOAT DEFAULT 0.0",
+        "ALTER TABLE promotions ADD COLUMN IF NOT EXISTS min_spend FLOAT DEFAULT 0.0",
+        "ALTER TABLE promotions ADD COLUMN IF NOT EXISTS buy_qty INTEGER DEFAULT 0",
+        "ALTER TABLE promotions ADD COLUMN IF NOT EXISTS get_qty INTEGER DEFAULT 0",
+        "ALTER TABLE promotions ADD COLUMN IF NOT EXISTS max_discount FLOAT DEFAULT 0.0",
+        "ALTER TABLE promotions ADD COLUMN IF NOT EXISTS product_ids JSONB",
+        "ALTER TABLE promotions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
     ]
     address_columns = [
         "ALTER TABLE addresses ADD COLUMN IF NOT EXISTS full_name VARCHAR(200)",
@@ -85,7 +99,7 @@ async def init_db() -> None:
         "ALTER TABLE payments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
     ]
     async with engine.begin() as conn:
-        for stmt in order_columns + payment_columns + address_columns:
+        for stmt in order_columns + payment_columns + address_columns + promotion_columns:
             await conn.execute(text(stmt))
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS payment_events (

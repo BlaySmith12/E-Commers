@@ -14,7 +14,10 @@
     .scope-option .scope-label { font-weight: 600; color: var(--text-light); }
     .scope-option .scope-desc { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
     .date-range-display { font-size: 0.8rem; color: var(--text-muted); }
-    .modal-lg-custom { max-width: 720px; }
+    .modal-lg-custom { max-width: 760px; }
+    .product-pick-list { max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; }
+    .product-pick-list label { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; color: var(--text-light); }
+    .product-pick-list label:hover { background: rgba(242,102,15,0.08); }
     @media (max-width: 768px) { .stats-row { flex-direction: column; } .stat-card { min-width: auto; } }
 </style>
 {% endblock %}
@@ -23,7 +26,7 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
     <div>
         <h3 class="fw-bold mb-1">Promotions</h3>
-        <p class="text-muted mb-0">Manage marketing campaigns, flash sales, and promotional events.</p>
+        <p class="text-muted mb-0">Auto-applied sales &amp; campaigns. No promo codes needed — they apply automatically at checkout.</p>
     </div>
     <button class="btn btn-primary-custom btn-sm" onclick="openCreateModal()">
         <i class="bi bi-plus-lg me-1"></i> Create Promotion
@@ -61,11 +64,11 @@
             <option value="scheduled">Scheduled</option>
             <option value="ended">Ended</option>
         </select>
-        <select id="filterType" class="form-select form-select-sm bg-dark text-light border-secondary" style="width: 140px;" onchange="loadPromotions()">
+        <select id="filterType" class="form-select form-select-sm bg-dark text-light border-secondary" style="width: 150px;" onchange="loadPromotions()">
             <option value="">All Types</option>
-            <option value="percentage">Percentage</option>
-            <option value="fixed">Fixed</option>
-            <option value="bogo">BOGO</option>
+            <option value="percent_off">Percent Off</option>
+            <option value="buy_x_get_y">Buy X Get Y</option>
+            <option value="spend_save">Spend &amp; Save</option>
             <option value="free_shipping">Free Shipping</option>
         </select>
         <button class="filter-btn" id="clearFiltersBtn" onclick="clearFilters()" style="display:none;">
@@ -123,60 +126,93 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label text-light small fw-semibold">Description</label>
-                                <textarea class="form-control bg-dark text-light border-secondary" id="promoDescription" rows="2" placeholder="Internal description"></textarea>
+                                <textarea class="form-control bg-dark text-light border-secondary" id="promoDescription" rows="2" placeholder="Shown to customers on the Deals page"></textarea>
                             </div>
 
                             <div class="form-section-title mt-4">Discount</div>
                             <div class="mb-3">
                                 <label class="form-label text-light small fw-semibold">Type *</label>
-                                <select class="form-select bg-dark text-light border-secondary" id="promoDiscountType" onchange="onDiscountTypeChange()">
-                                    <option value="percentage">Percentage Off</option>
-                                    <option value="fixed">Fixed Amount</option>
-                                    <option value="bogo">Buy One Get One (BOGO)</option>
+                                <select class="form-select bg-dark text-light border-secondary" id="promoType" onchange="onTypeChange()">
+                                    <option value="percent_off">Percent Off</option>
+                                    <option value="buy_x_get_y">Buy X Get Y Free</option>
+                                    <option value="spend_save">Spend &amp; Save</option>
                                     <option value="free_shipping">Free Shipping</option>
                                 </select>
                             </div>
-                            <div class="mb-3" id="discountValueGroup">
-                                <label class="form-label text-light small fw-semibold">Value *</label>
+
+                            <div class="mb-3" id="percentField">
+                                <label class="form-label text-light small fw-semibold">Discount Value *</label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-dark text-muted border-secondary" id="promoDiscountPrefix">%</span>
-                                    <input type="number" class="form-control bg-dark text-light border-secondary" id="promoDiscountValue" min="0" step="0.01" placeholder="0">
+                                    <span class="input-group-text bg-dark text-muted border-secondary">%</span>
+                                    <input type="number" class="form-control bg-dark text-light border-secondary" id="promoDiscountValue" min="0" max="100" step="0.01" placeholder="e.g. 20">
                                 </div>
-                                <small class="text-muted" id="promoDiscountHint">e.g. 10% off selected items</small>
+                                <small class="text-muted">e.g. 20% off the applicable items</small>
+                            </div>
+
+                            <div class="mb-3 d-none" id="bogoField">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label class="form-label text-light small fw-semibold">Buy *</label>
+                                        <input type="number" class="form-control bg-dark text-light border-secondary" id="promoBuyQty" min="1" value="1">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label text-light small fw-semibold">Get (free) *</label>
+                                        <input type="number" class="form-control bg-dark text-light border-secondary" id="promoGetQty" min="1" value="1">
+                                    </div>
+                                </div>
+                                <small class="text-muted">e.g. Buy 2, get 1 free</small>
+                            </div>
+
+                            <div class="mb-3 d-none" id="spendField">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label class="form-label text-light small fw-semibold">Minimum Spend (GHS) *</label>
+                                        <input type="number" class="form-control bg-dark text-light border-secondary" id="promoMinSpend" min="0" step="0.01" value="0">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label text-light small fw-semibold">Discount Amount (GHS) *</label>
+                                        <input type="number" class="form-control bg-dark text-light border-secondary" id="promoDiscountAmount" min="0" step="0.01" value="0">
+                                    </div>
+                                </div>
+                                <small class="text-muted">e.g. Spend GHS 500, get GHS 100 off automatically</small>
+                            </div>
+
+                            <div class="mb-3 d-none" id="freeshipField">
+                                <label class="form-label text-light small fw-semibold">Minimum Spend (GHS) <span class="text-muted">(optional)</span></label>
+                                <input type="number" class="form-control bg-dark text-light border-secondary" id="promoMinSpend2" min="0" step="0.01" value="0" placeholder="0 = free shipping on all orders">
+                                <small class="text-muted">Leave at 0 for free shipping on every order.</small>
+                            </div>
+
+                            <div class="mb-3" id="maxDiscField">
+                                <label class="form-label text-light small fw-semibold">Maximum Discount (GHS) <span class="text-muted">(optional)</span></label>
+                                <input type="number" class="form-control bg-dark text-light border-secondary" id="promoMaxDiscount" min="0" step="0.01" value="0" placeholder="0 = no limit">
                             </div>
 
                             <div class="form-section-title mt-4">Applies To</div>
                             <div class="mb-3">
-                                <label class="form-label text-light small fw-semibold">Scope *</label>
                                 <div class="row g-2">
                                     <div class="col-sm-4">
-                                        <label class="scope-option active" onclick="setScope(this, 'all')">
-                                            <input type="radio" name="promoScope" value="all" checked>
-                                            <div class="scope-label">All Products</div>
-                                            <div class="scope-desc">Storewide</div>
-                                        </label>
-                                    </div>
-                                    <div class="col-sm-4">
-                                        <label class="scope-option" onclick="setScope(this, 'product')">
-                                            <input type="radio" name="promoScope" value="product">
-                                            <div class="scope-label">Specific Product</div>
-                                            <div class="scope-desc">Select one</div>
+                                        <label class="scope-option active" onclick="setScope(this, 'storewide')">
+                                            <input type="radio" name="promoScope" value="storewide" checked>
+                                            <div class="scope-label">Storewide</div>
+                                            <div class="scope-desc">All products</div>
                                         </label>
                                     </div>
                                     <div class="col-sm-4">
                                         <label class="scope-option" onclick="setScope(this, 'category')">
                                             <input type="radio" name="promoScope" value="category">
-                                            <div class="scope-label">Specific Category</div>
+                                            <div class="scope-label">Category</div>
                                             <div class="scope-desc">Select one</div>
                                         </label>
                                     </div>
+                                    <div class="col-sm-4">
+                                        <label class="scope-option" onclick="setScope(this, 'product')">
+                                            <input type="radio" name="promoScope" value="product">
+                                            <div class="scope-label">Products</div>
+                                            <div class="scope-desc">Select many</div>
+                                        </label>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="mb-3 d-none" id="productSelector">
-                                <label class="form-label text-light small fw-semibold">Select Product</label>
-                                <select class="form-select bg-dark text-light border-secondary" id="promoProductId">
-                                    <option value="">Choose product...</option>
-                                </select>
                             </div>
                             <div class="mb-3 d-none" id="categorySelector">
                                 <label class="form-label text-light small fw-semibold">Select Category</label>
@@ -184,18 +220,24 @@
                                     <option value="">Choose category...</option>
                                 </select>
                             </div>
+                            <div class="mb-3 d-none" id="productSelector">
+                                <label class="form-label text-light small fw-semibold">Select Products</label>
+                                <div class="product-pick-list" id="promoProductList"></div>
+                                <small class="text-muted">Tick all products included in this promotion.</small>
+                            </div>
 
                             <div class="form-section-title mt-4">Date Range</div>
                             <div class="row g-3">
                                 <div class="col-sm-6">
-                                    <label class="form-label text-light small fw-semibold">Start Date *</label>
-                                    <input type="datetime-local" class="form-control bg-dark text-light border-secondary" id="promoStartDate" required>
+                                    <label class="form-label text-light small fw-semibold">Start Date</label>
+                                    <input type="datetime-local" class="form-control bg-dark text-light border-secondary" id="promoStartDate">
                                 </div>
                                 <div class="col-sm-6">
-                                    <label class="form-label text-light small fw-semibold">End Date *</label>
-                                    <input type="datetime-local" class="form-control bg-dark text-light border-secondary" id="promoEndDate" required>
+                                    <label class="form-label text-light small fw-semibold">End Date</label>
+                                    <input type="datetime-local" class="form-control bg-dark text-light border-secondary" id="promoEndDate">
                                 </div>
                             </div>
+                            <small class="text-muted">Leave dates empty for an always-on promotion.</small>
 
                             <div class="form-section-title mt-4">Status</div>
                             <div class="form-check form-switch">
@@ -212,7 +254,7 @@
                                     <div class="fw-bold text-light mt-2" id="summaryName">New Promotion</div>
                                 </div>
                                 <div class="d-flex justify-content-between text-light small mb-2">
-                                    <span class="text-muted">Type:</span><span id="summaryType">Percentage Off</span>
+                                    <span class="text-muted">Type:</span><span id="summaryType">Percent Off</span>
                                 </div>
                                 <div class="d-flex justify-content-between text-light small mb-2">
                                     <span class="text-muted">Value:</span><span id="summaryValue">0%</span>
@@ -222,14 +264,18 @@
                                 </div>
                                 <hr class="border-secondary my-2">
                                 <div class="d-flex justify-content-between text-light small mb-2">
-                                    <span class="text-muted">Start:</span><span id="summaryStart" class="date-range-display">-</span>
+                                    <span class="text-muted">Start:</span><span id="summaryStart" class="date-range-display">Always</span>
                                 </div>
                                 <div class="d-flex justify-content-between text-light small mb-2">
-                                    <span class="text-muted">End:</span><span id="summaryEnd" class="date-range-display">-</span>
+                                    <span class="text-muted">End:</span><span id="summaryEnd" class="date-range-display">Never</span>
                                 </div>
                                 <div class="d-flex justify-content-between text-light small">
                                     <span class="text-muted">Active:</span><span id="summaryActive" class="text-success">Yes</span>
                                 </div>
+                            </div>
+                            <div class="mt-3 p-3 rounded" style="background:rgba(25,135,84,.08);border:1px solid rgba(25,135,84,.25)">
+                                <div style="font-size:.78rem;color:#6cc788"><i class="bi bi-info-circle me-1"></i>Auto-applied</div>
+                                <div style="font-size:.75rem;color:var(--text-muted);margin-top:2px">Customers get this discount automatically at checkout. The best promotion wins and is shown in the cart.</div>
                             </div>
                         </div>
                     </div>
@@ -271,8 +317,10 @@
 
 {% block scripts %}
 <script>
-const API = '/api/coupons';
+const API = '/api/promotions/admin';
 let allPromos = [];
+let allProducts = [];
+let allCategories = [];
 let currentPage = 1;
 const perPage = 15;
 let searchTimer = null;
@@ -298,6 +346,8 @@ function showToast(message, type = 'success') {
     el.addEventListener('hidden.bs.toast', () => el.remove());
 }
 
+function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+
 function debounceSearch() {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => { currentPage = 1; loadPromotions(); }, 300);
@@ -318,7 +368,7 @@ function updateClearBtn() {
 }
 
 function getPromoStatus(promo) {
-    if (!promo.active) return 'inactive';
+    if (!promo.is_active) return 'inactive';
     const now = new Date();
     const start = promo.start_date ? new Date(promo.start_date) : null;
     const end = promo.end_date ? new Date(promo.end_date) : null;
@@ -338,40 +388,54 @@ function statusBadge(status) {
     return `<span class="badge ${map[status] || map.inactive} rounded-pill px-3 py-1">${label}</span>`;
 }
 
+const TYPE_LABELS = {
+    percent_off: 'Percent Off',
+    buy_x_get_y: 'Buy X Get Y',
+    spend_save: 'Spend & Save',
+    free_shipping: 'Free Shipping'
+};
+
 function typeBadge(type) {
     const map = {
-        percentage: 'bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25',
-        fixed: 'bg-info bg-opacity-10 text-info border border-info border-opacity-25',
-        bogo: 'bg-success bg-opacity-10 text-success border border-success border-opacity-25',
+        percent_off: 'bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25',
+        buy_x_get_y: 'bg-success bg-opacity-10 text-success border border-success border-opacity-25',
+        spend_save: 'bg-info bg-opacity-10 text-info border border-info border-opacity-25',
         free_shipping: 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25'
     };
-    const labels = { percentage: '% Off', fixed: 'Fixed', bogo: 'BOGO', free_shipping: 'Free Ship' };
-    return `<span class="badge ${map[type] || 'bg-secondary'} rounded-pill px-3 py-1">${labels[type] || type}</span>`;
+    return `<span class="badge ${map[type] || 'bg-secondary'} rounded-pill px-3 py-1">${TYPE_LABELS[type] || type}</span>`;
 }
 
 function formatDiscount(promo) {
-    if (promo.discount_type === 'free_shipping') return 'Free Shipping';
-    if (promo.discount_type === 'bogo') return 'Buy 1 Get 1';
-    if (promo.discount_type === 'percentage') return `${parseFloat(promo.discount_value)}%`;
-    return `GHS ${parseFloat(promo.discount_value).toFixed(2)}`;
+    switch (promo.promotion_type) {
+        case 'percent_off': return `${parseFloat(promo.discount_value)}% off`;
+        case 'buy_x_get_y': return `Buy ${promo.buy_qty} Get ${promo.get_qty} Free`;
+        case 'spend_save': return `GHS ${parseFloat(promo.discount_amount).toFixed(2)} off`;
+        case 'free_shipping': return 'Free Shipping';
+        default: return `GHS ${parseFloat(promo.discount_value).toFixed(2)}`;
+    }
 }
 
 function appliesToText(promo) {
-    if (promo.scope === 'product') return `<span class="text-light">Product:</span> ${escapeHtml(promo.product_name || 'ID ' + (promo.product_id || '-'))}`;
-    if (promo.scope === 'category') return `<span class="text-light">Category:</span> ${escapeHtml(promo.category_name || 'ID ' + (promo.category_id || '-'))}`;
+    const scopeLabels = { storewide: 'All Products', category: 'Category', product: 'Products' };
+    if (promo.scope === 'category') return `<span class="text-light">${scopeLabels.category}:</span> ${escapeHtml(promo.category_name || 'ID ' + (promo.category_id || '-'))}`;
+    if (promo.scope === 'product') {
+        const ids = (promo.product_ids || []).filter(Boolean);
+        return `<span class="text-light">Products:</span> ${ids.length} selected`;
+    }
     return `<span class="text-light">All Products</span>`;
 }
 
 function formatDateRange(start, end) {
+    if (!start && !end) return '<span class="text-muted small">Always on</span>';
     const opts = { day: '2-digit', month: 'short', year: 'numeric' };
-    const s = start ? new Date(start).toLocaleDateString('en-GB', opts) : '-';
-    const e = end ? new Date(end).toLocaleDateString('en-GB', opts) : '-';
+    const s = start ? new Date(start).toLocaleDateString('en-GB', opts) : 'Anytime';
+    const e = end ? new Date(end).toLocaleDateString('en-GB', opts) : 'Never';
     return `<div class="small">${s}</div><div class="small text-muted">to ${e}</div>`;
 }
 
 function renderPagination(total) {
-    const pages = Math.ceil(total / perPage);
-    document.getElementById('paginationInfo').textContent = `Showing ${(currentPage - 1) * perPage + 1}–${Math.min(currentPage * perPage, total)} of ${total}`;
+    const pages = Math.max(1, Math.ceil(total / perPage));
+    document.getElementById('paginationInfo').textContent = total === 0 ? 'Showing 0 promotions' : `Showing ${(currentPage - 1) * perPage + 1}–${Math.min(currentPage * perPage, total)} of ${total}`;
     let html = `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link bg-dark border-secondary text-muted" href="#" onclick="goPage(${currentPage - 1}); return false;"><i class="bi bi-chevron-left"></i></a></li>`;
     for (let i = 1; i <= pages; i++) {
         if (i === 1 || i === pages || Math.abs(i - currentPage) <= 1) {
@@ -380,7 +444,7 @@ function renderPagination(total) {
             html += `<li class="page-item disabled"><span class="page-link bg-dark border-secondary text-muted">...</span></li>`;
         }
     }
-    html += `<li class="page-item ${currentPage === pages || pages === 0 ? 'disabled' : ''}"><a class="page-link bg-dark border-secondary text-muted" href="#" onclick="goPage(${currentPage + 1}); return false;"><i class="bi bi-chevron-right"></i></a></li>`;
+    html += `<li class="page-item ${currentPage === pages ? 'disabled' : ''}"><a class="page-link bg-dark border-secondary text-muted" href="#" onclick="goPage(${currentPage + 1}); return false;"><i class="bi bi-chevron-right"></i></a></li>`;
     document.getElementById('paginationControls').innerHTML = html;
 }
 
@@ -392,11 +456,8 @@ async function loadProducts() {
         if (!resp.ok) return;
         let data = await resp.json();
         if (data.products) data = data.products;
-        const sel = document.getElementById('promoProductId');
-        sel.innerHTML = '<option value="">Choose product...</option>';
-        data.forEach(p => {
-            sel.innerHTML += `<option value="${p.id}">${escapeHtml(p.name || p.title || 'Product #' + p.id)}</option>`;
-        });
+        allProducts = Array.isArray(data) ? data : [];
+        renderProductList([]);
     } catch (e) { /* silent */ }
 }
 
@@ -406,12 +467,30 @@ async function loadCategories() {
         if (!resp.ok) return;
         let data = await resp.json();
         if (data.categories) data = data.categories;
+        allCategories = Array.isArray(data) ? data : [];
         const sel = document.getElementById('promoCategoryId');
         sel.innerHTML = '<option value="">Choose category...</option>';
-        data.forEach(c => {
+        allCategories.forEach(c => {
             sel.innerHTML += `<option value="${c.id}">${escapeHtml(c.name || 'Category #' + c.id)}</option>`;
         });
     } catch (e) { /* silent */ }
+}
+
+function renderProductList(selectedIds) {
+    const sel = new Set(selectedIds.map(Number).filter(Boolean));
+    const wrap = document.getElementById('promoProductList');
+    if (!allProducts.length) {
+        wrap.innerHTML = '<div class="text-muted small p-2">No products found.</div>';
+        return;
+    }
+    wrap.innerHTML = allProducts.map(p => {
+        const checked = sel.has(p.id) ? 'checked' : '';
+        return `<label><input type="checkbox" value="${p.id}" ${checked}> <span class="text-truncate" style="flex:1">${escapeHtml(p.name || 'Product #' + p.id)}</span> <span class="text-muted" style="font-size:.72rem">GHS ${parseFloat(p.price || 0).toFixed(2)}</span></label>`;
+    }).join('');
+}
+
+function getSelectedProductIds() {
+    return Array.from(document.querySelectorAll('#promoProductList input:checked')).map(i => parseInt(i.value));
 }
 
 async function loadPromotions() {
@@ -421,15 +500,10 @@ async function loadPromotions() {
         if (!resp.ok) throw new Error('Failed');
         allPromos = await resp.json();
         if (allPromos.promotions) allPromos = allPromos.promotions;
-        if (allPromos.coupons) allPromos = allPromos.coupons;
+        if (!Array.isArray(allPromos)) allPromos = [];
     } catch (e) {
         showToast('Failed to load promotions', 'error');
         allPromos = [];
-    }
-
-    const filteredOnly = allPromos.filter(c => c.discount_type === 'percentage' || c.discount_type === 'fixed' || c.discount_type === 'bogo' || c.discount_type === 'free_shipping' || c.promotion_type || c.type === 'promotion');
-    if (filteredOnly.length > 0 || allPromos.length > 0) {
-        /* keep full set; promotions may just be coupons with broader types */
     }
 
     allPromos.forEach(p => { p._status = getPromoStatus(p); });
@@ -439,10 +513,10 @@ async function loadPromotions() {
     const typeF = document.getElementById('filterType').value;
 
     let filtered = allPromos.filter(p => {
-        const name = (p.name || p.description || '').toLowerCase();
-        if (search && !name.includes(search) && !(p.code || '').toLowerCase().includes(search)) return false;
+        const name = (p.name || '').toLowerCase();
+        if (search && !name.includes(search)) return false;
         if (statusF && p._status !== statusF) return false;
-        if (typeF && p.discount_type !== typeF) return false;
+        if (typeF && p.promotion_type !== typeF) return false;
         return true;
     });
 
@@ -477,10 +551,10 @@ async function loadPromotions() {
         return `
             <tr>
                 <td class="border-secondary px-3">
-                    <div class="promo-name-cell">${escapeHtml(p.name || p.description || p.code || 'Promotion')}</div>
+                    <div class="promo-name-cell">${escapeHtml(p.name)}</div>
                     ${p.description ? `<div class="text-muted small text-truncate" style="max-width:200px;">${escapeHtml(p.description)}</div>` : ''}
                 </td>
-                <td class="border-secondary">${typeBadge(p.discount_type)}</td>
+                <td class="border-secondary">${typeBadge(p.promotion_type)}</td>
                 <td class="border-secondary text-light fw-semibold">${formatDiscount(p)}</td>
                 <td class="border-secondary small">${appliesToText(p)}</td>
                 <td class="border-secondary">${statusBadge(p._status)}</td>
@@ -488,7 +562,7 @@ async function loadPromotions() {
                 <td class="border-secondary text-end pe-3">
                     <div class="d-flex gap-1 justify-content-end">
                         <button class="btn btn-sm btn-outline-primary rounded-circle" style="width:32px;height:32px;padding:0;" title="Edit" onclick='openEditModal(${JSON.stringify(p).replace(/'/g, "&#39;").replace(/</g, "\\u003c")})'><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-danger rounded-circle" style="width:32px;height:32px;padding:0;" title="Delete" onclick="openDeleteModal(${p.id}, '${(p.name || p.code || '').replace(/'/g, "\\'")}')"><i class="bi bi-trash"></i></button>
+                        <button class="btn btn-sm btn-outline-danger rounded-circle" style="width:32px;height:32px;padding:0;" title="Delete" onclick="openDeleteModal(${p.id}, '${(p.name || '').replace(/'/g, "\\'")}')"><i class="bi bi-trash"></i></button>
                     </div>
                 </td>
             </tr>`;
@@ -497,8 +571,6 @@ async function loadPromotions() {
     document.getElementById('paginationRow').style.display = '';
     renderPagination(total);
 }
-
-function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
 function setScope(el, value) {
     document.querySelectorAll('.scope-option').forEach(o => o.classList.remove('active'));
@@ -509,55 +581,39 @@ function setScope(el, value) {
     updateSummary();
 }
 
-function onDiscountTypeChange() {
-    const type = document.getElementById('promoDiscountType').value;
-    const prefix = document.getElementById('promoDiscountPrefix');
-    const hint = document.getElementById('promoDiscountHint');
-    const valueGroup = document.getElementById('discountValueGroup');
-
-    if (type === 'free_shipping') {
-        valueGroup.style.display = 'none';
-    } else {
-        valueGroup.style.display = '';
-    }
-
-    if (type === 'percentage') {
-        prefix.textContent = '%';
-        hint.textContent = 'e.g. 10% off selected items';
-    } else if (type === 'fixed') {
-        prefix.textContent = 'GHS';
-        hint.textContent = 'e.g. GHS 50 off selected items';
-    } else if (type === 'bogo') {
-        prefix.textContent = 'x';
-        hint.textContent = 'Buy one, get one free';
-    }
+function onTypeChange() {
+    const type = document.getElementById('promoType').value;
+    document.getElementById('percentField').classList.toggle('d-none', type !== 'percent_off');
+    document.getElementById('bogoField').classList.toggle('d-none', type !== 'buy_x_get_y');
+    document.getElementById('spendField').classList.toggle('d-none', type !== 'spend_save');
+    document.getElementById('freeshipField').classList.toggle('d-none', type !== 'free_shipping');
+    document.getElementById('maxDiscField').classList.toggle('d-none', type !== 'percent_off');
     updateSummary();
 }
 
 function updateSummary() {
     const name = document.getElementById('promoName').value || 'New Promotion';
-    const type = document.getElementById('promoDiscountType').value;
-    const val = parseFloat(document.getElementById('promoDiscountValue').value) || 0;
-    const scope = document.querySelector('input[name="promoScope"]:checked')?.value || 'all';
+    const type = document.getElementById('promoType').value;
+    const scope = document.querySelector('input[name="promoScope"]:checked')?.value || 'storewide';
     const start = document.getElementById('promoStartDate').value;
     const end = document.getElementById('promoEndDate').value;
     const active = document.getElementById('promoActive').checked;
 
-    const typeLabels = { percentage: 'Percentage Off', fixed: 'Fixed Amount', bogo: 'Buy One Get One', free_shipping: 'Free Shipping' };
-    let discountText = '0%';
-    if (type === 'percentage') discountText = `${val}%`;
-    else if (type === 'fixed') discountText = `GHS ${val.toFixed(2)}`;
-    else if (type === 'bogo') discountText = 'Buy 1 Get 1 Free';
+    const typeLabels = { percent_off: 'Percent Off', buy_x_get_y: 'Buy X Get Y', spend_save: 'Spend & Save', free_shipping: 'Free Shipping' };
+    let discountText = '-';
+    if (type === 'percent_off') discountText = `${parseFloat(document.getElementById('promoDiscountValue').value) || 0}%`;
+    else if (type === 'buy_x_get_y') discountText = `Buy ${document.getElementById('promoBuyQty').value || '?'} get ${document.getElementById('promoGetQty').value || '?'} free`;
+    else if (type === 'spend_save') discountText = `GHS ${parseFloat(document.getElementById('promoDiscountAmount').value) || 0} off`;
     else if (type === 'free_shipping') discountText = 'Free Shipping';
 
-    const scopeLabels = { all: 'All Products', product: 'Specific Product', category: 'Specific Category' };
+    const scopeLabels = { storewide: 'All Products', category: 'Specific Category', product: 'Specific Products' };
 
     document.getElementById('summaryName').textContent = name;
     document.getElementById('summaryType').textContent = typeLabels[type] || type;
     document.getElementById('summaryValue').textContent = discountText;
     document.getElementById('summaryScope').textContent = scopeLabels[scope] || scope;
-    document.getElementById('summaryStart').textContent = start ? new Date(start).toLocaleDateString() : '-';
-    document.getElementById('summaryEnd').textContent = end ? new Date(end).toLocaleDateString() : '-';
+    document.getElementById('summaryStart').textContent = start ? new Date(start).toLocaleDateString() : 'Always';
+    document.getElementById('summaryEnd').textContent = end ? new Date(end).toLocaleDateString() : 'Never';
     document.getElementById('summaryActive').textContent = active ? 'Yes' : 'No';
     document.getElementById('summaryActive').className = active ? 'text-success' : 'text-danger';
 }
@@ -566,43 +622,55 @@ function resetForm() {
     document.getElementById('promoId').value = '';
     document.getElementById('promoName').value = '';
     document.getElementById('promoDescription').value = '';
-    document.getElementById('promoDiscountType').value = 'percentage';
+    document.getElementById('promoType').value = 'percent_off';
     document.getElementById('promoDiscountValue').value = '';
+    document.getElementById('promoBuyQty').value = '1';
+    document.getElementById('promoGetQty').value = '1';
+    document.getElementById('promoMinSpend').value = '0';
+    document.getElementById('promoDiscountAmount').value = '0';
+    document.getElementById('promoMinSpend2').value = '0';
+    document.getElementById('promoMaxDiscount').value = '0';
     document.getElementById('promoStartDate').value = '';
     document.getElementById('promoEndDate').value = '';
     document.getElementById('promoActive').checked = true;
-    document.getElementById('promoProductId').value = '';
     document.getElementById('promoCategoryId').value = '';
+    renderProductList([]);
     document.querySelectorAll('.scope-option').forEach(o => o.classList.remove('active'));
     document.querySelector('.scope-option').classList.add('active');
-    document.querySelector('input[name="promoScope"][value="all"]').checked = true;
+    document.querySelector('input[name="promoScope"][value="storewide"]').checked = true;
     document.getElementById('productSelector').classList.add('d-none');
     document.getElementById('categorySelector').classList.add('d-none');
     document.getElementById('promoModalTitle').textContent = 'Create Promotion';
     document.getElementById('promoSubmitBtn').innerHTML = '<i class="bi bi-check-lg me-1"></i> Create Promotion';
-    onDiscountTypeChange();
-    updateSummary();
+    onTypeChange();
 }
 
 function openCreateModal() {
     resetForm();
     loadProducts();
     loadCategories();
+    updateSummary();
     new bootstrap.Modal(document.getElementById('promoModal')).show();
 }
 
 function openEditModal(promo) {
     resetForm();
     document.getElementById('promoId').value = promo.id;
-    document.getElementById('promoName').value = promo.name || promo.description || '';
+    document.getElementById('promoName').value = promo.name || '';
     document.getElementById('promoDescription').value = promo.description || '';
-    document.getElementById('promoDiscountType').value = promo.discount_type || 'percentage';
+    document.getElementById('promoType').value = promo.promotion_type || 'percent_off';
     document.getElementById('promoDiscountValue').value = promo.discount_value || '';
+    document.getElementById('promoBuyQty').value = promo.buy_qty || '1';
+    document.getElementById('promoGetQty').value = promo.get_qty || '1';
+    document.getElementById('promoMinSpend').value = promo.min_spend || '0';
+    document.getElementById('promoDiscountAmount').value = promo.discount_amount || '0';
+    document.getElementById('promoMinSpend2').value = promo.min_spend || '0';
+    document.getElementById('promoMaxDiscount').value = promo.max_discount || '0';
     if (promo.start_date) document.getElementById('promoStartDate').value = promo.start_date.slice(0, 16);
     if (promo.end_date) document.getElementById('promoEndDate').value = promo.end_date.slice(0, 16);
-    document.getElementById('promoActive').checked = promo.active !== false;
+    document.getElementById('promoActive').checked = promo.is_active !== false;
 
-    const scope = promo.scope || 'all';
+    const scope = promo.scope || 'storewide';
     document.querySelectorAll('.scope-option').forEach(o => {
         o.classList.remove('active');
         if (o.querySelector('input').value === scope) {
@@ -616,14 +684,13 @@ function openEditModal(promo) {
     loadProducts();
     loadCategories();
     setTimeout(() => {
-        if (promo.product_id) document.getElementById('promoProductId').value = promo.product_id;
-        if (promo.category_id) document.getElementById('promoCategoryId').value = promo.category_id;
+        if (scope === 'category' && promo.category_id) document.getElementById('promoCategoryId').value = promo.category_id;
+        if (scope === 'product') renderProductList(promo.product_ids || (promo.product_id ? [promo.product_id] : []));
     }, 300);
 
     document.getElementById('promoModalTitle').textContent = 'Edit Promotion';
     document.getElementById('promoSubmitBtn').innerHTML = '<i class="bi bi-check-lg me-1"></i> Update Promotion';
-    onDiscountTypeChange();
-    updateSummary();
+    onTypeChange();
     new bootstrap.Modal(document.getElementById('promoModal')).show();
 }
 
@@ -631,21 +698,49 @@ async function savePromotion(e) {
     e.preventDefault();
     const id = document.getElementById('promoId').value;
     const isEdit = !!id;
-    const scope = document.querySelector('input[name="promoScope"]:checked')?.value || 'all';
+    const scope = document.querySelector('input[name="promoScope"]:checked')?.value || 'storewide';
+    const type = document.getElementById('promoType').value;
+    const start = document.getElementById('promoStartDate').value;
+    const end = document.getElementById('promoEndDate').value;
 
     const payload = {
         name: document.getElementById('promoName').value.trim(),
         description: document.getElementById('promoDescription').value.trim(),
-        discount_type: document.getElementById('promoDiscountType').value,
-        discount_value: parseFloat(document.getElementById('promoDiscountValue').value) || 0,
+        promotion_type: type,
         scope: scope,
-        product_id: scope === 'product' ? document.getElementById('promoProductId').value : null,
-        category_id: scope === 'category' ? document.getElementById('promoCategoryId').value : null,
-        start_date: document.getElementById('promoStartDate').value || null,
-        end_date: document.getElementById('promoEndDate').value || null,
-        active: document.getElementById('promoActive').checked,
-        code: document.getElementById('promoName').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20) || 'PROMO'
+        discount_value: type === 'percent_off' ? (parseFloat(document.getElementById('promoDiscountValue').value) || 0) : 0,
+        discount_amount: type === 'spend_save' ? (parseFloat(document.getElementById('promoDiscountAmount').value) || 0) : 0,
+        min_spend: type === 'spend_save' ? (parseFloat(document.getElementById('promoMinSpend').value) || 0) : type === 'free_shipping' ? (parseFloat(document.getElementById('promoMinSpend2').value) || 0) : 0,
+        buy_qty: type === 'buy_x_get_y' ? (parseInt(document.getElementById('promoBuyQty').value) || 1) : 0,
+        get_qty: type === 'buy_x_get_y' ? (parseInt(document.getElementById('promoGetQty').value) || 1) : 0,
+        max_discount: type === 'percent_off' ? (parseFloat(document.getElementById('promoMaxDiscount').value) || 0) : 0,
+        category_id: scope === 'category' ? (parseInt(document.getElementById('promoCategoryId').value) || null) : null,
+        product_ids: scope === 'product' ? getSelectedProductIds() : null,
+        start_date: start || null,
+        end_date: end || null,
+        is_active: document.getElementById('promoActive').checked
     };
+
+    if (type === 'percent_off' && (payload.discount_value <= 0 || payload.discount_value > 100)) {
+        showToast('Enter a discount percentage between 1 and 100', 'error');
+        return;
+    }
+    if (type === 'buy_x_get_y' && (payload.buy_qty < 1 || payload.get_qty < 1)) {
+        showToast('Buy and Get quantities must be at least 1', 'error');
+        return;
+    }
+    if (type === 'spend_save' && (payload.discount_amount <= 0 || payload.min_spend <= 0)) {
+        showToast('Enter a minimum spend and a discount amount', 'error');
+        return;
+    }
+    if (scope === 'category' && !payload.category_id) {
+        showToast('Select a category for this promotion', 'error');
+        return;
+    }
+    if (scope === 'product' && (!payload.product_ids || payload.product_ids.length === 0)) {
+        showToast('Select at least one product for this promotion', 'error');
+        return;
+    }
 
     const btn = document.getElementById('promoSubmitBtn');
     btn.disabled = true;
@@ -661,7 +756,7 @@ async function savePromotion(e) {
         });
         if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
-            throw new Error(err.message || err.error || 'Request failed');
+            throw new Error(err.detail || err.message || err.error || 'Request failed');
         }
         bootstrap.Modal.getInstance(document.getElementById('promoModal')).hide();
         showToast(isEdit ? 'Promotion updated successfully.' : 'Promotion created successfully.');
@@ -702,6 +797,9 @@ async function confirmDelete() {
 
 document.getElementById('promoName')?.addEventListener('input', updateSummary);
 document.getElementById('promoDiscountValue')?.addEventListener('input', updateSummary);
+document.getElementById('promoBuyQty')?.addEventListener('input', updateSummary);
+document.getElementById('promoGetQty')?.addEventListener('input', updateSummary);
+document.getElementById('promoDiscountAmount')?.addEventListener('input', updateSummary);
 document.getElementById('promoStartDate')?.addEventListener('input', updateSummary);
 document.getElementById('promoEndDate')?.addEventListener('input', updateSummary);
 document.getElementById('promoActive')?.addEventListener('change', updateSummary);

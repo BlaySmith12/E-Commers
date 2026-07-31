@@ -164,6 +164,7 @@
                     <h5><i class="bi bi-receipt"></i> Order Summary</h5>
                     <div class="summary-row"><span class="label">Subtotal</span><span class="value" id="sumSub">GHS 0.00</span></div>
                     <div class="summary-row" id="discRow" style="display:none;color:#28a745"><span class="label">Discount</span><span class="value" id="sumDisc">- GHS 0.00</span></div>
+                    <div class="summary-row" id="promoRow" style="display:none;color:#28a745"><span class="label" id="promoLabel"><i class="bi bi-tags me-1"></i>Promotion</span><span class="value" id="sumPromo">- GHS 0.00</span></div>
 
                     <!-- Coupon -->
                     <div class="coupon-section">
@@ -300,7 +301,7 @@
 
     function renderSummary(){
         document.getElementById('sumSub').textContent=fmt(cart.subtotal);
-        document.getElementById('sumShip').textContent=fmt(cart.shipping_fee);
+        document.getElementById('sumShip').textContent=cart.free_shipping?'FREE':fmt(cart.shipping_fee);
         document.getElementById('sumTax').textContent=fmt(cart.tax);
         document.getElementById('sumTotal').textContent=fmt(cart.total);
         document.getElementById('mobileTotal').textContent=fmt(cart.total);
@@ -308,6 +309,13 @@
         var dr=document.getElementById('discRow');
         if(cart.discount>0){dr.style.display='';document.getElementById('sumDisc').textContent='- '+fmt(cart.discount)}
         else{dr.style.display='none'}
+
+        var pr=document.getElementById('promoRow');
+        if(cart.promotion_name){
+            pr.style.display='';
+            document.getElementById('promoLabel').innerHTML='<i class="bi bi-tags me-1"></i>'+cart.promotion_name;
+            document.getElementById('sumPromo').textContent='- '+fmt(cart.promotion_discount||cart.discount);
+        }else{pr.style.display='none'}
 
         if(cart.coupon_code){
             document.getElementById('couponInputWrap').style.display='none';

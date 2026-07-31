@@ -309,6 +309,10 @@ class CartOut(BaseModel):
     item_count: int
     discount: float = 0.0
     coupon_code: Optional[str] = None
+    promotion_id: Optional[int] = None
+    promotion_name: Optional[str] = None
+    promotion_discount: float = 0.0
+    free_shipping: bool = False
     shipping_fee: float = 0.0
     tax: float = 0.0
     total: float = 0.0

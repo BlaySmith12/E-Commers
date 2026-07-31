@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Deals & Promotions - ASAH'S PRIMENEST{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav class="breadcrumb-custom" aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Deals & Promotions</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="container pb-5">
+    <div class="d-flex align-items-center gap-3 mb-1">
+        <i class="bi bi-lightning-charge-fill" style="color:var(--primary-orange);font-size:2rem"></i>
+        <div>
+            <h1 class="mb-0" style="color:var(--white);font-weight:800;font-size:1.6rem">Deals & Promotions</h1>
+            <p class="text-warm-gray mb-0" style="font-size:.9rem">Limited-time offers automatically applied at checkout. No promo code needed.</p>
+        </div>
+    </div>
+
+    {% if deals %}
+        {% for d in deals %}
+        <div class="mt-4 p-4 rounded" style="background:var(--card-bg);border:1px solid rgba(242,102,15,.3)">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge" style="background:rgba(242,102,15,.2);color:var(--primary-orange);font-weight:700;letter-spacing:.5px;font-size:.72rem;padding:6px 12px">
+                            {% if d.promotion_type == 'percent_off' %}{{ d.discount_value|int }}% OFF
+                            {% elif d.promotion_type == 'buy_x_get_y' %}BUY {{ d.buy_qty }} GET {{ d.get_qty }} FREE
+                            {% elif d.promotion_type == 'spend_save' %}SPEND &amp; SAVE
+                            {% elif d.promotion_type == 'free_shipping' %}FREE SHIPPING{% endif %}
+                        </span>
+                        {% if d.end_date %}
+                        <span class="promo-countdown text-warning small fw-semibold" data-end="{{ d.end_date.isoformat() }}Z">{{ d.end_date.strftime('%d %b %Y') }}</span>
+                        {% endif %}
+                    </div>
+                    <h3 class="mb-1" style="color:var(--white);font-weight:800">{{ d.name }}</h3>
+                    {% if d.description %}<p class="text-warm-gray mb-1" style="font-size:.9rem">{{ d.description }}</p>{% endif %}
+                    {% if d.promotion_type == 'spend_save' %}
+                        <p class="text-warm-gray mb-1" style="font-size:.85rem">Spend GHS {{ "%.2f"|format(d.min_spend) }} or more and automatically get GHS {{ "%.2f"|format(d.discount_amount) }} off.</p>
+                    {% elif d.promotion_type == 'free_shipping' %}
+                        <p class="text-warm-gray mb-1" style="font-size:.85rem">{% if d.min_spend %}Free delivery on orders over GHS {{ "%.2f"|format(d.min_spend) }}.{% else %}Free delivery on all orders.{% endif %}</p>
+                    {% elif d.promotion_type == 'buy_x_get_y' %}
+                        <p class="text-warm-gray mb-1" style="font-size:.85rem">Buy {{ d.buy_qty }} get {{ d.get_qty }} free on eligible products.</p>
+                    {% endif %}
+                </div>
+                <a href="/shop" class="btn px-4 py-2" style="background:var(--primary-orange);color:#fff;font-weight:700">Shop Now</a>
+            </div>
+
+            {% if d.products %}
+            <div class="row g-3 mt-1">
+                {% for p in d.products %}
+                <div class="col-6 col-md-3 col-lg-2">
+                    <a href="/product/{{ p.slug }}" class="text-decoration-none">
+                        <div class="product-card h-100">
+                            <div class="product-card-img-wrap">
+                                {% set card_price = (p.sale_price or p.discount_price or p.price) %}
+                                {% if card_price < p.price %}
+                                    <span class="product-badge">-{{ ((1 - card_price / p.price) * 100)|int }}%</span>
+                                {% endif %}
+                                {% if p.image %}
+                                    <img src="{{ p.image }}" class="product-card-img" alt="{{ p.name }}">
+                                {% else %}
+                                    <div class="product-card-img d-flex align-items-center justify-content-center" style="background:rgba(255,255,255,.02);color:rgba(255,255,255,.15);font-size:2rem">
+                                        <i class="bi bi-box-seam"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="product-card-body">
+                                <h6 class="product-card-name" style="font-size:.78rem">{{ p.name }}</h6>
+                                <div class="product-card-price">
+                                    <span class="price-current" style="font-size:.85rem">GHS {{ "%.2f"|format(card_price) }}</span>
+                                    {% if card_price < p.price %}
+                                        <span class="price-original" style="font-size:.7rem">GHS {{ "%.2f"|format(p.price) }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-5 mt-3" style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px">
+            <div style="opacity:.5"><i class="bi bi-megaphone" style="font-size:3.5rem;color:var(--primary-orange)"></i></div>
+            <h4 class="text-white mt-3 mb-1">No Active Deals Right Now</h4>
+            <p class="text-warm-gray mb-3" style="font-size:.9rem">Check back soon for exciting promotions.</p>
+            <a href="/shop" class="btn px-4 py-2" style="background:var(--primary-orange);color:#fff;font-weight:700"><i class="bi bi-bag me-1"></i>Shop the Store</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+    function tickPromoCountdowns(){
+        document.querySelectorAll('.promo-countdown').forEach(function(el){
+            var end = new Date(el.dataset.end);
+            if (isNaN(end.getTime())) return;
+            var diff = end - new Date();
+            if (diff <= 0) { el.textContent = 'Ended'; return; }
+            var d = Math.floor(diff/86400000);
+            var h = Math.floor(diff%86400000/3600000);
+            var m = Math.floor(diff%3600000/60000);
+            var s = Math.floor(diff%60000/1000);
+            var parts = [];
+            if (d) parts.push(d + 'd');
+            parts.push(h + 'h', m + 'm', s + 's');
+            el.textContent = parts.join(' ');
+        });
+    }
+    tickPromoCountdowns();
+    setInterval(tickPromoCountdowns, 1000);
+})();
+</script>
+{% endblock %}
