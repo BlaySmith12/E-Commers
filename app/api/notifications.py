@@ -5,16 +5,23 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select, update, func
+from sqlalchemy import select, update, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
-from app.models.catalog import Notification, NotificationCampaign, User
+from app.models.catalog import Notification, NotificationCampaign, User, Role, Permission
 from app.schemas import MessageOut
 from app.security import CurrentUser, AdminUser
 from app.services.email_service import send_broadcast_email
 
 router = APIRouter(prefix='/notifications', tags=['Notifications'])
+
+_non_admin_filter = or_(
+    User.role_id.is_(None),
+    User.role_id.notin_(
+        select(Role.id).where(Role.permissions.op('&')(Permission.ADMIN) > 0).scalar_subquery()
+    ),
+)
 
 
 class NotificationOut(BaseModel):
@@ -211,10 +218,10 @@ async def broadcast_notification(
             raise HTTPException(status_code=422, detail='Select at least one customer')
         stmt = select(User).where(
             User.id.in_(data.user_ids),
-            User.is_admin == False,  # noqa: E712
+            _non_admin_filter,
         )
     else:
-        stmt = select(User).where(User.is_admin == False)  # noqa: E712
+        stmt = select(User).where(_non_admin_filter)
 
     recipients = (await db.execute(stmt)).scalars().all()
     if not recipients:

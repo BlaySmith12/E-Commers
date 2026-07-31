@@ -622,7 +622,7 @@ async def admin_order_edit(request: Request, order_id: int):
 async def admin_customers(request: Request):
     try:
         async with async_session_maker() as db:
-            result = await db.execute(select(User).where(User.is_admin == False).order_by(User.created_at.desc()))
+            result = await db.execute(select(User).where(_non_admin_filter).order_by(User.created_at.desc()))
             customers = result.scalars().all()
     except Exception:
         customers = []
@@ -635,7 +635,7 @@ async def admin_notify(request: Request):
     try:
         async with async_session_maker() as db:
             result = await db.execute(
-                select(User).where(User.is_admin == False).order_by(User.created_at.desc())
+                select(User).where(_non_admin_filter).order_by(User.created_at.desc())
             )
             customers = result.scalars().all()
     except Exception:

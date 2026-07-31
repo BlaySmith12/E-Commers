@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.catalog import Order, OrderItem, Product, User
+from app.models.catalog import Order, OrderItem, Product, User, Role, Permission
 
 
 def _rows_to_csv(columns: list[str], rows: list[list[Any]]) -> str:
@@ -112,7 +112,14 @@ async def export_customers_csv(db: AsyncSession, filters: dict | None = None) ->
     """
     stmt = (
         select(User)
-        .where(User.is_admin == False)  # noqa: E712
+        .where(
+            or_(
+                User.role_id.is_(None),
+                User.role_id.notin_(
+                    select(Role.id).where(Role.permissions.op('&')(Permission.ADMIN) > 0).scalar_subquery()
+                ),
+            )
+        )
         .order_by(User.created_at.desc())
     )
 
