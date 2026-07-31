@@ -185,8 +185,11 @@ async def recent_activity(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Activity query failed: {str(e)}")
 
+    _HIDE_TYPES = {'order_created', 'payment_failed', 'order_cancelled'}
     result = []
     for a in activities:
+        if a.activity_type in _HIDE_TYPES:
+            continue
         result.append({
             "id": a.id,
             "activity_type": a.activity_type,

@@ -127,6 +127,8 @@ async def admin_list_orders(
     )
     if status:
         stmt = stmt.where(Order.status == status)
+    else:
+        stmt = stmt.where(Order.status.notin_(['Payment Failed', 'Cancelled']))
     if user_id:
         stmt = stmt.where(Order.user_id == user_id)
     if search:
@@ -710,6 +712,7 @@ async def checkout(
         actor_name=customer_name,
         actor_id=current_user.id,
         extra_data={"total": total_amount, "items": len(order_items), "payment_method": payload.payment_method},
+        notify_sms=False,
     )
     await db.commit()
 
@@ -774,6 +777,7 @@ async def update_order_status(
         actor_name=((admin.first_name or '') + ' ' + (admin.last_name or '')).strip() or admin.email or "Admin",
         actor_id=admin.id,
         extra_data={"old_status": old_status, "new_status": order.status},
+        notify_sms=False,
     )
     await db.commit()
 
@@ -838,6 +842,7 @@ async def cancel_order(
         entity_number=order.order_number,
         actor_name=customer_name,
         actor_id=current_user.id,
+        notify_sms=False,
     )
     await db.commit()
 

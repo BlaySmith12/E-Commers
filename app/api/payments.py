@@ -365,6 +365,7 @@ async def verify_payment(
                 entity_id=order.id if order else None,
                 entity_number=order.order_number if order else None,
                 extra_data={"reference": reference, "reason": tx_data.get('gateway_response', '')},
+                notify_sms=False,
             )
             await db.commit()
         except Exception:

@@ -1078,11 +1078,6 @@
             <div class="stat-value" id="statDelivered">0</div>
             <div class="stat-label">Delivered</div>
         </div>
-        <div class="stat-card stat-cancelled" data-filter="Cancelled" onclick="filterByStat(this, 'Cancelled')">
-            <div class="stat-icon"><i class="bi bi-x-circle"></i></div>
-            <div class="stat-value" id="statCancelled">0</div>
-            <div class="stat-label">Cancelled</div>
-        </div>
     </div>
 
     <!-- Orders Table Card -->
@@ -1112,12 +1107,6 @@
                 </button>
                 <button class="status-tab" data-status="Delivered" onclick="filterByTab(this)">
                     Delivered<span class="tab-count" id="tabCountDelivered">0</span>
-                </button>
-                <button class="status-tab" data-status="Payment Failed" onclick="filterByTab(this)">
-                    Failed<span class="tab-count" id="tabCountFailed">0</span>
-                </button>
-                <button class="status-tab" data-status="Cancelled" onclick="filterByTab(this)">
-                    Cancelled<span class="tab-count" id="tabCountCancelled">0</span>
                 </button>
             </div>
             <div class="date-filter">
@@ -1461,7 +1450,7 @@
         $('#statProcessing').textContent = c.Processing;
         $('#statShipped').textContent = c.Shipped;
         $('#statDelivered').textContent = c.Delivered;
-        $('#statCancelled').textContent = c.Cancelled;
+        if ($('#statCancelled')) $('#statCancelled').textContent = c.Cancelled;
         $('#tabCountAll').textContent = state.orders.length;
         if ($('#tabCountPendingPayment')) $('#tabCountPendingPayment').textContent = c['Pending Payment'];
         if ($('#tabCountPaid')) $('#tabCountPaid').textContent = c.Paid;
