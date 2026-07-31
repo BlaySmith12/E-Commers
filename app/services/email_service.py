@@ -558,6 +558,7 @@ async def send_order_status_email(db: AsyncSession, order, old_status: str, new_
         },
         entity_type="Order",
         entity_id=order.id,
+        skip_duplicate_check=True,
     )
 
 
@@ -589,6 +590,7 @@ async def send_order_cancelled_email(db: AsyncSession, order, cancelled_by: str 
         },
         entity_type="Order",
         entity_id=order.id,
+        skip_duplicate_check=True,
     )
 
 
