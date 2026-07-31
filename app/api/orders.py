@@ -127,8 +127,6 @@ async def admin_list_orders(
     )
     if status:
         stmt = stmt.where(Order.status == status)
-    else:
-        stmt = stmt.where(Order.status.notin_(['Payment Failed', 'Cancelled']))
     if user_id:
         stmt = stmt.where(Order.user_id == user_id)
     if search:
