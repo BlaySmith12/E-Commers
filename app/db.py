@@ -101,6 +101,14 @@ async def init_db() -> None:
     async with engine.begin() as conn:
         for stmt in order_columns + payment_columns + address_columns + promotion_columns:
             await conn.execute(text(stmt))
+        # Legacy promotions table had discount_type NOT NULL; the new promotion
+        # model uses promotion_type instead, so relax the old constraint if present.
+        await conn.execute(text("""
+            DO $$ BEGIN
+                ALTER TABLE promotions ALTER COLUMN discount_type DROP NOT NULL;
+            EXCEPTION WHEN undefined_column THEN NULL;
+            END $$;
+        """))
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS payment_events (
                 id SERIAL PRIMARY KEY,
