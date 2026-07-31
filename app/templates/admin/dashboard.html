@@ -506,15 +506,15 @@
         'order_created':           { icon: 'bi-bag-check', color: '#198754', link: '/admin/orders/edit/' },
         'payment_completed':       { icon: 'bi-credit-card', color: '#198754', link: '/admin/orders/edit/' },
         'payment_failed':          { icon: 'bi-x-circle', color: '#dc3545', link: '/admin/orders/edit/' },
-        'customer_registered':     { icon: 'bi-person-plus', color: '#0d6efd', link: '/admin/customers/' },
+        'customer_registered':     { icon: 'bi-person-plus', color: '#0d6efd', link: '/admin/customers?detail=' },
         'order_status_changed':    { icon: 'bi-arrow-repeat', color: '#0dcaf0', link: '/admin/orders/edit/' },
         'order_cancelled':         { icon: 'bi-x-octagon', color: '#dc3545', link: '/admin/orders/edit/' },
         'product_created':         { icon: 'bi-box-seam', color: '#198754', link: '/admin/products/edit/' },
         'product_updated':         { icon: 'bi-pencil-square', color: '#ffc107', link: '/admin/products/edit/' },
         'product_deleted':         { icon: 'bi-trash', color: '#dc3545', link: '/admin/products/' },
         'coupon_used':             { icon: 'bi-ticket-perforated', color: '#6f42c1', link: '/admin/coupons' },
-        'loyalty_points_earned':   { icon: 'bi-star-fill', color: '#ffc107', link: '/admin/customers/' },
-        'loyalty_points_redeemed': { icon: 'bi-star', color: '#6f42c1', link: '/admin/customers/' },
+        'loyalty_points_earned':   { icon: 'bi-star-fill', color: '#ffc107', link: '/admin/customers?detail=' },
+        'loyalty_points_redeemed': { icon: 'bi-star', color: '#6f42c1', link: '/admin/customers?detail=' },
     };
     const DEFAULT_ACTIVITY = { icon: 'bi-activity', color: '#6c757d', link: null };
 
@@ -811,7 +811,9 @@
             let html = '<div class="position-relative ms-3">';
             activities.forEach((a, i) => {
                 const cfg = ACTIVITY_CONFIG[a.activity_type] || DEFAULT_ACTIVITY;
-                const link = cfg.link && a.entity_id ? cfg.link + a.entity_id : (cfg.link || '#');
+                const link = cfg.link ? (cfg.link.includes('?') ? cfg.link + a.entity_id
+                    : cfg.link.endsWith('/') ? cfg.link + a.entity_id
+                    : cfg.link) : '#';
                 const isLast = i === activities.length - 1;
                 html += `
                     <div class="position-relative border-start border-secondary ${isLast ? 'pb-0' : 'pb-3'}">

@@ -1321,7 +1321,13 @@
         if (e.key === 'Escape') closeViewPanel();
     });
 
-    fetchCustomers();
+    fetchCustomers().then(function() {
+        var q = new URLSearchParams(window.location.search);
+        var target = parseInt(q.get('detail') || q.get('highlight'), 10);
+        if (target && allCustomers.some(function(c) { return c.id === target; })) {
+            viewCustomer(target);
+        }
+    });
 })();
 </script>
 {% endblock %}
