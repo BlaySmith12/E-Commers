@@ -271,7 +271,20 @@ async def admin_update_settings(
     db: AsyncSession = Depends(get_db),
     admin: AdminUser = None,
 ):
+    _VALID_KEYS = {
+        'points_per_currency', 'redemption_rate', 'min_redemption_points',
+        'max_redemption_per_order', 'min_order_for_redemption',
+        'max_discount_percent', 'points_expiry_days', 'signup_bonus_points',
+        'first_order_bonus_points', 'review_points',
+        'tier_bronze_min', 'tier_silver_min', 'tier_gold_min', 'tier_platinum_min',
+        'tier_bronze_multiplier', 'tier_silver_multiplier',
+        'tier_gold_multiplier', 'tier_platinum_multiplier',
+        'allow_points_with_coupon',
+    }
+    updated = 0
     for key, value in settings.items():
+        if key not in _VALID_KEYS:
+            continue
         result = await db.execute(select(LoyaltySettings).where(LoyaltySettings.key == key))
         row = result.scalar_one_or_none()
         if row:
@@ -279,8 +292,9 @@ async def admin_update_settings(
             row.updated_at = datetime.utcnow()
         else:
             db.add(LoyaltySettings(key=key, value=str(value)))
+        updated += 1
     await db.commit()
-    return MessageOut(detail='Settings updated')
+    return MessageOut(detail=f'Settings updated ({updated} changed)')
 
 
 @router.get('/admin/stats')
